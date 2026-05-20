@@ -1,45 +1,4 @@
-const rules = [
-  { p: 'Ozon', s: 'CEL', t: 'Express', c: 'Express Extra Small', d: '5-10天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .0468, f: 3.12 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Extra Small', d: '10-15天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .0364, f: 3.12 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Extra Small', d: '20-25天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .026, f: 3.12 },
-  { p: 'Ozon', s: 'CEL', t: 'Express', c: 'Express Budget', d: '5-10天', minG: 501, maxG: 30000, minR: 0, maxR: 1500, sum: 150, side: 60, v: false, rg: .03432, f: 23.92 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Budget', d: '10-15天', minG: 501, maxG: 30000, minR: 0, maxR: 1500, sum: 150, side: 60, v: false, rg: .026, f: 23.92 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Budget', d: '20-25天', minG: 501, maxG: 30000, minR: 0, maxR: 1500, sum: 150, side: 60, v: false, rg: .01768, f: 23.92 },
-  { p: 'Ozon', s: 'CEL', t: 'Express', c: 'Express Small', d: '5-10天', minG: 0, maxG: 2000, minR: 1501, maxR: 7000, sum: 150, side: 60, v: false, rg: .0468, f: 16.64 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Small', d: '10-15天', minG: 0, maxG: 2000, minR: 1501, maxR: 7000, sum: 150, side: 60, v: false, rg: .0364, f: 16.64 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Small', d: '20-25天', minG: 0, maxG: 2000, minR: 1501, maxR: 7000, sum: 150, side: 60, v: false, rg: .026, f: 16.64 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Big', d: '10-15天', minG: 2001, maxG: 30000, minR: 1501, maxR: 7000, sum: 310, side: 150, v: true, rg: .026, f: 37.44 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Big', d: '20-25天', minG: 2001, maxG: 30000, minR: 1501, maxR: 7000, sum: 310, side: 150, v: true, rg: .01768, f: 37.44 },
-  { p: 'Ozon', s: 'CEL', t: 'Express', c: 'Express Premium Small', d: '5-10天', minG: 0, maxG: 5000, minR: 7001, maxR: 250000, sum: 250, side: 150, v: false, rg: .0468, f: 22.88 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Premium Small', d: '10-15天', minG: 0, maxG: 5000, minR: 7001, maxR: 250000, sum: 250, side: 150, v: false, rg: .0364, f: 22.88 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Premium Small', d: '20-25天', minG: 0, maxG: 5000, minR: 7001, maxR: 250000, sum: 250, side: 150, v: false, rg: .026, f: 22.88 },
-  { p: 'Ozon', s: 'CEL', t: 'Standard', c: 'Standard Premium Big', d: '10-15天', minG: 5001, maxG: 30000, minR: 7001, maxR: 250000, sum: 310, side: 150, v: true, rg: .02912, f: 64.48 },
-  { p: 'Ozon', s: 'CEL', t: 'Economy', c: 'Economy Premium Big', d: '20-25天', minG: 5001, maxG: 30000, minR: 7001, maxR: 250000, sum: 310, side: 150, v: true, rg: .02392, f: 64.48 },
-  { p: 'Ozon', s: 'GUOO', t: 'Express', c: 'Express Extra Small', d: '5-10天', minG: 0, maxG: 500, minR: 1, maxR: 1500, sum: 90, side: 60, v: false, rg: .045, f: 3 },
-  { p: 'Ozon', s: 'GUOO', t: 'Standard', c: 'Standard Extra Small', d: '10-15天', minG: 0, maxG: 500, minR: 1, maxR: 1500, sum: 90, side: 60, v: false, rg: .035, f: 3 },
-  { p: 'Ozon', s: 'GUOO', t: 'Economy', c: 'Economy Extra Small', d: '15-20天', minG: 0, maxG: 500, minR: 1, maxR: 1500, sum: 90, side: 60, v: false, rg: .025, f: 2.6 },
-  { p: 'Ozon', s: 'GUOO', t: 'Economy', c: 'Economy Budget', d: '15-20天', minG: 501, maxG: 30000, minR: 1, maxR: 1500, sum: 150, side: 60, v: true, rg: .017, f: 23 },
-  { p: 'Ozon', s: 'GUOO', t: 'Express', c: 'Express Small', d: '5-10天', minG: 0, maxG: 2000, minR: 1501, maxR: 7700, sum: 150, side: 60, v: false, rg: .045, f: 16 },
-  { p: 'Ozon', s: 'GUOO', t: 'Standard', c: 'Standard Small', d: '10-15天', minG: 0, maxG: 2000, minR: 1501, maxR: 7700, sum: 150, side: 60, v: false, rg: .035, f: 16 },
-  { p: 'Ozon', s: 'GUOO', t: 'Economy', c: 'Economy Small', d: '15-20天', minG: 0, maxG: 2000, minR: 1501, maxR: 7700, sum: 150, side: 60, v: false, rg: .025, f: 16 },
-  { p: 'Ozon', s: 'XY兴远', t: 'Express', c: 'Express Extra Small', d: '5-10天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .045, f: 3 },
-  { p: 'Ozon', s: 'XY兴远', t: 'Standard', c: 'Standard Extra Small', d: '10-15天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .035, f: 3 },
-  { p: 'Ozon', s: 'XY兴远', t: 'Economy', c: 'Economy Extra Small', d: '13-18天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .025, f: 3 },
-  { p: 'Ozon', s: 'OYX欧亚兴', t: 'Express', c: 'Express Extra Small', d: '5-10天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .045, f: 3 },
-  { p: 'Ozon', s: 'OYX欧亚兴', t: 'Standard', c: 'Standard Extra Small', d: '10-15天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .035, f: 2.9 },
-  { p: 'Ozon', s: 'OYX欧亚兴', t: 'Economy', c: 'Economy Extra Small', d: '13-18天', minG: 0, maxG: 500, minR: 0, maxR: 1500, sum: 90, side: 60, v: false, rg: .025, f: 2.9 },
-  { p: 'Yandex', s: 'CEL', t: 'Express', c: 'Express', d: '10-15天', minG: 0, maxG: 30000, minR: 0, maxR: 500000, sum: 90, side: 60, v: false, rkg: 715, fr: 161, rub: true },
-  { p: 'Yandex', s: 'CEL', t: 'Economy', c: 'Economy', d: '19-22天', minG: 0, maxG: 30000, minR: 0, maxR: 500000, sum: 450, side: 150, v: false, rkg: 465, fr: 161, rub: true },
-  { p: 'Yandex', s: 'CEL', t: 'Express', c: 'Express Extra Small', d: '10-15天', minG: 0, maxG: 500, minR: 0, maxR: 500000, sum: 90, side: 60, v: false, rkg: 550, fr: 78, rub: true },
-  { p: 'Yandex', s: 'CEL', t: 'Economy', c: 'Economy Extra Small', d: '19-22天', minG: 0, maxG: 500, minR: 0, maxR: 500000, sum: 90, side: 60, v: false, rkg: 287, fr: 78, rub: true },
-  { p: 'Yandex', s: 'GUOO', t: 'SUPER_EXPRESS', c: 'SUPER_EXPRESS', d: '空运', minG: 1, maxG: 30000, minR: 1, maxR: 500000, sum: 310, side: 150, v: false, rkg: 1073, fr: 194, rub: true },
-  { p: 'Yandex', s: 'GUOO', t: 'EXPRESS', c: 'EXPRESS', d: '陆空联运', minG: 1, maxG: 30000, minR: 1, maxR: 500000, sum: 310, side: 150, v: false, rkg: 698, fr: 180, rub: true },
-  { p: 'Yandex', s: 'GUOO', t: 'SUPER_ECONOMY', c: 'SUPER_ECONOMY', d: '陆运', minG: 1, maxG: 30000, minR: 1, maxR: 500000, sum: 310, side: 150, v: false, rkg: 426, fr: 194, rub: true },
-  { p: 'Wildberries', s: 'CEL', t: 'Express', c: 'Wb-Express', d: '10天', minG: 0, maxG: 20000, minR: 0, maxR: 999999, sum: 200, side: 115, v: false, rkg: 48, f: 9 },
-  { p: 'Wildberries', s: 'CEL', t: 'Economy', c: 'Wb-Economy ≤0.3kg', d: '20天', minG: 0, maxG: 300, minR: 0, maxR: 999999, sum: 200, side: 115, v: false, rkg: 58, f: 2 },
-  { p: 'Wildberries', s: 'CEL', t: 'Economy', c: 'Wb-Economy >0.3kg', d: '20天', minG: 301, maxG: 20000, minR: 0, maxR: 999999, sum: 200, side: 115, v: false, rkg: 43, f: 8 }
-];
-
+// 负责读取页面输入、更新页面显示、绑定交互事件。
 let platform = 'Ozon';
 let lastSubsidyField = 'subsidySalePrice';
 
@@ -53,12 +12,18 @@ function v(id) {
   return isNaN(n) ? 0 : n;
 }
 
-function m(n) {
-  return '¥' + n.toFixed(2);
-}
-
-function uniq(a) {
-  return [...new Set(a)];
+function getLogisticsInput() {
+  return {
+    platform,
+    supplier: document.getElementById('supplier').value,
+    service: document.getElementById('service').value,
+    salePrice: v('salePrice'),
+    rubRate: v('rubRate'),
+    weight: v('weight'),
+    length: v('length'),
+    width: v('width'),
+    height: v('height')
+  };
 }
 
 function fillSuppliers() {
@@ -74,94 +39,24 @@ function fillServices() {
   document.getElementById('service').innerHTML = '<option>自动</option>' + arr.map(x => `<option>${x}</option>`).join('');
 }
 
-function volumeKg(l, wd, h) {
-  return l && wd && h ? l * wd * h / 12000 : 0;
-}
-
-function feeParts(r, cg, rate) {
-  if (!r) {
-    return { unitText: '¥0.0000/g', op: 0, unitFee: 0, total: 0 };
-  }
-
-  if (r.rub) {
-    const op = r.fr / rate;
-    const unit = (r.rkg / 1000) / rate;
-    const unitFee = cg * unit;
-    return { unitText: '¥' + unit.toFixed(4) + '/g', op, unitFee, total: op + unitFee };
-  }
-
-  if (r.rkg) {
-    const unit = r.rkg / 1000;
-    const unitFee = cg * unit;
-    return { unitText: '¥' + unit.toFixed(4) + '/g', op: r.f, unitFee, total: r.f + unitFee };
-  }
-
-  const unitFee = cg * r.rg;
-  return { unitText: '¥' + r.rg.toFixed(4) + '/g', op: r.f, unitFee, total: r.f + unitFee };
-}
-
 function match() {
-  const price = v('salePrice');
-  const rate = v('rubRate');
-  const rub = price * rate;
-  const w = v('weight');
-  const l = v('length');
-  const wd = v('width');
-  const h = v('height');
-  const sum = l + wd + h;
-  const side = Math.max(l, wd, h);
-  const sup = document.getElementById('supplier').value;
-  const ser = document.getElementById('service').value;
-  const vol = volumeKg(l, wd, h);
-
-  if (!price || !w) {
-    return null;
-  }
-
-  const list = rules
-    .filter(r => r.p === platform && r.s === sup && (ser === '自动' || r.t === ser) && w >= r.minG && w <= r.maxG && rub >= r.minR && rub <= r.maxR && (!sum || sum <= r.sum) && (!side || side <= r.side))
-    .map(r => {
-      const vg = vol * 1000;
-      const cg = r.v ? Math.max(w, vg) : w;
-      const parts = feeParts(r, cg, rate);
-      return { ...r, cg, vol, needThrow: r.v && vg > w, unitFee: parts.unitFee, op: parts.op, unitText: parts.unitText, fee: parts.total };
-    });
-
-  list.sort((a, b) => a.fee - b.fee);
-  return list[0] || null;
+  return matchLogistics(getLogisticsInput());
 }
 
-function failReason() {
-  const price = v('salePrice');
-  const rate = v('rubRate');
-  const rub = price * rate;
-  const w = v('weight');
-  const l = v('length');
-  const wd = v('width');
-  const h = v('height');
-  const sum = l + wd + h;
-  const side = Math.max(l, wd, h);
-  const sup = document.getElementById('supplier').value;
-  const ser = document.getElementById('service').value;
-  const base = rules.filter(r => r.p === platform && r.s === sup && (ser === '自动' || r.t === ser));
+function syncSubsidy(sale) {
+  const subsidy = calculateSubsidy({
+    sale,
+    subSale: v('subsidySalePrice'),
+    amount: v('subsidyAmountInput'),
+    rate: v('subsidyRateInput'),
+    lastSubsidyField
+  });
 
-  if (!price || !w) {
-    return '请先输入预设售价和毛重。';
-  }
+  Object.keys(subsidy.updates).forEach(id => {
+    setInput(id, subsidy.updates[id]);
+  });
 
-  if (!base.some(r => w >= r.minG && w <= r.maxG)) {
-    return '重量不符合当前供应商/时效的渠道范围。';
-  }
-
-  if (!base.some(r => rub >= r.minR && rub <= r.maxR)) {
-    return '售价折合卢布后不符合当前渠道货值范围。';
-  }
-
-  if (sum && side && !base.some(r => sum <= r.sum && side <= r.side)) {
-    return `尺寸超限：当前三边和 ${sum.toFixed(1)}cm，最长边 ${side.toFixed(1)}cm。`;
-  }
-
-  return '未找到符合当前价格、重量、尺寸、平台、供应商和时效的渠道。';
+  return subsidy;
 }
 
 function setText(id, value) {
@@ -174,92 +69,43 @@ function setInput(id, value) {
   if (el) el.value = value;
 }
 
-function syncSubsidy(sale) {
-  const subSaleEl = document.getElementById('subsidySalePrice');
-  const amountEl = document.getElementById('subsidyAmountInput');
-  const rateEl = document.getElementById('subsidyRateInput');
-  let subSale = v('subsidySalePrice');
-  let amount = v('subsidyAmountInput');
-  let rate = v('subsidyRateInput');
-
-  if (!sale) {
-    return { subSale: 0, amount: 0, rate: 0 };
-  }
-
-  if (lastSubsidyField === 'subsidyAmountInput') {
-    amount = Math.min(Math.max(amount, 0), sale);
-    subSale = sale - amount;
-    rate = amount / sale * 100;
-    setInput('subsidySalePrice', subSale.toFixed(2));
-    setInput('subsidyRateInput', rate.toFixed(2));
-  } else if (lastSubsidyField === 'subsidyRateInput') {
-    rate = Math.min(Math.max(rate, 0), 100);
-    amount = sale * rate / 100;
-    subSale = sale - amount;
-    setInput('subsidySalePrice', subSale.toFixed(2));
-    setInput('subsidyAmountInput', amount.toFixed(2));
-  } else {
-    if (!subSale) {
-      amount = 0;
-      rate = 0;
-    } else {
-      subSale = Math.min(Math.max(subSale, 0), sale);
-      amount = sale - subSale;
-      rate = amount / sale * 100;
-    }
-
-    setInput('subsidyAmountInput', amount ? amount.toFixed(2) : '');
-    setInput('subsidyRateInput', rate ? rate.toFixed(2) : '');
-  }
-
-  return { subSale, amount, rate };
-}
-
 function calc() {
   const sale = v('salePrice');
   const subsidy = syncSubsidy(sale);
-  const subSale = subsidy.subSale;
-  const sub = subsidy.amount;
-  const subRate = subsidy.rate;
   const rub = sale * v('rubRate');
   const r = match();
   const log = r ? r.fee : 0;
-  const pur = v('purchaseCost');
-  const comRate = v('commissionRate');
-  const adRate = v('adRate');
-  const taxRate = v('taxRate');
-  const withdrawRate = v('withdrawRate');
-  const returnRate = v('returnRate');
-  const label = v('labelFee');
-  const other = v('otherCostInput');
-  const com = sale * comRate / 100;
-  const ad = sale * adRate / 100;
-  const tax = sale * taxRate / 100;
-  const wd = sale * withdrawRate / 100;
-  const returnCost = sale * returnRate / 100;
-  const total = pur + log + com + ad + tax + wd + returnCost + label + other;
-  const profit = sale - total;
-  const pr = sale ? profit / sale * 100 : 0;
-  const otherRate = sale ? other / sale * 100 : 0;
+  const costs = calculateProfit({
+    sale,
+    logisticsCost: log,
+    purchaseCost: v('purchaseCost'),
+    commissionRate: v('commissionRate'),
+    adRate: v('adRate'),
+    taxRate: v('taxRate'),
+    withdrawRate: v('withdrawRate'),
+    returnRate: v('returnRate'),
+    labelFee: v('labelFee'),
+    otherCost: v('otherCostInput')
+  });
 
   document.getElementById('rubPrice').value = rub.toFixed(2) + ' ₽';
-  setText('subsidyAmountDisplay', m(sub));
-  setText('subsidyRateDisplay', subRate.toFixed(2) + '%');
-  setText('actualSaleDisplay', m(subSale));
+  setText('subsidyAmountDisplay', m(subsidy.amount));
+  setText('subsidyRateDisplay', subsidy.rate.toFixed(2) + '%');
+  setText('actualSaleDisplay', m(subsidy.subSale));
   setText('logisticsCost', m(log));
-  setText('totalCost', m(total));
-  setText('profit', m(profit));
-  setText('profitRate', pr.toFixed(2) + '%');
-  setText('purchaseCostDisplay', m(pur));
-  setText('commissionCost', m(com));
-  setText('adCost', m(ad));
-  setText('taxCost', m(tax));
-  setText('withdrawCost', m(wd));
-  setText('returnCostDisplay', m(returnCost));
-  setText('labelFeeDisplay', m(label));
-  setText('otherCostDisplay', m(other));
-  setText('returnRateDisplay', returnRate.toFixed(2) + '%');
-  setText('otherRateDisplay', otherRate.toFixed(2) + '%');
+  setText('totalCost', m(costs.total));
+  setText('profit', m(costs.profit));
+  setText('profitRate', costs.profitRate.toFixed(2) + '%');
+  setText('purchaseCostDisplay', m(v('purchaseCost')));
+  setText('commissionCost', m(costs.com));
+  setText('adCost', m(costs.ad));
+  setText('taxCost', m(costs.tax));
+  setText('withdrawCost', m(costs.withdraw));
+  setText('returnCostDisplay', m(costs.returnCost));
+  setText('labelFeeDisplay', m(v('labelFee')));
+  setText('otherCostDisplay', m(v('otherCostInput')));
+  setText('returnRateDisplay', v('returnRate').toFixed(2) + '%');
+  setText('otherRateDisplay', costs.otherRate.toFixed(2) + '%');
 
   if (r) {
     setText('matchedChannel', r.c);
@@ -284,41 +130,10 @@ function calc() {
     setText('operationFeeDisplay', '¥0.00/票');
     setText('unitRateDisplay', '¥0.0000/g');
     document.getElementById('matchNotice').classList.add('danger');
-    document.getElementById('matchNotice').textContent = failReason();
+    document.getElementById('matchNotice').textContent = failReason(getLogisticsInput());
     throwTip.style.display = 'none';
     throwTip.innerHTML = '';
   }
-}
-
-function exportToCSV() {
-  const data = {
-    '平台': platform,
-    '供应商': supplier.value,
-    '时效': service.value,
-    '预设售价': v('salePrice'),
-    '卢布售价': rubPrice.value,
-    '补贴后售价': v('subsidySalePrice'),
-    '补贴金额': subsidyAmountDisplay.textContent,
-    '补贴率': subsidyRateDisplay.textContent,
-    '匹配渠道': matchedChannel.textContent,
-    '计费重量': chargeWeight.textContent,
-    '体积重': volumeWeightDisplay.textContent,
-    '渠道操作费': operationFeeDisplay.textContent,
-    '物流单价': unitRateDisplay.textContent,
-    '物流费用': logisticsCost.textContent,
-    '退货率': returnRateDisplay.textContent,
-    '退货费用': returnCostDisplay.textContent,
-    '总成本': totalCost.textContent,
-    '利润': profit.textContent,
-    '利润率': profitRate.textContent
-  };
-  let csv = 'data:text/csv;charset=utf-8,\uFEFF' + Object.keys(data).join(',') + '\n' + Object.values(data).join(',') + '\n';
-  const a = document.createElement('a');
-  a.href = encodeURI(csv);
-  a.download = '多平台物流利润计算表_' + new Date().toLocaleDateString() + '.csv';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
 }
 
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
