@@ -1,0 +1,221 @@
+
+=== SHEET CEL ===
+1	
+2	CEL-运费测算表														
+3	OZON官方指定物流														
+4	产品分类	渠道名称	到取货点/到门	订单备货时间	揽收点至莫斯科分拣中心时效	资费	最大重量	最大货值(卢布)	尺寸限制(厘米)	特货限制	渠道说明	计费重 / (KG)	体积重kg/m³	价格测算	
+5	Extra  Small / （超级轻小件）	Express Extra Small / 超级轻小件（陆空特快）	PUDO到取货点 / Courier到门	5天内	5-10天	0.0468元/克+3.12元/票	0.5KG	1500卢布	三边和不超90CM / 最长边不超60CM / 不计材积	带电、带磁、液体、粉末均可发货	1：重量0.5KG内 / 2：货值 1500卢布以内 / 3：丢件最大赔付1500卢布 / 免费销毁	5	None	None	150
+6		Standard Extra Small  / 超级轻小件（陆空标准）	PUDO到取货点 / Courier到门		10-15天	0.0364元/克+3.12元/票						5	None	None	50
+7		Economy Extra Small / 超级轻小件（陆运经济）	PUDO到取货点 / Courier到门		20-25天	0.026元/克+3.12元/票						5	None	None	50
+8	Budget / （低客单标准件）	Express Budget / 低客单标准件（陆空特快）	PUDO到取货点 / Courier到门		5-10天	0.03432元/克+23.92元/票	0.5KG-30KG	1500卢布	三边和不超150CM / 最长边不超60CM / 不计材积		1：重量0.5-25KG， / 2：货值1500卢布以内: / 3：丢件最大赔付1500卢布 / 免费销毁	5	None	None	250
+9		Standard Budget / 低客单标准件（陆空标准）	PUDO到取货点 / Courier到门		10-15天	0.026元/克+23.92元/票						5	None	None	2000
+10		Economy Budget / 低客单标准件（陆运经济）	PUDO到取货点 / Courier到门		20-25天	0.01768元/克+23.92元/票						5	None	None	温馨提示：建议卖家尽量使用 到取货点 物流方式
+11	Small / （轻小件）	Express Small 轻小件 / （陆空特快）	到取货点		5-10天	0.0468元/克+16.64元/票	2KG	1501-7000卢布	三边和不超150CM / 最长边不超60CM / 不计材积		1：:重量2KG内 / 2：货值:1501-7000卢布以内 / 3：丢件最大赔付7000卢布 / 免费销毁支持改派 支持退回	5	None	None	
+12			到门			0.0468元/克+16.64元/票						5	None	None	1：自提点和国内菜鸟驿站类似，网点多，专业成熟，有保存期
+13		Standard Small 轻小件 / （陆空标准）	到取货点		10-15天	0.0364元/克+16.64元/票						5	None	None	2：自提点，有14天超长保存期，解决上班不在家和旅游不在家，无法签收快递的问题
+14			到门			0.0364元/克+16.64元/票						5	None	None	3：国外派送到门服务，和客户上班时间可能冲突，可能会导致配送不成功
+15		Economy Small 轻小件 / （陆运经济）	到取货点		20-25天	0.026元/克+16.64元/票						5	None	None	4：买家更注重个人隐私，更愿意到选择到自提点
+16			到门			0.026元/克+16.64元/票						5	None	None	若计费重与您填写的实重数值不一致，则为计泡，反之则按实重计费。
+17	Big / （大件）	Standard Big 大件 / （陆空标准）	到取货点		10-15天	0.026元/克+37.44元/票	2kg-30kg / 计抛 / 体积重不超31KG	1501-7000卢布	三边和不超310CM / 最长边不超150CM / 		1：重量2KG-25KG， / 2：货值1501-7000卢布以内 / 3：丢件最大赔付7000卢布 / 免费销毁支持改派 支持退回	31.25	31.25	849.94	
+18			到门			0.026元/克+37.44元/票						31.25	31.25	849.94	
+19		Economy Big 大件 / （陆运经济）	到取货点		20-25天	0.01768元/克+37.44元/票						31.25	31.25	589.94	
+20			到门			0.01768元/克+37.44元/票						31.25	31.25	589.94	
+21	Premium  Small / （高客单轻小件）	Express Premium Small / 高客单小件（陆空特快）	到取货点		5-10天	0.0468元/克+22.88元/票	5KG内	7001-250000卢布	 		1：重量5KG内， / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布 / 免费销毁支持改派 支持退回	5	None	None	
+22			到门			0.0468元/克+22.88元/票						5	None	None	
+23		Standard Premium Small 高客单小件（陆空标准）	到取货点		10-15天	0.0364元/克+22.88元/票						5	None	None	
+24			到门			0.0364元/克+22.88元/票						5	None	None	
+25		Economy Premium Small 高客单小件（陆运经济）	到取货点		20-25天	0.026元/克+22.88元/票						5	None	None	
+26			到门			0.026元/克+22.88元/票						5	None	None	
+27	Premium  Big / （高客单大件）	Standard Premium Big  / 高客单大件（陆空标准）	到取货点		10-15天	0.02912元/克+64.48元/票	5KG-30KG / 计抛 / 体积重不超80KG	7001-250000卢布	三边和不超310CM / 最长边不超150CM / （最大尺寸限制150*80*80CM） / 		1：重量5kg-30kg / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布 / 免费销毁支持改派 支持退回	5	None	None	
+28			到门			0.02912元/克+64.48元/票						5	None	None	
+29		Economy Premium Big  / 高客单大件（陆运经济）	到取货点		20-25天	0.02392元/克+64.48元/票						5	None	None	
+30			到门			0.02392元/克+64.48元/票						5	None	None	
+31	1.日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”，表格自动生成对应物流报价；														
+32	2.重量默认单位为千克 KG，尺寸默认单位为厘米 CM,  成交价是卢布；														
+33	3.价格测算出来的”绿色“价格为最优惠的物流渠道，仅供您参考														
+34	4.CEL重量，计费，查询网址：http://146.56.210.134:8033/#/login?redirect=/dashboard														
+35	5.OZON帮助页面仓库创建教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/warehouse/?country=CN														
+
+=== SHEET GUOO ===
+1	
+2	GUOO-运费测算表														
+3	OZON官方指定物流														
+4	产品分类	渠道名称		到取货点/到门	订单备货时间	揽收点至莫斯科分拣中心时效	资费	最大重量		尺寸限制(厘米)		渠道说明	计费重 / (KG)	体积重kg/m³	价格测算
+5	GUOO / Extra  Small / （超级轻小件）	Express Extra Small / 超级轻小件（陆空特快）	超快速	PUDO到取货点 / Courier到门	    5天内	5-10天	45元/KG+3/票	0.5KG	1-1500卢布	三边和不超90CM / 最长边不超60CM / 不计材积	电池不允许 / 只接普货（不接带电、带磁、液体、粉末、刀具、仿牌等产品）	1：重量0.5KG内 / 2：货值 1500卢布以内 / 3：丢件最大赔付1700卢布	0	0.166666666666667	3
+6		Standard Extra Small / 超级轻小件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	35元/KG+3/票				不可运输纯电池，可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS，最大功率为160瓦特一小时		0	0.166666666666667	3
+7		Economy Extra Small / 超级轻小件（陆运经济）	经济	PUDO到取货点 / Courier到门		15-20天	25元/KG+2.6/票				可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS		0	0.166666666666667	2.6
+8	GUOO / Budget / （低客单标准件）	Economy Budget / 低客单标准件（陆运经济）	经济	PUDO到取货点 / Courier到门		15-20天	17元/KG+23/票	0.5kg-30kg / 计抛		三边和不超150CM / 最长边不超60CM / 计材积	可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS	1：重量0.5KG内 / 2：货值 1500卢布以内 / 3：丢件最大赔付1700卢布	0	None	None
+9															
+10	GUOO / Small / （轻小件）	Express Small 轻小件 / （陆空特快）	超快速	到取货点		5-10天	0.045元/克+16/票	2KG	1501-7700卢布	三边和不超150CM / 最长边不超60CM / 不计材积	电池不允许 / 只接普货（不接带电、带磁、液体、粉末、刀具、仿牌等产品）	1：:重量2KG内 / 2：货值:1501-7700卢布以内 / 3：丢件最大赔付7700卢布	0	None	None
+11				到门			0.045元/克+16/票						0	None	None
+12		Standard Small 轻小件 / （陆空标准）	快速	到取货点		10-15天	0.035元/克+16/票				     不可运输纯电池，可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS，最大功率为160瓦特一小时		0	None	None
+13				到门			0.035元/克+16/票						0	None	None
+14		Economy Small 轻小件 / （陆运经济）	经济	到取货点		15-20天	0.025元/克+16/票				可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS		0	None	None
+15				到门			0.025元/克+16/票						0	None	None
+16	GUOO / Big / （大件）	Economy Big 大件 / （陆运经济）	经济	到取货点		15-20天	17/KG+36票	2kg-30kg / 计抛		三边和不超250CM / 最长边不超150*80*80CM / 	可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS	1：重量2KG-25KG， / 2：货值1501-7700卢布以内 / 3：丢件最大赔付7700卢布	0	None	None
+17													0	None	None
+18				到门			17/KG+36票						0	None	None
+19	GUOO / Premium  Small / （高客单轻小件）	Express Premium Small / 高客单小件（陆空特快）	超快速	到取货点		5-10天	45/KG+22票	5KG内 / 计抛	7001-250000卢布	三边和不超250CM / 最长边不超150*80*80CM / 计材积	电池不允许 / 只接普货（不接带电、带磁、液体、粉末、刀具、仿牌等产品）	1：重量5KG内， / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+20				到门			45/KG+22票						0	None	None
+21		Economy Premium Small 高客单小件（陆运经济）	经济	到取货点		15-20天	25/KG+22票				可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS		0	None	None
+22				到门			25/KG+22票						0	None	None
+23	GUOO / Premium  Big / （高客单大件）	Economy Premium Big  / 高客单大件（陆运经济）	经济	到取货点		15-20天	23/KG+62票	5KG-30KG / 计抛		三边和不超310CM / 最长边不超150*80*80CM / 计材积	可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS	1：重量5KG内， / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+24				到门			23/KG+62票						0	None	None
+25	1.日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”，表格自动生成对应物流报价；														
+26	2.重量默认单位为千克 KG，尺寸默认单位为厘米 CM,  成交价是卢布；														
+27	3.价格测算出来的”绿色“价格为最优惠的物流渠道，仅供您参考														
+28	4.物流运费网址：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN							
+29	5.OZON帮助页面仓库创建教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/warehouse/?country=CN						
+30	6.OZON帮助页面物流配送方式添加教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/delivery-methods/?country=CN						
+31	浙江省金华市义乌市后宅街道柳青路1576号1楼GUOO / 浙江省宁波市江北区银海路300号2号工业楼一楼西1号门 CEL宁波集货仓 / 联系人：吴浩鹏；手机号码：19817935310														
+32		
+33		
+
+=== SHEET XY兴远 ===
+1	
+2	XY兴远-运费测算表														
+3	OZON官方指定物流														
+4	产品分类	渠道名称		到取货点/到门	订单备货时间	揽收点至莫斯科分拣中心时效	资费	最大重量	最大货值(卢布)	电池	尺寸限制(厘米)	渠道说明	计费重 / (KG)	体积重kg/m³	价格测算
+5	XY / Extra  Small / （超级轻小件）	Express Extra Small / 超级轻小件（陆空特快）	超快速	PUDO到取货点 / Courier到门	5天内	5-10天	3元+0.045 元/1克	0.5KG	1500卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超90CM / 最长边不超60CM / 不计材积	1：重量0.5KG内 / 2：货值 1500卢布以内 / 3：丢件最大赔付1500卢布	0	None	None
+6		Standard Extra Small / 超级轻小件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	3元+0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+7		Economy Extra Small / 超级轻小件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	3元+0.025元/1克						0	None	None
+8	XY / Budget / （低客单标准件）	Express Budget / 低客单标准件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	23元 +0.033元/1克	0.5KG-30KG	1500卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超150CM / 最长边不超60CM / 不计材积	1：重量0.5-30KG， / 2：货值1500卢布以内: / 3：丢件最大赔付1500卢布	0	None	None
+9		Standard Budget / 低客单标准件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	23元 +0.025元/1克			没有限制。不需要提供MSDS；			0	None	None
+10		Economy Budget / 低客单标准件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	23元 +0.017元/1克						0	None	None
+11	XY / Small / （轻小件）	Express Small 轻小件 / （陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	16元 +0.045元/1克	2KG	1501-7000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超150CM / 最长边不超60CM / 不计材积	1：:重量2KG内 / 2：货值:1501-7000卢布以内 / 3：丢件最大赔付7000卢布	0	None	None
+12															
+13		Standard Small 轻小件 / （陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	15.6元 +0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+14															
+15		Economy Small 轻小件 / （陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	15.6元 +0.025元/1克						0	None	None
+16															
+17	XY / Big / （大件）	Express Big 大件 / （陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	36元 + 0.033元/1克	2kg-30kg / 计抛	1501-7000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超250CM / 最长边不超150CM / 	1：重量2KG-30KG， / 2：货值1501-7000卢布以内 / 3：丢件最大赔付7000卢布	0	None	None
+18		Standard Big 大件 / （陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	36元 + 0.025元/1克			没有限制。不需要提供MSDS；			0	None	None
+19		Economy Big 大件 / （陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	36元 + 0.017元/1克						0	None	None
+20	XY / Premium  Small / （高客单轻小件）	Express Premium Small / 高客单小件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	22元 +0.045元/1克	5KG内	7001-250000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超250CM / 最长边不超150CM / 不计材积	1：重量5KG内， / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+21															
+22		Standard Premium Small  / 高客单小件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	22元 +0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+23															
+24		Economy Premium Small 高客单小件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	22元 +0.025元/1克						0	None	None
+25															
+26	XY / Premium  Big / （高客单大件）	Express Premium Big  / 高客单大件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	62元 +0.033元/1克	5KG-30KG / 计抛	7001-250000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超310CM / 最长边不超150CM / 	1：重量5kg-30kg / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+27		Standard Premium Big  / 高客单大件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	62元 +0.028元/1克			没有限制。不需要提供MSDS；			0	None	None
+28		Economy Premium Big  / 高客单大件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	62元 +0.023元/1克						0	None	None
+29	1.日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”，表格自动生成对应物流报价；														
+30	2.重量默认单位为千克 KG，尺寸默认单位为厘米 CM,  成交价是卢布；														
+31	3.价格测算出来的”绿色“价格为最优惠的物流渠道，仅供您参考														
+32	4.物流运费网址：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN														
+33	5.OZON帮助页面仓库创建教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/warehouse/?country=CN					
+34	6.OZON帮助页面物流配送方式添加教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/delivery-methods/?country=CN					
+35	浙江省金华市义乌市后宅街道柳青路1576号2楼B区 / 联系人：舒先生 ；手机号码：18058976330（微信同步） / 浙江省宁波市江北区银海路300号2号工业楼一楼西1号门 CEL宁波集货仓 / 联系人：吴浩鹏；手机号码：19817935310（微信同步）														
+
+=== SHEET OYX欧亚兴 ===
+1	
+2	OYX欧亚兴-运费测算表														
+3	OZON官方指定物流														
+4	产品分类	渠道名称		到取货点/到门	订单备货时间	揽收点至莫斯科分拣中心时效	资费	最大重量	最大货值(卢布)	电池	尺寸限制(厘米)	渠道说明	计费重 / (KG)	体积重kg/m³	价格测算
+5	OYX / Extra  Small / （超级轻小件）	Express Extra Small / 超级轻小件（陆空特快）	超快速	PUDO到取货点 / Courier到门	5天内	5-10天	3元+0.045 元/1克	0.5KG	1500卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超90CM / 最长边不超60CM / 不计材积	1：重量0.5KG内 / 2：货值 1500卢布以内 / 3：丢件最大赔付1500卢布	0	None	None
+6		Standard Extra Small / 超级轻小件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	2.9元+0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+7		Economy Extra Small / 超级轻小件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	2.9元+0.025元/1克						0	None	None
+8	OYX / Budget / （低客单标准件）	Express Budget / 低客单标准件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	23元 +0.033元/1克	0.5KG-30KG	1500卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超150CM / 最长边不超60CM / 不计材积	1：重量0.5-30KG， / 2：货值1500卢布以内: / 3：丢件最大赔付1500卢布	0	None	None
+9		Standard Budget / 低客单标准件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	22.6元 +0.025元/1克			没有限制。不需要提供MSDS；			0	None	None
+10		Economy Budget / 低客单标准件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	23元 +0.017元/1克						0	None	None
+11	OYX / Small / （轻小件）	Express Small 轻小件 / （陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	16元 +0.045元/1克	2KG	1501-7000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超150CM / 最长边不超60CM / 不计材积	1：:重量2KG内 / 2：货值:1501-7000卢布以内 / 3：丢件最大赔付7000卢布	0	None	None
+12															
+13		Standard Small 轻小件 / （陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	15.6元 +0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+14															
+15		Economy Small 轻小件 / （陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	15.6元 +0.025元/1克						0	None	None
+16															
+17	OYX / Big / （大件）	Express Big 大件 / （陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	36元 + 0.033元/1克	2kg-30kg / 计抛	1501-7000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超250CM / 最长边不超150CM / 	1：重量2KG-30KG， / 2：货值1501-7000卢布以内 / 3：丢件最大赔付7000卢布	0	None	None
+18		Standard Big 大件 / （陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	35.6元 + 0.025元/1克			没有限制。不需要提供MSDS；			0	None	None
+19		Economy Big 大件 / （陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	36元 + 0.017元/1克						0	None	None
+20	OYX / Premium  Small / （高客单轻小件）	Express Premium Small / 高客单小件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	22元 +0.045元/1克	5KG内	7001-250000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超250CM / 最长边不超150CM / 不计材积	1：重量5KG内， / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+21															
+22		Standard Premium Small  / 高客单小件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	21.6元 +0.035元/1克			没有限制。不需要提供MSDS；			0	None	None
+23															
+24		Economy Premium Small 高客单小件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	21.6元 +0.025元/1克						0	None	None
+25															
+26	OYX / Premium  Big / （高客单大件）	Express Premium Big  / 高客单大件（陆空特快）	超快速	PUDO到取货点 / Courier到门		5-10天	62元 +0.033元/1克	5KG-30KG / 计抛	7001-250000卢布	设备内部装有电池最高功率100瓦特。不需要提供MSDS；	三边和不超310CM / 最长边不超150CM / 	1：重量5kg-30kg / 2：货值:7001-250000卢布以内 / 3：丢件最大赔付250000卢布	0	None	None
+27		Standard Premium Big  / 高客单大件（陆空标准）	快速	PUDO到取货点 / Courier到门		10-15天	62元 +0.028元/1克			没有限制。不需要提供MSDS；			0	None	None
+28		Economy Premium Big  / 高客单大件（陆运经济）	经济	PUDO到取货点 / Courier到门		13-18天	62元 +0.023元/1克						0	None	None
+29	1.日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”，表格自动生成对应物流报价；														
+30	2.重量默认单位为千克 KG，尺寸默认单位为厘米 CM,  成交价是卢布；														
+31	3.价格测算出来的”绿色“价格为最优惠的物流渠道，仅供您参考														
+32	4.物流运费网址：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/partner-delivery-ozon/?country=CN														
+33	5.OZON帮助页面仓库创建教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/warehouse/?country=CN					
+34	6.OZON帮助页面物流配送方式添加教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/delivery-methods/?country=CN					
+35	浙江省金华市义乌市后宅街道柳青路1576号2楼B区 / 联系人：舒先生 ；手机号码：18058976330（微信同步） / 浙江省宁波市江北区银海路300号2号工业楼一楼西1号门 CEL宁波集货仓 / 联系人：吴浩鹏；手机号码：19817935310（微信同步）														
+
+=== SHEET WB-Yandex(CEL) ===
+1	Yandex平台—CEL运费测算表								
+2									
+3	渠道	时效（天）	重量限制	尺寸限制	费用（实重计费）	试算运费(卢布）	价格试算	
+4	Express	10-15天	≤30KG	长+宽+高≤90cm，单边≤60cm	715卢布/KG + 161卢布/票	232.5	0.1	←产品重量（KG)
+5	Economy	19-22天		长+宽+高≤450cm，单边≤150cm	465卢布/KG + 161卢布/票	207.5		
+6	Express Extra Small	10-15天	≤0.5KG	长+宽+高≤90cm，单边≤60cm	550卢布/KG +78卢布/票	133		
+7	Economy Extra Small	19-22天			287卢布/KG +78卢布/票	106.7		
+8	FBP-Express	5-10天	≤30KG	长+宽+高≤90cm，单边≤60cm	715卢布/KG + 161卢布/票	232.5		
+9	退件服务：清关失败退货42元/票；派送失败退货、签收退货86元/票								
+10							
+11	            wildberries平台—CEL运费测算表										
+12	渠道	网点	时效（天）	产品	包裹限重（kg）	尺寸限制	费用	试算运费(元）	百克进位计费重量（kg）	包裹实际重量（kg）	价格试算
+13	陆空联运 / （Wb-Express)	珲春仓备货	10	到达取货点	≤20kg	三边之和不超过200厘米                单边不超过115厘米	48元/kg+9元/票	13.8	0.1	0.01	←输入重量/kg
+14	陆运 / （Wb-Economy)	前端仓库	20		≤0.3kg		58元/kg+2元/票	7.8			
+15					＞0.3kg≤20kg		43元/kg+8元/票				
+16	注意：包裹送仓地址需要与平台出单仓库一致；珲春仓备货单件包裹密度需大于70kg/m³										
+17	退货服务：派送失败退回WB官方仓我司不承运不收费；清关失败退货42元/票										
+
+=== SHEET GUOO YANDEX资费试算表 ===
+2				GUOO Yandex物流资费测算表 / Yandex官方指定物流									
+3							浙江省宁波市江北区银海路300号2号工业楼一楼西1号门 / 客服工作时间：周一至周六  09:00-18:00						
+4													
+5					商品重量(kg)				长(cm)		*填写为最长边		
+6									宽(cm)				
+7					商品成交价(卢布)				高(cm)				
+8													
+9				产品类型	配送方式	运输方式	价格测算(卢布)	资费(RUB)	重量区间限制 / (公斤)	货值(卢布)	尺寸限制(厘米)	电池运输	
+10				标准	SUPER_EXPRESS	空运	   	1073/KG+194/票	1-30000 克	1-500000₽	尺寸限制：单边最大尺寸不超150*80*80CM，按1克进制，实重计费 /  / 渠道优势：适合重量0.001-30000G以内,货值500000卢布以内商品。 /  / 丢件：最高赔付500000卢布	电池不允许 / 只接普货（不接带电、带磁、液体、粉末、刀具、仿牌等产品）	
+11					EXPRESS	陆空联运	   	698/KG+180/票				不可运输纯电池 / 可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS / 最大功率为160瓦特一小时	
+12					SUPER_ECONOMY	陆运	   	426/KG+194/票				可以运输内部装有电池的物品 / 无需提供材料安全性数据表MSDS	
+13				1. 本表仅用于物流运费测算，核算成本使用，结果数据仅供参考；									
+14				2. 请勿对表格数据改动，造成数据计算错误；									
+15				3. 重量默认单位为千克 KG，尺寸默认单位为厘米 CM，成交价是卢布；									
+16				4. 日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”即可，表格自动生成对应物流报价；									
+17				5. 如显示“超出渠道限制”则为该订单重量或货值超出渠道限制。									
+18													
+
+=== SHEET OZON CIS 独联体国家 ===
+1	
+2	CEL-独联体国家运费测算表										
+3	OZON官方指定物流										
+4	产品	时效	资费	重量限制(KG)	尺寸(CM)	最大货值(RUB)	退货服务	计费重 / (KG)	运费(RMB)		0.1	←填入重量/KG	
+5	CEL Belarus Standard Extra Small	白俄罗斯 / Standard：20-25天 / Economy：30-35天	36.4元/kg+3.12元/票	0.001-0.5kg	长+宽+高≤90cm，单边≤60cm	≤1500	销毁	0.1	6.64	10	←三边尺寸/CM	
+6	CEL Belarus Economy Extra Small		26元/kg+3.12元/票					0.1	5.6	10		
+7	CEL Belarus Standard Budget		26元/kg+23.92元/票	0.501-35kg	长+宽+高≤150cm，单边≤60cm			0.1	 	10		
+8	CEL Belarus Economy Budget		17.68元/kg+23.92元/票					0.1	 	100	←密度KG/M³	
+9	CEL Belarus Standard Small		36.4元/kg+16.64元/票	0.001-2kg		1501-7000	退回 / 销毁	0.1	 	1500	←填入销售价格/卢布	
+10	CEL Belarus Economy Small		26元/kg+16.64元/票					0.1	 					
+11	CEL Belarus Standard Big		26元/kg+37.44元/票	2.001-35kg	长+宽+高≤250cm，单边≤150cm			0.1	 						
+12	CEL Belarus Economy Big		17.68元/kg+37.44元/票					0.1	 						
+13	CEL Belarus Standard Premium Small		36.4元/kg+22.88元/票	0.001-5kg		7001-18000		0.1	 					
+14	CEL Belarus Economy  Premium Small		26元/kg+22.88元/票					0.1	 			
+15	CEL Belarus Standard Premium Big		29.12元/kg+64.48元/票	5.001-35kg	长+宽+高≤310cm，单边≤150cm			0.1	 	
+16	CEL Belarus Economy  Premium Big		23.92元/kg+64.48元/票					0.1	 	
+17	CEL Kazakhstan Standard Extra Small	哈萨克斯坦 / Standard：15-20天 / Economy：25-30天	36.4元/kg+3.12元/票	0.001-0.5kg	长+宽+高≤90cm，单边≤60cm	≤1500	销毁	0.1	6.64	
+18	CEL Kazakhstan Economy Extra Small		26元/kg+3.12元/票					0.1	5.6	
+19	CEL Kazakhstan Standard Budget		26元/kg+23.92元/票	0.501-35kg	长+宽+高≤150cm，单边≤60cm			0.1	 	
+20	CEL Kazakhstan Economy Budget		17.68元/kg+23./92元/票					0.1	 	
+21	CEL Kazakhstan Standard Small		36.4元/kg+16.64元/票	0.001-2kg		1501-7000	退回 / 销毁	0.1	 	
+22	CEL Kazakhstan  Economy Small		26元/kg+16.64元/票					0.1	 	
+23	CEL Kazakhstan Standard Big		26元/kg+37.44元/票	2.001-35kg	长+宽+高≤250cm，单边≤150cm			0.1	 	
+24	CEL Kazakhstan  Economy Big		17.68元/kg+37.44元/票					0.1	 	
+25	CEL Kazakhstan Standard Premium Small		36.4元/kg+22.88元/票	0.001-5kg		7001-18000		0.1	 	
+26	CEL Kazakhstan  Economy Premium Small		26元/kg+22.88元/票					0.1	 	
+27	CEL Kazakhstan Standard Premium Big		29.12元/kg+64.48元/票	5.001-35kg	长+宽+高≤310cm，单边≤150cm			0.1	 	
+28	CEL Kazakhstan  Economy Premium Big		23.92元/kg+64.48元/票					0.1	 	
+29	1.日常使用时，请按实际重量填写“商品重量/三边尺寸”和“商品货值”，表格自动生成对应物流报价；									
+30	2.重量默认单位为千克 KG，尺寸默认单位为厘米 CM,  成交价是卢布；									
+31	3.价格测算出来的”绿色“价格为最优惠的物流渠道，仅供您参考									
+32	4.CEL重量，计费，查询网址：http://146.56.210.134:8033/#/login?redirect=/dashboard									
+33	5.OZON帮助页面仓库创建教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/warehouse/?country=CN									
+34	6.OZON帮助页面物流配送方式添加教程：https://docs.ozon.ru/global/zh/fulfillment/rfbs/logistic-settings/delivery-methods/?country=CN									
+35	7.OZON各类商品销售佣金标准：https://docs.ozon.ru/global/zh-hans/commissions/ozon-fees/commissions/?country=CN									
