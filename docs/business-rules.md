@@ -37,3 +37,13 @@
 - If advertising fee is the highest pressure item, recommend controlling budget and testing in small scale.
 - If profit margin is 25% or higher, show a positive but cautious action.
 - If input is invalid, show a neutral message and do not show a confident next action.
+
+## LocalStorage Save/Load Rules
+
+- Save only user-editable form values and selected platform/supplier/service.
+- Do not save calculated result text such as profit, total cost, logistics fee, diagnosis, or explanation output.
+- Restore saved values when the page loads, then run the normal validation and calculation flow.
+- Invalid saved values are allowed to restore, but they must still be caught by validation.
+- If `localStorage` is unavailable or blocked, fail silently and keep the calculator usable.
+- No sensitive secrets or API keys should be entered or saved in this MVP.
+- There is currently no reset/clear button, so no visible clear behavior is added in this milestone.

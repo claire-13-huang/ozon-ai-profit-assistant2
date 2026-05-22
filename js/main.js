@@ -3,6 +3,29 @@ let platform = 'Ozon';
 let lastSubsidyField = 'subsidySalePrice';
 let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
 
+const savedFieldIds = [
+  'salePrice',
+  'rubRate',
+  'weight',
+  'length',
+  'width',
+  'height',
+  'purchaseCost',
+  'commissionRate',
+  'adRate',
+  'taxRate',
+  'withdrawRate',
+  'returnRate',
+  'labelFee',
+  'otherCostInput',
+  'subsidySalePrice',
+  'subsidyAmountInput',
+  'subsidyRateInput',
+  'productUrl',
+  'imageUrl',
+  'localPreference'
+];
+
 const inputRules = {
   salePrice: { label: '预设售价', required: true, min: 0.01, warnAbove: 100000, requiredMessage: '请先填写售价，系统才能计算利润。', minMessage: '售价必须大于 0，请检查后再计算。' },
   rubRate: { label: '人民币兑卢布汇率', required: true, min: 0.01, warnBelow: 5, warnAbove: 30, requiredMessage: '请检查汇率，汇率必须大于 0。', minMessage: '请检查汇率，汇率必须大于 0。' },
@@ -26,6 +49,69 @@ const inputRules = {
 function applyTheme() {
   document.body.classList.remove('theme-ozon', 'theme-wildberries', 'theme-yandex');
   document.body.classList.add(platform === 'Wildberries' ? 'theme-wildberries' : platform === 'Yandex' ? 'theme-yandex' : 'theme-ozon');
+}
+
+function optionExists(selectEl, value) {
+  return Array.from(selectEl.options).some(option => option.value === value);
+}
+
+function updateActivePlatformTab() {
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.classList.toggle('active', tab.dataset.platform === platform);
+  });
+}
+
+function collectFormState() {
+  const fields = {};
+
+  savedFieldIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) fields[id] = el.value;
+  });
+
+  return {
+    platform,
+    supplier: document.getElementById('supplier').value,
+    service: document.getElementById('service').value,
+    fields
+  };
+}
+
+function persistFormState() {
+  saveFormState(collectFormState());
+}
+
+function restoreFormState() {
+  const saved = loadFormState();
+
+  if (!saved) return;
+
+  if (saved.platform && rules.some(rule => rule.p === saved.platform)) {
+    platform = saved.platform;
+  }
+
+  applyTheme();
+  updateActivePlatformTab();
+  fillSuppliers();
+
+  const supplierEl = document.getElementById('supplier');
+  if (saved.supplier && optionExists(supplierEl, saved.supplier)) {
+    supplierEl.value = saved.supplier;
+    fillServices();
+  }
+
+  const serviceEl = document.getElementById('service');
+  if (saved.service && optionExists(serviceEl, saved.service)) {
+    serviceEl.value = saved.service;
+  }
+
+  if (saved.fields) {
+    savedFieldIds.forEach(id => {
+      if (Object.prototype.hasOwnProperty.call(saved.fields, id)) {
+        setInput(id, saved.fields[id]);
+      }
+    });
+  }
 }
 
 function readNumber(id) {
@@ -562,18 +648,23 @@ function calc() {
 
 document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   platform = b.dataset.platform;
-  document.querySelectorAll('.tab').forEach(x => x.classList.toggle('active', x === b));
+  updateActivePlatformTab();
   applyTheme();
   fillSuppliers();
+  persistFormState();
   calc();
 });
 
 supplier.onchange = () => {
   fillServices();
+  persistFormState();
   calc();
 };
 
-service.onchange = calc;
+service.onchange = () => {
+  persistFormState();
+  calc();
+};
 
 document.querySelectorAll('input,select').forEach(e => {
   e.addEventListener('input', () => {
@@ -581,6 +672,7 @@ document.querySelectorAll('input,select').forEach(e => {
       lastSubsidyField = e.id;
     }
 
+    persistFormState();
     calc();
   });
 
@@ -589,10 +681,13 @@ document.querySelectorAll('input,select').forEach(e => {
       lastSubsidyField = e.id;
     }
 
+    persistFormState();
     calc();
   });
 });
 
 applyTheme();
+updateActivePlatformTab();
 fillSuppliers();
+restoreFormState();
 calc();

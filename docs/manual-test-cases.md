@@ -71,3 +71,33 @@
 9. CSV export still works after valid calculation
    - Input: return to valid input and click export.
    - Expected: CSV still downloads.
+
+## LocalStorage Save/Load
+
+1. Fill normal valid values, refresh page, values restore
+   - Input: sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 30, commission 10%, advertising 5%.
+   - Expected: after refresh, the same input values are restored and calculation runs again.
+
+2. Change platform/supplier/service, refresh page, selections restore
+   - Input: switch platform and choose a supplier/service combination.
+   - Expected: after refresh, platform, supplier, and service are restored when those options still exist.
+
+3. Fill invalid value, refresh page, validation still catches it
+   - Input: set purchase cost to -5 or exchange rate to 0, then refresh.
+   - Expected: invalid value is restored and validation shows the same blocking error.
+
+4. Clear/reset values if reset behavior exists
+   - Input: no reset/clear button currently exists.
+   - Expected: no reset behavior is tested in this milestone; clearing can be added later with a dedicated button.
+
+5. Recalculate after restore
+   - Input: refresh after valid saved values.
+   - Expected: logistics, profit decision, cost explanation, and result cards update after restore.
+
+6. CSV export still works after restore
+   - Input: refresh after valid saved values, then click CSV export.
+   - Expected: CSV still downloads with the restored calculation state.
+
+7. localStorage unavailable should not break the app if detectable
+   - Input: test in private/restricted storage mode if available.
+   - Expected: app still calculates normally; values may simply not persist.
