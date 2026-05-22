@@ -336,6 +336,8 @@ function renderDiagnosisMessages(messages) {
 }
 
 function getCostPressureItem(data) {
+  const pressurePriority = ['purchase', 'logistics', 'ad', 'commission', 'other'];
+
   return [
     { key: 'purchase', name: '采购成本', value: data.purchaseCost, tip: '采购成本是当前最大压力项，建议优先确认供货价、起订量和是否有更稳的采购渠道。' },
     { key: 'logistics', name: '物流费用', value: data.logisticsCost, tip: '物流费用是当前最大压力项，轻小件或更合适的物流渠道可能更适合测试。' },
@@ -344,7 +346,10 @@ function getCostPressureItem(data) {
     { key: 'other', name: '其他费用', value: data.otherCost, tip: '其他费用是当前最大压力项，建议拆分确认是否包含包装、损耗或人工等成本。' }
   ]
     .filter(item => item.value > 0)
-    .sort((a, b) => b.value - a.value)[0] || null;
+    .sort((a, b) => {
+      if (b.value !== a.value) return b.value - a.value;
+      return pressurePriority.indexOf(a.key) - pressurePriority.indexOf(b.key);
+    })[0] || null;
 }
 
 function getCostExplanation(data) {
@@ -610,7 +615,7 @@ function renderInitialReferenceRateStatus() {
   const cached = readCachedReferenceExchangeRate();
   if (!cached) return;
 
-  setReferenceRateStatus(`今日已有缓存参考汇率：${cached.rate.toFixed(4)}，来源：${cached.source}，日期：${cached.sourceDate}。点击按钮可应用，仍仅作当日参考。`);
+  setReferenceRateStatus(`${cached.source} · ${cached.sourceDate} · 今日已缓存；仅作运营测算参考，非实时/官方/利润保证。`);
 }
 
 async function applyDailyReferenceRate() {
@@ -632,8 +637,7 @@ async function applyDailyReferenceRate() {
     persistFormState();
     calc();
 
-    const cacheText = reference.fromCache ? '已使用今日缓存。' : '已获取当日参考汇率。';
-    setReferenceRateStatus(`${cacheText}来源：${reference.source}，日期：${reference.sourceDate}，仅作运营试算参考，不代表实时、平台官方或利润保证。`, 'is-ok');
+    setReferenceRateStatus(`${reference.source} · ${reference.sourceDate} · 仅作运营测算参考，非实时/官方/利润保证。`, 'is-ok');
   } catch (error) {
     setReferenceRateStatus('参考汇率获取失败，请手动填写。', 'is-error');
   } finally {
@@ -686,7 +690,7 @@ function applyPresetTemplate(templateId) {
   lastSubsidyField = 'subsidySalePrice';
   persistFormState();
   calc();
-  setText('presetApplyStatus', `已应用预设：${template.name}。`);
+  setText('presetApplyStatus', `已应用预设：${template.name}，当前输入已替换为示例值。`);
 }
 
 function bindPresetControls() {
@@ -834,7 +838,7 @@ document.querySelectorAll('input,select').forEach(e => {
     }
 
     if (e.id === 'rubRate') {
-      setReferenceRateStatus('当前汇率已手动修改；请自行确认是否继续使用该假设。');
+      setReferenceRateStatus('已手动修改 · 请自行确认汇率假设。');
     }
 
     persistFormState();
@@ -847,7 +851,7 @@ document.querySelectorAll('input,select').forEach(e => {
     }
 
     if (e.id === 'rubRate') {
-      setReferenceRateStatus('当前汇率已手动修改；请自行确认是否继续使用该假设。');
+      setReferenceRateStatus('已手动修改 · 请自行确认汇率假设。');
     }
 
     persistFormState();

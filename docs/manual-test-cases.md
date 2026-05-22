@@ -140,6 +140,14 @@
    - Input: apply the preset, confirm valid calculation, then click CSV export.
    - Expected: CSV still downloads with the current calculated result.
 
+10. Edit purchase cost after applying preset
+   - Input: apply `Healthy Profit Baseline`, then change purchase cost from 50 to 120.
+   - Expected: purchase cost display, total cost, profit, profit margin, diagnosis, next action, and cost explanation update using 120. The preset should not keep purchase cost fixed after manual editing.
+
+11. Same inputs should keep the same diagnosis
+   - Input: use the same values twice, including any equal-cost edge case.
+   - Expected: decision text, risk wording, next action, and cost-pressure diagnosis stay the same for the same inputs.
+
 ## Daily Reference Exchange Rate Helper
 
 1. Manual exchange rate input still works
@@ -148,7 +156,7 @@
 
 2. Fetch daily reference exchange rate
    - Input: click `获取当日参考汇率`.
-   - Expected: the exchange rate field is filled with a positive reference CNY/RUB value when the public source is available; the status note shows source, date, and reference-only wording.
+   - Expected: the exchange rate field is filled with a positive reference CNY/RUB value when the public source is available; the compact status note shows source, date, and reference-only wording without stretching the form row.
 
 3. Confirm calculation updates after fetched rate fills
    - Input: after fetching the reference rate, review the result area.

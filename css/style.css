@@ -582,17 +582,28 @@ input.input-warning:focus {
   margin-top: 8px;
 }
 
+.rate-helper-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rate-helper-row input {
+  min-width: 0;
+}
+
 .rate-helper-button {
-  width: 100%;
-  border: 1px solid color-mix(in srgb, var(--brand) 30%, #d8d8df);
-  border-radius: 12px;
-  padding: 10px 12px;
-  margin-top: 8px;
+  flex: 0 0 auto;
+  border: 1px solid #d8d8df;
+  border-radius: 10px;
+  padding: 0 10px;
+  min-height: 36px;
   background: #fff;
   color: var(--brand);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 900;
+  font-size: 12px;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .rate-helper-button:hover {
@@ -606,19 +617,20 @@ input.input-warning:focus {
 
 .rate-helper-status {
   color: #6e6e73;
-  font-size: 12px;
-  line-height: 1.5;
-  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.35;
+  margin-top: 5px;
+  min-height: 15px;
 }
 
 .rate-helper-status.is-error {
   color: #b02a37;
-  font-weight: 800;
+  font-weight: 700;
 }
 
 .rate-helper-status.is-ok {
-  color: #23613a;
-  font-weight: 800;
+  color: #4f6f5c;
+  font-weight: 700;
 }
 
 .throw-tip {
