@@ -4,23 +4,23 @@ let lastSubsidyField = 'subsidySalePrice';
 let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
 
 const inputRules = {
-  salePrice: { label: '预设售价', required: true, min: 0.01, warnAbove: 100000 },
-  rubRate: { label: '人民币兑卢布汇率', required: true, min: 0.01, warnBelow: 5, warnAbove: 30 },
-  weight: { label: '毛重', required: true, min: 1, warnAbove: 30000 },
-  length: { label: '长', min: 0, warnAbove: 300 },
-  width: { label: '宽', min: 0, warnAbove: 300 },
-  height: { label: '高', min: 0, warnAbove: 300 },
-  purchaseCost: { label: '采购成本', min: 0, warnAbove: 100000 },
-  commissionRate: { label: '佣金率', min: 0, warnAbove: 100 },
-  adRate: { label: '广告率', min: 0, warnAbove: 100 },
-  taxRate: { label: '税率', min: 0, warnAbove: 100 },
-  withdrawRate: { label: '提现率', min: 0, warnAbove: 100 },
-  returnRate: { label: '退货率', min: 0, warnAbove: 100 },
-  labelFee: { label: '贴单费', min: 0, warnAbove: 10000 },
-  otherCostInput: { label: '其他费用', min: 0, warnAbove: 100000 },
-  subsidySalePrice: { label: '补贴后售价', min: 0 },
-  subsidyAmountInput: { label: '补贴金额', min: 0 },
-  subsidyRateInput: { label: '补贴率', min: 0, warnAbove: 100 }
+  salePrice: { label: '预设售价', required: true, min: 0.01, warnAbove: 100000, requiredMessage: '请先填写售价，系统才能计算利润。', minMessage: '售价必须大于 0，请检查后再计算。' },
+  rubRate: { label: '人民币兑卢布汇率', required: true, min: 0.01, warnBelow: 5, warnAbove: 30, requiredMessage: '请检查汇率，汇率必须大于 0。', minMessage: '请检查汇率，汇率必须大于 0。' },
+  weight: { label: '毛重', required: true, min: 1, warnAbove: 30000, requiredMessage: '请先填写商品重量，系统才能匹配物流渠道。', minMessage: '商品重量必须大于 0，系统才能匹配物流渠道。' },
+  length: { label: '长', min: 0, warnAbove: 300, minMessage: '商品长度不能为负数，请检查尺寸。' },
+  width: { label: '宽', min: 0, warnAbove: 300, minMessage: '商品宽度不能为负数，请检查尺寸。' },
+  height: { label: '高', min: 0, warnAbove: 300, minMessage: '商品高度不能为负数，请检查尺寸。' },
+  purchaseCost: { label: '采购成本', min: 0, warnAbove: 100000, minMessage: '采购成本不能为负数，请检查进货价。' },
+  commissionRate: { label: '佣金率', min: 0, warnAbove: 100, minMessage: '佣金率不能为负数，请检查平台费率。' },
+  adRate: { label: '广告率', min: 0, warnAbove: 100, minMessage: '广告率不能为负数，请检查投放成本。' },
+  taxRate: { label: '税率', min: 0, warnAbove: 100, minMessage: '税率不能为负数，请检查税费设置。' },
+  withdrawRate: { label: '提现率', min: 0, warnAbove: 100, minMessage: '提现率不能为负数，请检查提现成本。' },
+  returnRate: { label: '退货率', min: 0, warnAbove: 100, minMessage: '退货率不能为负数，请检查退货成本。' },
+  labelFee: { label: '贴单费', min: 0, warnAbove: 10000, minMessage: '贴单费不能为负数，请检查操作费用。' },
+  otherCostInput: { label: '其他费用', min: 0, warnAbove: 100000, minMessage: '其他费用不能为负数，请检查额外成本。' },
+  subsidySalePrice: { label: '补贴后售价', min: 0, minMessage: '补贴后售价不能为负数，请检查补贴设置。' },
+  subsidyAmountInput: { label: '补贴金额', min: 0, minMessage: '补贴金额不能为负数，请检查补贴设置。' },
+  subsidyRateInput: { label: '补贴率', min: 0, warnAbove: 100, minMessage: '补贴率不能为负数，请检查补贴设置。' }
 };
 
 function applyTheme() {
@@ -69,7 +69,7 @@ function validateInputs() {
 
     if (parsed.empty) {
       if (rule.required) {
-        addIssue(validation.errors, validation.invalidIds, id, `请填写${rule.label}。`);
+        addIssue(validation.errors, validation.invalidIds, id, rule.requiredMessage || `请填写${rule.label}。`);
       }
       return;
     }
@@ -82,7 +82,7 @@ function validateInputs() {
 
     if (rule.min !== undefined && parsed.value < rule.min) {
       validation.values[id] = rule.min === 0.01 ? 0 : rule.min;
-      addIssue(validation.errors, validation.invalidIds, id, `${rule.label}不能小于 ${rule.min}。`);
+      addIssue(validation.errors, validation.invalidIds, id, rule.minMessage || `${rule.label}不能小于 ${rule.min}。`);
       return;
     }
 
@@ -292,6 +292,8 @@ function renderCostExplanation(messages) {
 }
 
 function renderInvalidInputState() {
+  const firstError = currentValidation.errors[0] || '请先修正输入错误。';
+
   setInput('rubPrice', '请先修正输入');
   setText('totalCost', '待校验');
   setText('profit', '待校验');
@@ -318,15 +320,15 @@ function renderInvalidInputState() {
   renderProfitDecision({
     type: 'waiting',
     status: '请先修正输入',
-    text: '当前有明显输入错误，暂不生成利润判断，避免误导。'
+    text: firstError + ' 当前暂不生成利润判断，避免误导。'
   });
-  renderDiagnosisMessages(['请先修正输入错误，再查看运营诊断。']);
-  renderCostExplanation(['请先修正输入错误，再查看成本和结果解释。']);
+  renderDiagnosisMessages([firstError, '修正后系统会重新生成运营诊断。']);
+  renderCostExplanation([firstError, '修正后系统会重新解释成本结构和利润率。']);
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
     notice.classList.add('danger');
-    notice.textContent = '请先修正必填项或负数输入，再匹配物流渠道。';
+    notice.textContent = firstError + ' 修正后系统会重新匹配物流渠道。';
   }
 
   if (typeof throwTip !== 'undefined') {
