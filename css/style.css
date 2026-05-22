@@ -582,6 +582,45 @@ input.input-warning:focus {
   margin-top: 8px;
 }
 
+.rate-helper-button {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--brand) 30%, #d8d8df);
+  border-radius: 12px;
+  padding: 10px 12px;
+  margin-top: 8px;
+  background: #fff;
+  color: var(--brand);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.rate-helper-button:hover {
+  background: color-mix(in srgb, var(--brand) 8%, #fff);
+}
+
+.rate-helper-button:disabled {
+  cursor: wait;
+  opacity: .68;
+}
+
+.rate-helper-status {
+  color: #6e6e73;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 6px;
+}
+
+.rate-helper-status.is-error {
+  color: #b02a37;
+  font-weight: 800;
+}
+
+.rate-helper-status.is-ok {
+  color: #23613a;
+  font-weight: 800;
+}
+
 .throw-tip {
   display: none;
   background: #ffe8e8;

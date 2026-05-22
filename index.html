@@ -68,6 +68,8 @@
           <div>
             <label>人民币兑卢布汇率</label>
             <input id="rubRate" type="number" value="12.5" step="0.01" min="0">
+            <button class="rate-helper-button" id="fetchReferenceRateButton" type="button">获取当日参考汇率</button>
+            <div class="rate-helper-status" id="referenceRateStatus">可手动填写汇率；参考汇率仅用于测试和学习。</div>
           </div>
           <div>
             <label>售价折合卢布</label>
@@ -293,6 +295,7 @@
   <script src="js/data-rules.js"></script>
   <script src="js/calculations.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/exchange-rate.js"></script>
   <script src="js/presets.js"></script>
   <script src="js/export.js"></script>
   <script src="js/main.js"></script>

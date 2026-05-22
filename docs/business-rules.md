@@ -61,6 +61,19 @@
 - No sensitive secrets or API keys should be entered or saved in this MVP.
 - There is currently no reset/clear button, so no visible clear behavior is added in this milestone.
 
+## Daily Reference Exchange Rate Rules
+
+- The exchange rate field remains manually editable.
+- The user must click `获取当日参考汇率` before the app fills a reference exchange rate.
+- The app must not silently overwrite a user-entered exchange rate on page load.
+- The current reference source is Frankfurter, using a no-key public API.
+- The UI wording must use `当日参考汇率`, not `实时汇率`.
+- The reference rate is only for operational testing and learning. It is not trading-grade, guaranteed, platform-official, or real-time.
+- When a reference rate is applied, the existing calculation, validation, diagnosis, cost explanation, and localStorage save flow should run normally.
+- If fetching fails, keep the existing manually entered value and show `参考汇率获取失败，请手动填写。`
+- A successfully fetched reference rate can be cached in localStorage for the same local day to reduce repeat requests.
+- The exchange rate helper does not change profit formulas or logistics rules.
+
 ## Preset Template Rules
 
 - Phase 3 currently implements only one preset: Healthy Profit Baseline.

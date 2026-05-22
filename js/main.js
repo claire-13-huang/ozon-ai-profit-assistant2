@@ -595,6 +595,65 @@ function setInput(id, value) {
   if (el) el.value = value;
 }
 
+function setReferenceRateStatus(message, type = '') {
+  const el = document.getElementById('referenceRateStatus');
+  if (!el) return;
+
+  el.classList.remove('is-ok', 'is-error');
+  if (type) el.classList.add(type);
+  el.textContent = message;
+}
+
+function renderInitialReferenceRateStatus() {
+  if (typeof readCachedReferenceExchangeRate !== 'function') return;
+
+  const cached = readCachedReferenceExchangeRate();
+  if (!cached) return;
+
+  setReferenceRateStatus(`今日已有缓存参考汇率：${cached.rate.toFixed(4)}，来源：${cached.source}，日期：${cached.sourceDate}。点击按钮可应用，仍仅作当日参考。`);
+}
+
+async function applyDailyReferenceRate() {
+  if (typeof getDailyReferenceExchangeRate !== 'function') return;
+
+  const button = document.getElementById('fetchReferenceRateButton');
+  const originalText = button ? button.textContent : '';
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = '获取中...';
+  }
+
+  setReferenceRateStatus('正在获取当日参考汇率...');
+
+  try {
+    const reference = await getDailyReferenceExchangeRate();
+    setInput('rubRate', reference.rate.toFixed(4));
+    persistFormState();
+    calc();
+
+    const cacheText = reference.fromCache ? '已使用今日缓存。' : '已获取当日参考汇率。';
+    setReferenceRateStatus(`${cacheText}来源：${reference.source}，日期：${reference.sourceDate}，仅作运营试算参考，不代表实时、平台官方或利润保证。`, 'is-ok');
+  } catch (error) {
+    setReferenceRateStatus('参考汇率获取失败，请手动填写。', 'is-error');
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
+}
+
+function bindExchangeRateHelper() {
+  const button = document.getElementById('fetchReferenceRateButton');
+
+  if (!button) return;
+
+  button.addEventListener('click', () => {
+    applyDailyReferenceRate();
+  });
+}
+
 function applyPresetTemplate(templateId) {
   if (typeof getPresetTemplate !== 'function') return;
 
@@ -774,6 +833,10 @@ document.querySelectorAll('input,select').forEach(e => {
       lastSubsidyField = e.id;
     }
 
+    if (e.id === 'rubRate') {
+      setReferenceRateStatus('当前汇率已手动修改；请自行确认是否继续使用该假设。');
+    }
+
     persistFormState();
     calc();
   });
@@ -783,14 +846,20 @@ document.querySelectorAll('input,select').forEach(e => {
       lastSubsidyField = e.id;
     }
 
+    if (e.id === 'rubRate') {
+      setReferenceRateStatus('当前汇率已手动修改；请自行确认是否继续使用该假设。');
+    }
+
     persistFormState();
     calc();
   });
 });
 
+bindExchangeRateHelper();
 bindPresetControls();
 applyTheme();
 updateActivePlatformTab();
 fillSuppliers();
 restoreFormState();
+renderInitialReferenceRateStatus();
 calc();

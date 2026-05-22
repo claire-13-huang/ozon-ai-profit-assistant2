@@ -139,3 +139,37 @@
 9. CSV export after applying preset
    - Input: apply the preset, confirm valid calculation, then click CSV export.
    - Expected: CSV still downloads with the current calculated result.
+
+## Daily Reference Exchange Rate Helper
+
+1. Manual exchange rate input still works
+   - Input: manually change exchange rate to a valid value, such as 12.30.
+   - Expected: ruble price, logistics matching, total cost, profit, diagnosis, and cost explanation update normally; the helper status says the rate was manually changed.
+
+2. Fetch daily reference exchange rate
+   - Input: click `获取当日参考汇率`.
+   - Expected: the exchange rate field is filled with a positive reference CNY/RUB value when the public source is available; the status note shows source, date, and reference-only wording.
+
+3. Confirm calculation updates after fetched rate fills
+   - Input: after fetching the reference rate, review the result area.
+   - Expected: ruble price, logistics matching, total cost, profit, profit margin, diagnosis, and cost explanation update through the normal calculation flow.
+
+4. Refresh page and confirm localStorage behavior
+   - Input: fetch the reference rate, then refresh the page.
+   - Expected: the fetched exchange rate restores through existing form localStorage; the helper may also show same-day cached reference information if available.
+
+5. Fetch failure behavior
+   - Input: simulate failure by disabling network or temporarily making the source endpoint unavailable in a local test.
+   - Expected: the page does not break, the existing manually entered rate stays unchanged, and the status shows `参考汇率获取失败，请手动填写。`
+
+6. Validation still catches exchange rate = 0
+   - Input: set exchange rate to 0 after using the helper.
+   - Expected: validation shows an error and misleading profit output is blocked.
+
+7. Apply Healthy Profit Baseline, then fetch reference rate
+   - Input: apply `Healthy Profit Baseline`, then click `获取当日参考汇率`.
+   - Expected: preset fields remain filled, the exchange rate updates to the reference value, and calculation/diagnosis/cost explanation recalculate.
+
+8. CSV export after using fetched reference rate
+   - Input: fetch the reference rate, confirm valid calculation, then click CSV export.
+   - Expected: CSV still downloads with the current calculated result.
