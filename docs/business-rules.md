@@ -26,3 +26,14 @@
 - If profit is negative, explain that cost or selling price should be reviewed before testing.
 - If profit margin is below 10%, explain that return, advertising, or exchange-rate changes may reduce profit.
 - If profit is positive, keep the wording as operational reference, not a final business conclusion.
+
+## Next Action Rules
+
+- Show next action only after inputs pass blocking validation.
+- If profit is negative, show a risk action and recommend checking the highest cost pressure item first.
+- If profit margin is below 10%, show a warning action and recommend small testing before scaling spend.
+- If purchase cost is the highest pressure item, recommend checking supply price and purchase assumptions.
+- If logistics fee is the highest pressure item, recommend checking product size, weight, and channel fit.
+- If advertising fee is the highest pressure item, recommend controlling budget and testing in small scale.
+- If profit margin is 25% or higher, show a positive but cautious action.
+- If input is invalid, show a neutral message and do not show a confident next action.

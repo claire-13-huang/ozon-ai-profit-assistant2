@@ -33,3 +33,41 @@
 8. CSV export still works after valid calculation
    - Input: return to a valid normal input.
    - Expected: calculation results update normally and CSV export still downloads.
+
+## Decision-Focused UI
+
+1. Negative profit should show strong risk state and cautious next action
+   - Input: sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 120.
+   - Expected: profit decision shows risk and next action warns not to scale before checking the main cost pressure.
+
+2. Low profit margin should show warning state and small-test suggestion
+   - Input: sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 75.
+   - Expected: next action recommends small testing and checking the pressure item.
+
+3. High purchase cost should recommend checking purchase cost
+   - Input: use valid input and make purchase cost the largest cost item.
+   - Expected: next action recommends checking purchase cost.
+
+4. High logistics cost should recommend checking logistics/channel/product size
+   - Input: use valid input and increase weight or dimensions so logistics fee is the largest cost item.
+   - Expected: next action recommends checking product size, weight, or channel fit.
+
+5. High advertising rate should recommend checking ad budget or test scale
+   - Input: use valid input and set advertising rate high enough to become the largest cost item.
+   - Expected: next action recommends controlling budget and small-scale testing.
+
+6. Healthy profit should show neutral-positive next action
+   - Input: adjust costs so profit margin is between 10% and 25%.
+   - Expected: next action suggests continuing to review return rate, ads, and exchange-rate changes.
+
+7. Good profit should show positive but still cautious next action
+   - Input: use valid input with profit margin above 25%.
+   - Expected: next action says profit looks good but still needs return and ad validation.
+
+8. Invalid input should not show confident next action
+   - Input: clear selling price or set exchange rate to 0.
+   - Expected: next action asks the user to fix input first.
+
+9. CSV export still works after valid calculation
+   - Input: return to valid input and click export.
+   - Expected: CSV still downloads.

@@ -241,6 +241,18 @@ function renderDiagnosisMessages(messages) {
   });
 }
 
+function getCostPressureItem(data) {
+  return [
+    { key: 'purchase', name: '采购成本', value: data.purchaseCost, tip: '采购成本是当前最大压力项，建议优先确认供货价、起订量和是否有更稳的采购渠道。' },
+    { key: 'logistics', name: '物流费用', value: data.logisticsCost, tip: '物流费用是当前最大压力项，轻小件或更合适的物流渠道可能更适合测试。' },
+    { key: 'commission', name: '平台佣金', value: data.commissionCost, tip: '平台佣金是当前最大压力项，需要确认类目佣金是否已经按实际平台规则填写。' },
+    { key: 'ad', name: '广告费用', value: data.adCost, tip: '广告费用是当前最大压力项，即使毛利润为正，也可能影响实际投放后的利润。' },
+    { key: 'other', name: '其他费用', value: data.otherCost, tip: '其他费用是当前最大压力项，建议拆分确认是否包含包装、损耗或人工等成本。' }
+  ]
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value)[0] || null;
+}
+
 function getCostExplanation(data) {
   if (!data.sale) {
     return ['请先填写有效售价，再查看成本和结果解释。'];
@@ -250,16 +262,7 @@ function getCostExplanation(data) {
     '总成本主要由采购成本、物流费用、平台佣金、广告费用、税费、提现、退货、贴单费和其他费用组成。',
     '利润率 = 利润 / 售价，用来判断当前售价下的安全空间。'
   ];
-  const costItems = [
-    { name: '采购成本', value: data.purchaseCost, tip: '采购成本是当前最大压力项，建议优先确认供货价、起订量和是否有更稳的采购渠道。' },
-    { name: '物流费用', value: data.logisticsCost, tip: '物流费用是当前最大压力项，轻小件或更合适的物流渠道可能更适合测试。' },
-    { name: '平台佣金', value: data.commissionCost, tip: '平台佣金是当前最大压力项，需要确认类目佣金是否已经按实际平台规则填写。' },
-    { name: '广告费用', value: data.adCost, tip: '广告费用是当前最大压力项，即使毛利润为正，也可能影响实际投放后的利润。' },
-    { name: '其他费用', value: data.otherCost, tip: '其他费用是当前最大压力项，建议拆分确认是否包含包装、损耗或人工等成本。' }
-  ];
-  const highest = costItems
-    .filter(item => item.value > 0)
-    .sort((a, b) => b.value - a.value)[0];
+  const highest = getCostPressureItem(data);
 
   if (highest) {
     const ratio = data.totalCost ? highest.value / data.totalCost * 100 : 0;
@@ -279,6 +282,55 @@ function getCostExplanation(data) {
   return explanations;
 }
 
+function getNextAction(data) {
+  if (!data.sale) {
+    return {
+      type: 'waiting',
+      text: '请先填写有效数据，再查看下一步建议。'
+    };
+  }
+
+  const pressure = getCostPressureItem(data);
+
+  if (data.profit < 0) {
+    return {
+      type: 'risk',
+      text: pressure ? `当前测算为亏损，建议先检查${pressure.name}，不要直接放大投放。` : '当前测算为亏损，建议先检查售价和成本结构。'
+    };
+  }
+
+  if (data.profitRate < 10) {
+    return {
+      type: 'warning',
+      text: pressure ? `利润率偏低，建议先小量测试，并优先检查${pressure.name}。` : '利润率偏低，建议先小量测试，不要直接放大投放。'
+    };
+  }
+
+  if (pressure && pressure.key === 'purchase') {
+    return { type: 'warning', text: '优先检查采购成本，当前采购成本对利润压力较大。' };
+  }
+
+  if (pressure && pressure.key === 'logistics') {
+    return { type: 'warning', text: '当前物流费用偏高，建议优先测试更轻小的商品或更合适的渠道。' };
+  }
+
+  if (pressure && pressure.key === 'ad') {
+    return { type: 'warning', text: '当前广告费用压力较高，建议先控制预算并小量测试。' };
+  }
+
+  if (data.profitRate >= 25) {
+    return {
+      type: 'good',
+      text: '当前利润表现较好，但仍需结合退货率和广告实际消耗判断。'
+    };
+  }
+
+  return {
+    type: 'healthy',
+    text: '当前利润表现较稳，建议继续复核退货率、广告消耗和汇率波动。'
+  };
+}
+
 function renderCostExplanation(messages) {
   const list = document.getElementById('resultExplanationList');
   if (!list) return;
@@ -289,6 +341,15 @@ function renderCostExplanation(messages) {
     li.textContent = message;
     list.appendChild(li);
   });
+}
+
+function renderNextAction(action) {
+  const card = document.getElementById('nextActionCard');
+  if (!card) return;
+
+  card.classList.remove('next-action-waiting', 'next-action-risk', 'next-action-warning', 'next-action-healthy', 'next-action-good');
+  card.classList.add('next-action-' + action.type);
+  setText('nextActionText', action.text);
 }
 
 function renderInvalidInputState() {
@@ -324,6 +385,10 @@ function renderInvalidInputState() {
   });
   renderDiagnosisMessages([firstError, '修正后系统会重新生成运营诊断。']);
   renderCostExplanation([firstError, '修正后系统会重新解释成本结构和利润率。']);
+  renderNextAction({
+    type: 'waiting',
+    text: '请先修正输入错误，再查看下一步建议。'
+  });
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
@@ -447,6 +512,16 @@ function calc() {
   renderCostExplanation(getCostExplanation({
     sale,
     totalCost: costs.total,
+    profit: costs.profit,
+    profitRate: costs.profitRate,
+    purchaseCost: v('purchaseCost'),
+    logisticsCost: log,
+    commissionCost: costs.com,
+    adCost: costs.ad,
+    otherCost: v('otherCostInput')
+  }));
+  renderNextAction(getNextAction({
+    sale,
     profit: costs.profit,
     profitRate: costs.profitRate,
     purchaseCost: v('purchaseCost'),
