@@ -26,3 +26,19 @@
 - 修改内容：新增结果解释 / 成本解释区域；在 main.js 中增加规则化成本解释和最高成本压力识别；新增业务规则和手动测试文档。
 - 验收方式：输入有效数据后显示总成本构成、利润率含义和最高成本压力；无效输入时不显示误导解释；CSV 导出保持可用。
 - 已知风险：最高成本压力只基于当前已计算金额，不代表完整经营结论。
+
+## 2026-05-22 Documentation / AI 工具审计与未来自动化路线图
+
+- 修改目标：Added AI tool audit and future automation roadmap documentation.
+- 涉及文件：docs/CURRENT_AI_TOOL_AUDIT.md、docs/AI_AUTOMATION_ROADMAP.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：记录当前 AI/自动化相关文件现状；规划未来夜间自动化工作流；明确 Codex、Hermes/分析 Agent、用户的职责边界。
+- 验收方式：确认两个文档存在，且未修改产品功能、依赖、部署或自动化运行配置。
+- 已知风险：如果过早引入自动化运行时，会分散 Phase 2 MVP 注意力，并增加误改主分支、误部署或泄露密钥的风险。
+
+## 2026-05-22 Documentation / 手动夜间任务模板与 Runbook
+
+- 修改目标：Added manual night-work template and runbook for future Codex automation.
+- 涉及文件：docs/NIGHT_TASK_TEMPLATE.md、docs/NIGHT_RUNBOOK.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增夜间任务模板；新增当前手动夜间工作流程；明确睡前准备、夜间模拟、早晨 review、安全规则和未来自动化等级。
+- 验收方式：确认两个文档存在，且未修改产品功能、依赖、部署或真实自动化配置。
+- 已知风险：当前仅为文档准备，不能当作已经具备自动化能力。
