@@ -156,6 +156,26 @@ select:focus {
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--brand) 15%, transparent);
 }
 
+input.input-error {
+  border-color: #dc3545;
+  background: #fff6f6;
+}
+
+input.input-error:focus {
+  border-color: #dc3545;
+  box-shadow: 0 0 0 4px rgba(220, 53, 69, .14);
+}
+
+input.input-warning {
+  border-color: #f0ad4e;
+  background: #fffaf0;
+}
+
+input.input-warning:focus {
+  border-color: #f0ad4e;
+  box-shadow: 0 0 0 4px rgba(240, 173, 78, .16);
+}
+
 .big input {
   font-size: 28px;
   font-weight: 800;
@@ -296,6 +316,132 @@ select:focus {
   border-color: #ff6b6b;
   color: #b02a37;
   font-weight: 800;
+}
+
+.decision-card {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-left: 5px solid #8a8f98;
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  line-height: 1.6;
+}
+
+.decision-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.decision-label {
+  color: #6e6e73;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.decision-status {
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.decision-text {
+  color: #333;
+  font-size: 14px;
+}
+
+.decision-waiting {
+  border-left-color: #8a8f98;
+}
+
+.decision-waiting .decision-status {
+  background: #f1f3f5;
+  color: #565b61;
+}
+
+.decision-risk {
+  border-left-color: #dc3545;
+  background: #fff7f7;
+}
+
+.decision-risk .decision-status {
+  background: #ffe1e1;
+  color: #a61b2b;
+}
+
+.decision-low {
+  border-left-color: #f0ad4e;
+  background: #fffaf0;
+}
+
+.decision-low .decision-status {
+  background: #ffe8b8;
+  color: #7a4a00;
+}
+
+.decision-healthy {
+  border-left-color: #20a162;
+  background: #f5fbf7;
+}
+
+.decision-healthy .decision-status {
+  background: #dff4e8;
+  color: #1f6b43;
+}
+
+.decision-good {
+  border-left-color: var(--brand);
+  background: color-mix(in srgb, var(--brand) 6%, #fff);
+}
+
+.decision-good .decision-status {
+  background: color-mix(in srgb, var(--brand) 14%, #fff);
+  color: var(--brand);
+}
+
+.validation-notice {
+  border-radius: 16px;
+  padding: 12px 14px;
+  margin: -4px 0 16px;
+  line-height: 1.6;
+  font-size: 14px;
+  border: 1px solid rgba(0, 0, 0, .08);
+}
+
+.validation-notice.is-ok {
+  background: #f4fbf7;
+  border-color: #b9e4ca;
+  color: #23613a;
+}
+
+.validation-notice.has-warning {
+  background: #fff9ed;
+  border-color: #f0c36d;
+  color: #7a4a00;
+}
+
+.validation-notice.has-error {
+  background: #fff1f1;
+  border-color: #ff8a8a;
+  color: #9f2331;
+}
+
+.validation-notice strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.validation-notice ul {
+  padding-left: 18px;
+}
+
+.validation-notice li + li {
+  margin-top: 2px;
 }
 
 .throw-tip {

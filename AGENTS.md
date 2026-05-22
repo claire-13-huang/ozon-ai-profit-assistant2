@@ -123,6 +123,11 @@ Always explain:
 * how to test
 * possible risks
 
+Development log path:
+
+* Always read and update `docs/DEVELOPMENT_LOG.md`
+* Do not use the root `DEVELOPMENT_LOG.md` for new records
+
 ---
 
 ## Important Constraints

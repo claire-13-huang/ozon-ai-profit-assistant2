@@ -1,15 +1,232 @@
 // 负责读取页面输入、更新页面显示、绑定交互事件。
 let platform = 'Ozon';
 let lastSubsidyField = 'subsidySalePrice';
+let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
+
+const inputRules = {
+  salePrice: { label: '预设售价', required: true, min: 0.01, warnAbove: 100000 },
+  rubRate: { label: '人民币兑卢布汇率', required: true, min: 0.01, warnBelow: 5, warnAbove: 30 },
+  weight: { label: '毛重', required: true, min: 1, warnAbove: 30000 },
+  length: { label: '长', min: 0, warnAbove: 300 },
+  width: { label: '宽', min: 0, warnAbove: 300 },
+  height: { label: '高', min: 0, warnAbove: 300 },
+  purchaseCost: { label: '采购成本', min: 0, warnAbove: 100000 },
+  commissionRate: { label: '佣金率', min: 0, warnAbove: 100 },
+  adRate: { label: '广告率', min: 0, warnAbove: 100 },
+  taxRate: { label: '税率', min: 0, warnAbove: 100 },
+  withdrawRate: { label: '提现率', min: 0, warnAbove: 100 },
+  returnRate: { label: '退货率', min: 0, warnAbove: 100 },
+  labelFee: { label: '贴单费', min: 0, warnAbove: 10000 },
+  otherCostInput: { label: '其他费用', min: 0, warnAbove: 100000 },
+  subsidySalePrice: { label: '补贴后售价', min: 0 },
+  subsidyAmountInput: { label: '补贴金额', min: 0 },
+  subsidyRateInput: { label: '补贴率', min: 0, warnAbove: 100 }
+};
 
 function applyTheme() {
   document.body.classList.remove('theme-ozon', 'theme-wildberries', 'theme-yandex');
   document.body.classList.add(platform === 'Wildberries' ? 'theme-wildberries' : platform === 'Yandex' ? 'theme-yandex' : 'theme-ozon');
 }
 
+function readNumber(id) {
+  const el = document.getElementById(id);
+
+  if (!el) {
+    return { value: 0, empty: true, invalid: true };
+  }
+
+  const raw = el.value.trim();
+
+  if (raw === '') {
+    return { value: 0, empty: true, invalid: false };
+  }
+
+  const n = Number(raw);
+  return Number.isFinite(n) ? { value: n, empty: false, invalid: false } : { value: 0, empty: false, invalid: true };
+}
+
 function v(id) {
-  const n = parseFloat(document.getElementById(id).value);
-  return isNaN(n) ? 0 : n;
+  if (currentValidation.values && Object.prototype.hasOwnProperty.call(currentValidation.values, id)) {
+    return currentValidation.values[id];
+  }
+
+  const n = readNumber(id);
+  return n.invalid ? 0 : n.value;
+}
+
+function addIssue(list, ids, id, message) {
+  list.push(message);
+  if (!ids.includes(id)) ids.push(id);
+}
+
+function validateInputs() {
+  const validation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
+
+  Object.keys(inputRules).forEach(id => {
+    const rule = inputRules[id];
+    const parsed = readNumber(id);
+    validation.values[id] = parsed.value;
+
+    if (parsed.empty) {
+      if (rule.required) {
+        addIssue(validation.errors, validation.invalidIds, id, `请填写${rule.label}。`);
+      }
+      return;
+    }
+
+    if (parsed.invalid) {
+      validation.values[id] = 0;
+      addIssue(validation.errors, validation.invalidIds, id, `${rule.label}不是有效数字，请重新填写。`);
+      return;
+    }
+
+    if (rule.min !== undefined && parsed.value < rule.min) {
+      validation.values[id] = rule.min === 0.01 ? 0 : rule.min;
+      addIssue(validation.errors, validation.invalidIds, id, `${rule.label}不能小于 ${rule.min}。`);
+      return;
+    }
+
+    if (rule.warnBelow !== undefined && parsed.value > 0 && parsed.value < rule.warnBelow) {
+      addIssue(validation.warnings, validation.warningIds, id, `${rule.label}低于常见范围，请确认是否填错。`);
+    }
+
+    if (rule.warnAbove !== undefined && parsed.value > rule.warnAbove) {
+      addIssue(validation.warnings, validation.warningIds, id, `${rule.label}高于常见范围，请确认是否填错。`);
+    }
+  });
+
+  const hasSomeSize = ['length', 'width', 'height'].some(id => readNumber(id).value > 0);
+  const hasAllSize = ['length', 'width', 'height'].every(id => readNumber(id).value > 0);
+
+  if (hasSomeSize && !hasAllSize) {
+    ['length', 'width', 'height'].forEach(id => {
+      if (!readNumber(id).value && !validation.warningIds.includes(id)) validation.warningIds.push(id);
+    });
+    validation.warnings.push('长、宽、高没有填完整，体积重会暂按 0 计算。');
+  }
+
+  const sale = validation.values.salePrice;
+
+  if (sale > 0 && validation.values.purchaseCost > sale) {
+    addIssue(validation.warnings, validation.warningIds, 'purchaseCost', '采购成本已经高于售价，请确认是否仍要试算。');
+  }
+
+  if (sale > 0 && validation.values.subsidySalePrice > sale) {
+    addIssue(validation.warnings, validation.warningIds, 'subsidySalePrice', '补贴后售价高于原售价，系统会按原售价范围计算补贴。');
+  }
+
+  if (sale > 0 && validation.values.subsidyAmountInput > sale) {
+    addIssue(validation.warnings, validation.warningIds, 'subsidyAmountInput', '补贴金额高于原售价，系统会按不超过原售价处理。');
+  }
+
+  return validation;
+}
+
+function renderValidation(validation) {
+  Object.keys(inputRules).forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.remove('input-error', 'input-warning');
+  });
+
+  validation.warningIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('input-warning');
+  });
+
+  validation.invalidIds.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.classList.remove('input-warning');
+      el.classList.add('input-error');
+    }
+  });
+
+  const box = document.getElementById('inputValidationNotice');
+  if (!box) return;
+
+  box.classList.remove('is-ok', 'has-warning', 'has-error');
+  box.textContent = '';
+
+  if (!validation.errors.length && !validation.warnings.length) {
+    box.classList.add('is-ok');
+    box.textContent = '输入检查通过，结果会随修改自动更新。';
+    return;
+  }
+
+  box.classList.add(validation.errors.length ? 'has-error' : 'has-warning');
+
+  const title = document.createElement('strong');
+  title.textContent = validation.errors.length ? '请先检查这些明显错误：' : '输入提醒：';
+  box.appendChild(title);
+
+  const ul = document.createElement('ul');
+  validation.errors.concat(validation.warnings).slice(0, 6).forEach(message => {
+    const li = document.createElement('li');
+    li.textContent = message;
+    ul.appendChild(li);
+  });
+  box.appendChild(ul);
+}
+
+function logisticsValidationMessage() {
+  const blockingIds = ['salePrice', 'rubRate', 'weight'].filter(id => currentValidation.invalidIds.includes(id));
+
+  if (!blockingIds.length) {
+    return '';
+  }
+
+  return '请先修正：' + blockingIds.map(id => inputRules[id].label).join('、') + '，再匹配物流渠道。';
+}
+
+function getProfitDecision(sale, profit, profitRate) {
+  if (!sale) {
+    return {
+      type: 'waiting',
+      status: '等待输入',
+      text: '填写售价和成本后，这里会根据利润和利润率给出参考提示。'
+    };
+  }
+
+  if (profit < 0) {
+    return {
+      type: 'risk',
+      status: '亏损风险',
+      text: '当前测算为亏损，仅作参考。建议先检查售价、采购成本、物流费和广告费是否合理。'
+    };
+  }
+
+  if (profitRate < 10) {
+    return {
+      type: 'low',
+      status: '利润偏低',
+      text: '当前利润率偏低，仅作参考。可以重点复查采购价、物流渠道、佣金和广告成本。'
+    };
+  }
+
+  if (profitRate < 25) {
+    return {
+      type: 'healthy',
+      status: '利润健康',
+      text: '当前利润率处在较稳妥区间，仅作参考。后续仍建议结合退货、广告波动和平台规则复核。'
+    };
+  }
+
+  return {
+    type: 'good',
+    status: '利润较好',
+    text: '当前利润率较好，仅作参考。建议继续确认销量、竞争价格和成本是否稳定。'
+  };
+}
+
+function renderProfitDecision(decision) {
+  const card = document.getElementById('profitDecisionCard');
+  if (!card) return;
+
+  card.classList.remove('decision-waiting', 'decision-risk', 'decision-low', 'decision-healthy', 'decision-good');
+  card.classList.add('decision-' + decision.type);
+  setText('profitDecisionStatus', decision.status);
+  setText('profitDecisionText', decision.text);
 }
 
 function getLogisticsInput() {
@@ -40,6 +257,10 @@ function fillServices() {
 }
 
 function match() {
+  if (logisticsValidationMessage()) {
+    return null;
+  }
+
   return matchLogistics(getLogisticsInput());
 }
 
@@ -70,6 +291,9 @@ function setInput(id, value) {
 }
 
 function calc() {
+  currentValidation = validateInputs();
+  renderValidation(currentValidation);
+
   const sale = v('salePrice');
   const subsidy = syncSubsidy(sale);
   const rub = sale * v('rubRate');
@@ -106,6 +330,7 @@ function calc() {
   setText('otherCostDisplay', m(v('otherCostInput')));
   setText('returnRateDisplay', v('returnRate').toFixed(2) + '%');
   setText('otherRateDisplay', costs.otherRate.toFixed(2) + '%');
+  renderProfitDecision(getProfitDecision(sale, costs.profit, costs.profitRate));
 
   if (r) {
     setText('matchedChannel', r.c);
@@ -130,7 +355,7 @@ function calc() {
     setText('operationFeeDisplay', '¥0.00/票');
     setText('unitRateDisplay', '¥0.0000/g');
     document.getElementById('matchNotice').classList.add('danger');
-    document.getElementById('matchNotice').textContent = failReason(getLogisticsInput());
+    document.getElementById('matchNotice').textContent = logisticsValidationMessage() || failReason(getLogisticsInput());
     throwTip.style.display = 'none';
     throwTip.innerHTML = '';
   }

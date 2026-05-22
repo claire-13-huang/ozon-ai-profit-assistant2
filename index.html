@@ -20,7 +20,7 @@
       <div class="summary">
         <div class="big">
           <label>💰 预设售价（人民币）</label>
-          <input id="salePrice" type="number" step="0.01" placeholder="请输入预设售价">
+          <input id="salePrice" type="number" step="0.01" min="0.01" placeholder="请输入预设售价">
         </div>
 
         <div class="metrics">
@@ -38,6 +38,8 @@
           </div>
         </div>
 
+        <div class="validation-notice is-ok" id="inputValidationNotice">输入检查通过，结果会随修改自动更新。</div>
+
         <div class="title">🚚 物流与商品信息</div>
         <div class="grid">
           <div>
@@ -50,7 +52,7 @@
           </div>
           <div>
             <label>人民币兑卢布汇率</label>
-            <input id="rubRate" type="number" value="12.5" step="0.01">
+            <input id="rubRate" type="number" value="12.5" step="0.01" min="0">
           </div>
           <div>
             <label>售价折合卢布</label>
@@ -58,19 +60,19 @@
           </div>
           <div>
             <label>毛重（g）</label>
-            <input id="weight" type="number" step="1" placeholder="例如 500">
+            <input id="weight" type="number" step="1" min="1" placeholder="例如 500">
           </div>
           <div>
             <label>长（cm）</label>
-            <input id="length" type="number" step="0.1">
+            <input id="length" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>宽（cm）</label>
-            <input id="width" type="number" step="0.1">
+            <input id="width" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>高（cm）</label>
-            <input id="height" type="number" step="0.1">
+            <input id="height" type="number" step="0.1" min="0">
           </div>
         </div>
 
@@ -78,35 +80,35 @@
         <div class="grid">
           <div>
             <label>采购成本</label>
-            <input id="purchaseCost" type="number" step="0.01">
+            <input id="purchaseCost" type="number" step="0.01" min="0">
           </div>
           <div>
             <label>佣金率（%）</label>
-            <input id="commissionRate" type="number" step="0.1">
+            <input id="commissionRate" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>广告率（%）</label>
-            <input id="adRate" type="number" step="0.1">
+            <input id="adRate" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>税率（%）</label>
-            <input id="taxRate" type="number" step="0.1">
+            <input id="taxRate" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>提现率（%）</label>
-            <input id="withdrawRate" type="number" step="0.1">
+            <input id="withdrawRate" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>退货率（%）</label>
-            <input id="returnRate" type="number" step="0.1">
+            <input id="returnRate" type="number" step="0.1" min="0">
           </div>
           <div>
             <label>贴单费</label>
-            <input id="labelFee" type="number" step="0.01">
+            <input id="labelFee" type="number" step="0.01" min="0">
           </div>
           <div>
             <label>其他费用</label>
-            <input id="otherCostInput" type="number" step="0.01">
+            <input id="otherCostInput" type="number" step="0.01" min="0">
           </div>
         </div>
       </div>
@@ -165,6 +167,14 @@
             </div>
           </div>
 
+          <div class="decision-card decision-waiting" id="profitDecisionCard">
+            <div class="decision-head">
+              <span class="decision-label">利润辅助判断</span>
+              <span class="decision-status" id="profitDecisionStatus">等待输入</span>
+            </div>
+            <div class="decision-text" id="profitDecisionText">填写售价和成本后，这里会根据利润和利润率给出参考提示。</div>
+          </div>
+
           <div class="notice" id="matchNotice">等待输入商品信息后自动匹配渠道。</div>
 
           <div class="fee-metrics" style="margin-top:12px">
@@ -192,15 +202,15 @@
           <div class="subsidy-metrics">
             <div class="big">
               <label>补贴后售价（人民币）</label>
-              <input id="subsidySalePrice" type="number" step="0.01" placeholder="输入后自动算补贴">
+              <input id="subsidySalePrice" type="number" step="0.01" min="0" placeholder="输入后自动算补贴">
             </div>
             <div>
               <label>补贴金额（人民币）</label>
-              <input id="subsidyAmountInput" type="number" step="0.01" placeholder="也可以直接填金额">
+              <input id="subsidyAmountInput" type="number" step="0.01" min="0" placeholder="也可以直接填金额">
             </div>
             <div>
               <label>补贴率（%）</label>
-              <input id="subsidyRateInput" type="number" step="0.01" placeholder="也可以直接填比例">
+              <input id="subsidyRateInput" type="number" step="0.01" min="0" placeholder="也可以直接填比例">
             </div>
             <div class="metric">
               <div class="name">补贴金额</div>
