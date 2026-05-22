@@ -82,3 +82,11 @@
 - 修改内容：在 AGENTS.md 追加简洁的 Phase 3 Development Rules，明确当前重点、允许范围、禁止范围、执行规则和推荐首个任务。
 - 验收方式：确认仅修改文档；不修改产品功能、业务逻辑、依赖或部署配置。
 - 已知风险：Phase 3 仍需保持小步迭代，避免过早进入真实 AI/API、后端或自动化运行时。
+
+## 2026-05-23 Documentation / Phase 3 卖家场景示例
+
+- 修改目标：Created seller scenario examples for Phase 3.
+- 涉及文件：docs/SELLER_SCENARIOS.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 10 个面向 Ozon/Wildberries/Yandex 卖家的业务场景示例，说明输入值、工具预期展示、卖家解读、下一步动作和风险提醒。
+- 验收方式：确认仅新增/更新文档；不修改产品功能、业务逻辑、依赖或部署配置。
+- 已知风险：示例基于当前本地规则和 MVP 行为，后续如果物流规则或计算逻辑变化，需要同步复核示例。
