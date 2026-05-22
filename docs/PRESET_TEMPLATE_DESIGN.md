@@ -472,3 +472,34 @@ Before any future preset UI implementation:
 - Confirm the preset does not require changing logistics rules.
 - Confirm the result is treated as an example, not a recommendation.
 - Confirm manual test cases are updated when UI behavior is added.
+
+## 8. Current Implementation Status
+
+Implemented first preset:
+Healthy Profit Baseline.
+
+Current behavior:
+
+- The page has one preset selector and one apply button.
+- Applying the preset fills only existing fields and platform/supplier/service selections.
+- The implementation uses the existing UI service value `自动`, which corresponds to the design intent of `Auto`.
+- After applying the preset, the existing calculation, validation, diagnosis, cost explanation, localStorage, and CSV export behavior are expected to continue normally.
+- No other preset templates are implemented yet.
+
+Current preset values:
+
+- Platform: Ozon
+- Supplier: CEL
+- Logistics service: 自动
+- Selling price: 100 CNY
+- Exchange rate: 12.5
+- Weight: 500g
+- Dimensions: 10cm x 10cm x 10cm
+- Purchase cost: 50 CNY
+- Commission rate: 10%
+- Advertising rate: 5%
+- Tax rate: 0%
+- Withdrawal rate: 0%
+- Return rate: 0%
+- Label fee: 1 CNY
+- Other cost: 2 CNY

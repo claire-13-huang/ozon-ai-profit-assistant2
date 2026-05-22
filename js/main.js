@@ -549,6 +549,52 @@ function setInput(id, value) {
   if (el) el.value = value;
 }
 
+function applyPresetTemplate(templateId) {
+  if (typeof getPresetTemplate !== 'function') return;
+
+  const template = getPresetTemplate(templateId);
+  if (!template) return;
+
+  if (template.platform && rules.some(rule => rule.p === template.platform)) {
+    platform = template.platform;
+  }
+
+  applyTheme();
+  updateActivePlatformTab();
+  fillSuppliers();
+
+  const supplierEl = document.getElementById('supplier');
+  if (template.supplier && optionExists(supplierEl, template.supplier)) {
+    supplierEl.value = template.supplier;
+    fillServices();
+  }
+
+  const serviceEl = document.getElementById('service');
+  if (template.service && optionExists(serviceEl, template.service)) {
+    serviceEl.value = template.service;
+  }
+
+  Object.keys(template.fields).forEach(id => {
+    setInput(id, template.fields[id]);
+  });
+
+  lastSubsidyField = 'subsidySalePrice';
+  persistFormState();
+  calc();
+  setText('presetApplyStatus', `已应用预设：${template.name}。`);
+}
+
+function bindPresetControls() {
+  const select = document.getElementById('presetTemplateSelect');
+  const button = document.getElementById('applyPresetButton');
+
+  if (!select || !button) return;
+
+  button.addEventListener('click', () => {
+    applyPresetTemplate(select.value);
+  });
+}
+
 function calc() {
   currentValidation = validateInputs();
   renderValidation(currentValidation);
@@ -686,6 +732,7 @@ document.querySelectorAll('input,select').forEach(e => {
   });
 });
 
+bindPresetControls();
 applyTheme();
 updateActivePlatformTab();
 fillSuppliers();

@@ -40,6 +40,21 @@
 
         <div class="validation-notice is-ok" id="inputValidationNotice">输入检查通过，结果会随修改自动更新。</div>
 
+        <div class="preset-panel">
+          <div class="preset-title">常用预设</div>
+          <div class="preset-controls">
+            <div>
+              <label>预设模板</label>
+              <select id="presetTemplateSelect">
+                <option value="healthyProfitBaseline">Healthy Profit Baseline（健康利润基线）</option>
+              </select>
+            </div>
+            <button class="preset-apply-button" id="applyPresetButton" type="button">应用预设</button>
+          </div>
+          <div class="preset-note">预设值仅用于测试和学习，不代表真实平台实时数据或利润保证。</div>
+          <div class="preset-status" id="presetApplyStatus"></div>
+        </div>
+
         <div class="title">🚚 物流与商品信息</div>
         <div class="grid">
           <div>
@@ -278,6 +293,7 @@
   <script src="js/data-rules.js"></script>
   <script src="js/calculations.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/presets.js"></script>
   <script src="js/export.js"></script>
   <script src="js/main.js"></script>
 </body>

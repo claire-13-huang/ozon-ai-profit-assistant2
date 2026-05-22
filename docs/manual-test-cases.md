@@ -101,3 +101,33 @@
 7. localStorage unavailable should not break the app if detectable
    - Input: test in private/restricted storage mode if available.
    - Expected: app still calculates normally; values may simply not persist.
+
+## Healthy Profit Baseline Preset
+
+1. Apply Healthy Profit Baseline preset
+   - Input: click the preset apply button for `Healthy Profit Baseline`.
+   - Expected: platform switches to Ozon, supplier is CEL, service is automatic, and the preset status confirms the template was applied.
+
+2. Confirm input fields are filled
+   - Input: inspect the form after applying the preset.
+   - Expected: sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 50, commission 10%, advertising 5%, tax 0%, withdrawal 0%, return 0%, label fee 1, and other cost 2 are filled.
+
+3. Confirm profit calculation updates
+   - Input: apply the preset and review the result area.
+   - Expected: total cost, profit, profit margin, logistics match, diagnosis, next action, and cost explanation update through the normal calculation flow.
+
+4. Refresh page and confirm localStorage restores preset values
+   - Input: apply the preset, refresh the page.
+   - Expected: platform, supplier, service, and preset-filled inputs restore; calculation runs again after restore.
+
+5. Modify one preset-filled value and confirm calculation updates
+   - Input: after applying the preset, change purchase cost or advertising rate.
+   - Expected: total cost, profit, profit margin, diagnosis, next action, and cost explanation update automatically.
+
+6. Enter invalid value after applying preset and confirm validation still works
+   - Input: after applying the preset, set exchange rate to 0 or purchase cost to -1.
+   - Expected: validation shows an error, misleading profit output is blocked, and normal calculation returns after fixing the value.
+
+7. CSV export after applying preset
+   - Input: apply the preset, confirm valid calculation, then click CSV export.
+   - Expected: CSV still downloads with the current calculated result.

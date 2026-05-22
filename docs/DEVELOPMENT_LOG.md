@@ -98,3 +98,11 @@
 - 修改内容：将卖家场景转换为未来可实现的轻量预设模板设计，明确模板目的、建议输入、预期信号、实现边界、风险等级和首个推荐实现模板。
 - 验收方式：确认仅新增/更新文档；不修改产品功能、业务逻辑、依赖、AGENTS.md 或部署配置。
 - 已知风险：预设模板后续进入 UI 前仍需逐个手动验证，避免让示例值被误解为真实平台政策或保证利润。
+
+## 2026-05-23 Phase 3 / Healthy Profit Baseline 预设模板
+
+- 修改目标：实现第一个安全预设模板 Healthy Profit Baseline。
+- 涉及文件：index.html、css/style.css、js/presets.js、js/main.js、docs/business-rules.md、docs/manual-test-cases.md、docs/PRESET_TEMPLATE_DESIGN.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增一个轻量预设选择/应用区域；新增单一预设数据文件；应用预设时只填充现有字段并复用现有计算、校验、诊断、成本解释和 localStorage 保存流程；补充业务规则和手动测试用例。
+- 验收方式：应用预设后确认字段填充、计算更新、校验仍生效、诊断和成本解释更新、刷新后 localStorage 恢复、CSV 导出仍可用；运行 `node --check` 检查 JS 文件。
+- 已知风险：当前只实现一个预设，后续新增预设前仍需逐个评估风险，避免示例值被误解为真实平台实时数据或利润保证。

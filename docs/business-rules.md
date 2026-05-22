@@ -47,3 +47,12 @@
 - If `localStorage` is unavailable or blocked, fail silently and keep the calculator usable.
 - No sensitive secrets or API keys should be entered or saved in this MVP.
 - There is currently no reset/clear button, so no visible clear behavior is added in this milestone.
+
+## Preset Template Rules
+
+- Phase 3 currently implements only one preset: Healthy Profit Baseline.
+- The preset only fills existing input fields and existing platform/supplier/service selections.
+- The preset does not change formulas, logistics rules, validation rules, diagnosis rules, or CSV export rules.
+- After applying the preset, the normal calculation, validation, diagnosis, cost explanation, and localStorage save flow should run.
+- Preset values are examples for testing and learning only. They do not represent real-time platform data or guaranteed profit.
+- Users can edit any preset-filled field after applying the preset; edited values should recalculate and save normally.

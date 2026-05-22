@@ -527,6 +527,61 @@ input.input-warning:focus {
   margin-top: 2px;
 }
 
+.preset-panel {
+  background: rgba(255, 255, 255, .78);
+  border: 1px solid rgba(0, 0, 0, .06);
+  border-radius: 20px;
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, .05);
+}
+
+.preset-title {
+  color: var(--brand);
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 10px;
+}
+
+.preset-controls {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.preset-apply-button {
+  min-width: 112px;
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  background: var(--brand);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 900;
+  cursor: pointer;
+}
+
+.preset-apply-button:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}
+
+.preset-note {
+  color: #6e6e73;
+  font-size: 13px;
+  line-height: 1.6;
+  margin-top: 10px;
+}
+
+.preset-status {
+  color: #23613a;
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+  margin-top: 8px;
+}
+
 .throw-tip {
   display: none;
   background: #ffe8e8;
@@ -576,7 +631,8 @@ input.input-warning:focus {
   .grid,
   .cards,
   .fee-metrics,
-  .subsidy-metrics {
+  .subsidy-metrics,
+  .preset-controls {
     grid-template-columns: 1fr;
   }
 
