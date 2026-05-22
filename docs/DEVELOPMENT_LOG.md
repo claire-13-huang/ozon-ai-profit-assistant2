@@ -74,3 +74,11 @@
 - 修改内容：评审 Phase 3 路线图，区分可接受、应延后和当前拒绝的方向；明确推荐首个 Phase 3 任务；草拟未来可追加到 AGENTS.md 的 Phase 3 段落。
 - 验收方式：确认评审摘要存在；不修改产品功能、业务逻辑、部署配置或 AGENTS.md。
 - 已知风险：评审摘要仅用于决策，不代表 Phase 3 已开始执行。
+
+## 2026-05-23 Documentation / Phase 3 AGENTS.md 规则确认
+
+- 修改目标：Updated AGENTS.md with confirmed Phase 3 development rules.
+- 涉及文件：AGENTS.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：在 AGENTS.md 追加简洁的 Phase 3 Development Rules，明确当前重点、允许范围、禁止范围、执行规则和推荐首个任务。
+- 验收方式：确认仅修改文档；不修改产品功能、业务逻辑、依赖或部署配置。
+- 已知风险：Phase 3 仍需保持小步迭代，避免过早进入真实 AI/API、后端或自动化运行时。

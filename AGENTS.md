@@ -360,3 +360,50 @@ A Phase 2 task is complete only when:
 - change is small enough to commit safely
 
 After each completed milestone, commit the change with a clear Git message.
+
+---
+
+## Phase 3 Development Rules
+
+Current focus:
+Phase 3 is productization polish and seller workflow improvement for Ozon/Wildberries/Yandex sellers.
+
+The goal is to make the existing profit decision assistant easier to understand, reuse, compare, and verify in daily seller work.
+Phase 3 is not real AI/API/backend development.
+
+Allowed in Phase 3:
+
+- seller scenario examples
+- simple preset calculation templates
+- manual exchange rate explanation
+- simple channel comparison only if it is safe and clearly documented
+- documentation improvements
+- manual testing and reporting improvements
+- UI copy polish
+- logistics rule source notes
+
+Do NOT build in Phase 3:
+
+- real AI API integration
+- OpenAI API calls
+- backend
+- database
+- login or user accounts
+- crawler or automatic product link scraping
+- ERP features
+- inventory or order management
+- React/Vue/TypeScript migration
+- n8n/Dify/Hermes runtime integration
+- true multi-agent automation
+
+Execution rules:
+
+- Keep each milestone small, readable, independently testable, and reversible.
+- Start with documentation-first tasks when possible.
+- Do not change formulas, logistics behavior, or business logic unless the milestone explicitly requires it.
+- Update `docs/DEVELOPMENT_LOG.md` after each completed task.
+- Update business rules or manual test cases when behavior or seller guidance changes.
+- Report changed files and manual verification steps after each task.
+
+Recommended first Phase 3 task:
+Add seller scenario examples documentation before building interactive preset templates.
