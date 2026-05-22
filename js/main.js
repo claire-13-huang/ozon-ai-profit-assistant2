@@ -241,6 +241,56 @@ function renderDiagnosisMessages(messages) {
   });
 }
 
+function getCostExplanation(data) {
+  if (!data.sale) {
+    return ['请先填写有效售价，再查看成本和结果解释。'];
+  }
+
+  const explanations = [
+    '总成本主要由采购成本、物流费用、平台佣金、广告费用、税费、提现、退货、贴单费和其他费用组成。',
+    '利润率 = 利润 / 售价，用来判断当前售价下的安全空间。'
+  ];
+  const costItems = [
+    { name: '采购成本', value: data.purchaseCost, tip: '采购成本是当前最大压力项，建议优先确认供货价、起订量和是否有更稳的采购渠道。' },
+    { name: '物流费用', value: data.logisticsCost, tip: '物流费用是当前最大压力项，轻小件或更合适的物流渠道可能更适合测试。' },
+    { name: '平台佣金', value: data.commissionCost, tip: '平台佣金是当前最大压力项，需要确认类目佣金是否已经按实际平台规则填写。' },
+    { name: '广告费用', value: data.adCost, tip: '广告费用是当前最大压力项，即使毛利润为正，也可能影响实际投放后的利润。' },
+    { name: '其他费用', value: data.otherCost, tip: '其他费用是当前最大压力项，建议拆分确认是否包含包装、损耗或人工等成本。' }
+  ];
+  const highest = costItems
+    .filter(item => item.value > 0)
+    .sort((a, b) => b.value - a.value)[0];
+
+  if (highest) {
+    const ratio = data.totalCost ? highest.value / data.totalCost * 100 : 0;
+    explanations.push(`${highest.name}占总成本约 ${ratio.toFixed(1)}%，${highest.tip}`);
+  } else {
+    explanations.push('当前还没有明显的单项成本压力，请补充采购、物流、佣金或广告等成本后再判断。');
+  }
+
+  if (data.profit < 0) {
+    explanations.push('当前利润为负，建议先降低关键成本或提高售价，再继续评估是否适合测试。');
+  } else if (data.profitRate < 10) {
+    explanations.push('当前利润率偏低，后续退货、广告波动或汇率变化都可能压缩利润。');
+  } else {
+    explanations.push('当前利润为正，但仍需要结合退货率、广告消耗和汇率波动继续判断。');
+  }
+
+  return explanations;
+}
+
+function renderCostExplanation(messages) {
+  const list = document.getElementById('resultExplanationList');
+  if (!list) return;
+
+  list.textContent = '';
+  messages.forEach(message => {
+    const li = document.createElement('li');
+    li.textContent = message;
+    list.appendChild(li);
+  });
+}
+
 function renderInvalidInputState() {
   setInput('rubPrice', '请先修正输入');
   setText('totalCost', '待校验');
@@ -271,6 +321,7 @@ function renderInvalidInputState() {
     text: '当前有明显输入错误，暂不生成利润判断，避免误导。'
   });
   renderDiagnosisMessages(['请先修正输入错误，再查看运营诊断。']);
+  renderCostExplanation(['请先修正输入错误，再查看成本和结果解释。']);
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
@@ -391,6 +442,17 @@ function calc() {
   setText('returnRateDisplay', v('returnRate').toFixed(2) + '%');
   setText('otherRateDisplay', costs.otherRate.toFixed(2) + '%');
   renderProfitDecision(getProfitDecision(sale, costs.profit, costs.profitRate));
+  renderCostExplanation(getCostExplanation({
+    sale,
+    totalCost: costs.total,
+    profit: costs.profit,
+    profitRate: costs.profitRate,
+    purchaseCost: v('purchaseCost'),
+    logisticsCost: log,
+    commissionCost: costs.com,
+    adCost: costs.ad,
+    otherCost: v('otherCostInput')
+  }));
 
   if (r) {
     setText('matchedChannel', r.c);

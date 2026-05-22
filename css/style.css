@@ -404,6 +404,42 @@ input.input-warning:focus {
   color: var(--brand);
 }
 
+.explanation-panel,
+.diagnosis-panel {
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, .08);
+  border-radius: 16px;
+  padding: 14px 16px;
+  margin-top: 16px;
+  line-height: 1.7;
+}
+
+.explanation-title,
+.diagnosis-title {
+  color: var(--brand);
+  font-size: 15px;
+  font-weight: 900;
+  margin-bottom: 8px;
+}
+
+.explanation-list,
+.diagnosis-list {
+  padding-left: 18px;
+  color: #333;
+  font-size: 14px;
+}
+
+.explanation-list li + li,
+.diagnosis-list li + li {
+  margin-top: 4px;
+}
+
+.diagnosis-note {
+  color: #6e6e73;
+  font-size: 12px;
+  margin-top: 10px;
+}
+
 .validation-notice {
   border-radius: 16px;
   padding: 12px 14px;
