@@ -229,6 +229,61 @@ function renderProfitDecision(decision) {
   setText('profitDecisionText', decision.text);
 }
 
+function renderDiagnosisMessages(messages) {
+  const list = document.getElementById('businessDiagnosisList');
+  if (!list) return;
+
+  list.textContent = '';
+  messages.forEach(message => {
+    const li = document.createElement('li');
+    li.textContent = message;
+    list.appendChild(li);
+  });
+}
+
+function renderInvalidInputState() {
+  setInput('rubPrice', '请先修正输入');
+  setText('totalCost', '待校验');
+  setText('profit', '待校验');
+  setText('profitRate', '待校验');
+  setText('subsidyAmountDisplay', '待校验');
+  setText('subsidyRateDisplay', '待校验');
+  setText('actualSaleDisplay', '待校验');
+  setText('matchedChannel', '未匹配');
+  setText('chargeWeight', '待校验');
+  setText('volumeWeightDisplay', '待校验');
+  setText('logisticsCost', '待校验');
+  setText('purchaseCostDisplay', '待校验');
+  setText('commissionCost', '待校验');
+  setText('adCost', '待校验');
+  setText('taxCost', '待校验');
+  setText('withdrawCost', '待校验');
+  setText('returnCostDisplay', '待校验');
+  setText('labelFeeDisplay', '待校验');
+  setText('otherCostDisplay', '待校验');
+  setText('operationFeeDisplay', '待校验');
+  setText('unitRateDisplay', '待校验');
+  setText('returnRateDisplay', '待校验');
+  setText('otherRateDisplay', '待校验');
+  renderProfitDecision({
+    type: 'waiting',
+    status: '请先修正输入',
+    text: '当前有明显输入错误，暂不生成利润判断，避免误导。'
+  });
+  renderDiagnosisMessages(['请先修正输入错误，再查看运营诊断。']);
+
+  const notice = document.getElementById('matchNotice');
+  if (notice) {
+    notice.classList.add('danger');
+    notice.textContent = '请先修正必填项或负数输入，再匹配物流渠道。';
+  }
+
+  if (typeof throwTip !== 'undefined') {
+    throwTip.style.display = 'none';
+    throwTip.innerHTML = '';
+  }
+}
+
 function getLogisticsInput() {
   return {
     platform,
@@ -293,6 +348,11 @@ function setInput(id, value) {
 function calc() {
   currentValidation = validateInputs();
   renderValidation(currentValidation);
+
+  if (currentValidation.errors.length) {
+    renderInvalidInputState();
+    return;
+  }
 
   const sale = v('salePrice');
   const subsidy = syncSubsidy(sale);
