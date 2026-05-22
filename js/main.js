@@ -285,23 +285,31 @@ function getProfitDecision(sale, profit, profitRate) {
   if (profitRate < 10) {
     return {
       type: 'low',
-      status: '利润偏低',
-      text: '当前利润率偏低，仅作参考。可以重点复查采购价、物流渠道、佣金和广告成本。'
+      status: '利润很低',
+      text: '当前利润率很低，仅作参考。退货、广告波动、物流误差或汇率变化都可能让利润消失，建议先复查关键成本。'
     };
   }
 
-  if (profitRate < 25) {
+  if (profitRate < 20) {
+    return {
+      type: 'low',
+      status: '勉强可测',
+      text: '当前利润率只是勉强可测，不适合直接放量。建议小量测试，并优先确认采购、物流、广告和退货假设。'
+    };
+  }
+
+  if (profitRate < 30) {
     return {
       type: 'healthy',
-      status: '利润健康',
-      text: '当前利润率处在较稳妥区间，仅作参考。后续仍建议结合退货、广告波动和平台规则复核。'
+      status: '可测试利润',
+      text: '当前利润率有一定安全空间，但仍只适合谨慎测试。后续需要结合退货、广告波动、汇率和平台规则复核。'
     };
   }
 
   return {
     type: 'good',
-    status: '利润较好',
-    text: '当前利润率较好，仅作参考。建议继续确认销量、竞争价格和成本是否稳定。'
+    status: '利润较强',
+    text: '当前利润率较强，仅作参考。仍需确认销量、竞争价格、退货率和广告成本是否稳定，不代表利润保证。'
   };
 }
 
@@ -360,9 +368,13 @@ function getCostExplanation(data) {
   if (data.profit < 0) {
     explanations.push('当前利润为负，建议先降低关键成本或提高售价，再继续评估是否适合测试。');
   } else if (data.profitRate < 10) {
-    explanations.push('当前利润率偏低，后续退货、广告波动或汇率变化都可能压缩利润。');
+    explanations.push('当前利润率很低，后续退货、广告波动、物流误差或汇率变化都可能让利润消失。');
+  } else if (data.profitRate < 20) {
+    explanations.push('当前利润率只是勉强可测，安全空间不高，建议先小量测试并复核关键成本。');
+  } else if (data.profitRate < 30) {
+    explanations.push('当前利润为正且有一定空间，但仍需要结合退货率、广告消耗和汇率波动继续验证。');
   } else {
-    explanations.push('当前利润为正，但仍需要结合退货率、广告消耗和汇率波动继续判断。');
+    explanations.push('当前利润空间较强，但仍不代表最终经营结果，需要继续验证销量、退货和广告稳定性。');
   }
 
   return explanations;
@@ -388,7 +400,14 @@ function getNextAction(data) {
   if (data.profitRate < 10) {
     return {
       type: 'warning',
-      text: pressure ? `利润率偏低，建议先小量测试，并优先检查${pressure.name}。` : '利润率偏低，建议先小量测试，不要直接放大投放。'
+      text: pressure ? `利润率很低，建议先复查${pressure.name}，不要直接放大投放。` : '利润率很低，建议先复查成本结构，不要直接放大投放。'
+    };
+  }
+
+  if (data.profitRate < 20) {
+    return {
+      type: 'warning',
+      text: pressure ? `利润率只是勉强可测，建议只做小量验证，并优先检查${pressure.name}。` : '利润率只是勉强可测，建议只做小量验证。'
     };
   }
 
@@ -404,17 +423,44 @@ function getNextAction(data) {
     return { type: 'warning', text: '当前广告费用压力较高，建议先控制预算并小量测试。' };
   }
 
-  if (data.profitRate >= 25) {
+  if (data.profitRate >= 30) {
     return {
       type: 'good',
-      text: '当前利润表现较好，但仍需结合退货率和广告实际消耗判断。'
+      text: '当前利润空间较强，但仍需结合退货率、广告实际消耗和竞争价格判断。'
     };
   }
 
   return {
     type: 'healthy',
-    text: '当前利润表现较稳，建议继续复核退货率、广告消耗和汇率波动。'
+    text: '当前利润有一定空间，但仍建议小量测试，并复核退货率、广告消耗和汇率波动。'
   };
+}
+
+function getBusinessDiagnosis(data) {
+  if (!data.sale) {
+    return ['请先填写有效售价、重量和成本后再查看诊断。'];
+  }
+
+  const pressure = getCostPressureItem(data);
+  const messages = [];
+
+  if (data.profit < 0) {
+    messages.push('当前测算为亏损，不建议直接上架或放大投放。');
+  } else if (data.profitRate < 10) {
+    messages.push('当前利润率很低，退货、广告或汇率波动都可能让利润消失。');
+  } else if (data.profitRate < 20) {
+    messages.push('当前利润率只是勉强可测，适合小量验证，不适合直接放量。');
+  } else if (data.profitRate < 30) {
+    messages.push('当前利润有一定测试空间，但仍需要用真实广告、退货和物流数据复核。');
+  } else {
+    messages.push('当前利润空间较强，但仍不代表销量、退货和广告成本已经稳定。');
+  }
+
+  if (pressure) {
+    messages.push(`当前最大成本压力是${pressure.name}，建议优先复查这项假设。`);
+  }
+
+  return messages;
 }
 
 function renderCostExplanation(messages) {
@@ -653,6 +699,16 @@ function calc() {
     otherCost: v('otherCostInput')
   }));
   renderNextAction(getNextAction({
+    sale,
+    profit: costs.profit,
+    profitRate: costs.profitRate,
+    purchaseCost: v('purchaseCost'),
+    logisticsCost: log,
+    commissionCost: costs.com,
+    adCost: costs.ad,
+    otherCost: v('otherCostInput')
+  }));
+  renderDiagnosisMessages(getBusinessDiagnosis({
     sale,
     profit: costs.profit,
     profitRate: costs.profitRate,

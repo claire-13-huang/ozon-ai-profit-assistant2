@@ -217,10 +217,10 @@ Suggested input values:
 - Other cost: 2 CNY
 
 Expected tool signal:
-Profit should be positive if current logistics matching remains close to the current rule set. The tool should show a balanced decision signal and still identify the largest known pressure item.
+Profit should be positive if current logistics matching remains close to the current rule set. If the resulting margin is only around 10%-20%, the tool should present it as a learning baseline that is only barely testable, not as a strong or guaranteed result.
 
 What the seller should learn:
-A healthy baseline is a starting point for learning the calculator. Sellers should adjust one field at a time to see how cost pressure changes.
+A baseline preset is a starting point for learning the calculator. Sellers should adjust one field at a time to see how cost pressure changes, and should not treat moderate margin as enough for scaling.
 
 Risk reminder:
 Healthy profit is still not a guarantee. Return rate, ad cost, platform changes, and exchange rate can reduce margin.
@@ -482,8 +482,10 @@ Current behavior:
 
 - The page has one preset selector and one apply button.
 - Applying the preset fills only existing fields and platform/supplier/service selections.
+- Applying the preset replaces current input values.
 - The implementation uses the existing UI service value `自动`, which corresponds to the design intent of `Auto`.
 - After applying the preset, the existing calculation, validation, diagnosis, cost explanation, localStorage, and CSV export behavior are expected to continue normally.
+- If the resulting margin is only around 10%-20%, the decision wording should be conservative and should recommend small validation rather than calling the result healthy.
 - No other preset templates are implemented yet.
 
 Current preset values:

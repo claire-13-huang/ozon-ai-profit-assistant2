@@ -57,12 +57,12 @@
    - Expected: next action recommends controlling budget and small-scale testing.
 
 6. Healthy profit should show neutral-positive next action
-   - Input: adjust costs so profit margin is between 10% and 25%.
-   - Expected: next action suggests continuing to review return rate, ads, and exchange-rate changes.
+   - Input: adjust costs so profit margin is between 20% and 30%.
+   - Expected: next action says the result has some space but still needs small testing and review of return rate, ads, and exchange-rate changes.
 
 7. Good profit should show positive but still cautious next action
-   - Input: use valid input with profit margin above 25%.
-   - Expected: next action says profit looks good but still needs return and ad validation.
+   - Input: use valid input with profit margin above 30%.
+   - Expected: next action says profit space is stronger but still needs return, ad, and competition validation.
 
 8. Invalid input should not show confident next action
    - Input: clear selling price or set exchange rate to 0.
@@ -116,18 +116,26 @@
    - Input: apply the preset and review the result area.
    - Expected: total cost, profit, profit margin, logistics match, diagnosis, next action, and cost explanation update through the normal calculation flow.
 
-4. Refresh page and confirm localStorage restores preset values
+4. Confirm conservative wording for moderate margin
+   - Input: apply the preset and review the profit decision, next action, diagnosis, and cost explanation.
+   - Expected: because the current preset margin is around 10%-20%, the tool should describe it as only barely testable or requiring small validation, not as healthy or guaranteed; the diagnosis panel should no longer show the default placeholder.
+
+5. Confirm preset warning explains replacement behavior
+   - Input: read the preset note before applying the preset.
+   - Expected: the note says applying a preset replaces current input values and that preset values are only for learning/testing, not real-time data or profit guarantee.
+
+6. Refresh page and confirm localStorage restores preset values
    - Input: apply the preset, refresh the page.
    - Expected: platform, supplier, service, and preset-filled inputs restore; calculation runs again after restore.
 
-5. Modify one preset-filled value and confirm calculation updates
+7. Modify one preset-filled value and confirm calculation updates
    - Input: after applying the preset, change purchase cost or advertising rate.
    - Expected: total cost, profit, profit margin, diagnosis, next action, and cost explanation update automatically.
 
-6. Enter invalid value after applying preset and confirm validation still works
+8. Enter invalid value after applying preset and confirm validation still works
    - Input: after applying the preset, set exchange rate to 0 or purchase cost to -1.
    - Expected: validation shows an error, misleading profit output is blocked, and normal calculation returns after fixing the value.
 
-7. CSV export after applying preset
+9. CSV export after applying preset
    - Input: apply the preset, confirm valid calculation, then click CSV export.
    - Expected: CSV still downloads with the current calculated result.
