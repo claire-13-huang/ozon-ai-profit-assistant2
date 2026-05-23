@@ -181,3 +181,29 @@
 8. CSV export after using fetched reference rate
    - Input: fetch the reference rate, confirm valid calculation, then click CSV export.
    - Expected: CSV still downloads with the current calculated result.
+
+## Phase 3 Visual Polish And Exchange Rate UX
+
+1. Page visual hierarchy is calmer
+   - Input: open the page on desktop.
+   - Expected: the page uses a light gray background, white panels, thin borders, low shadow, and no large colorful gradient container; the title reads `利润决策助手`.
+
+2. Left input area remains readable
+   - Input: inspect selling price, preset, logistics/product info, and cost fields.
+   - Expected: inputs stay grouped on the left, labels are readable, and the user can still edit the same fields without layout overlap.
+
+3. Right result area remains decision-focused
+   - Input: enter valid calculation data or apply `Healthy Profit Baseline`.
+   - Expected: calculation result cards, decision card, next action, explanation, diagnosis, and logistics notice remain visible and update normally.
+
+4. Exchange rate control is easier to understand
+   - Input: inspect the exchange rate field.
+   - Expected: the exchange rate can still be manually edited; the reference-rate button is compact and labeled `今日参考`; the helper text explains that manual input is the default.
+
+5. Mobile layout does not overlap
+   - Input: open the page around 390px wide or use browser responsive mode.
+   - Expected: tabs, input fields, result cards, and the exchange-rate button stack cleanly with no clipped text or overlap.
+
+6. CSV export still works after visual changes
+   - Input: complete a valid calculation and click `导出为 CSV`.
+   - Expected: CSV export still downloads with current calculated values.

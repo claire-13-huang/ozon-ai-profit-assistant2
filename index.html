@@ -8,7 +8,13 @@
 </head>
 <body class="theme-ozon">
   <div class="container">
-    <h1>📦 多平台智能物流计算器</h1>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">Ozon / Wildberries / Yandex</p>
+        <h1>利润决策助手</h1>
+        <p class="page-subtitle">用售价、物流和成本结构快速判断商品是否值得小量测试。</p>
+      </div>
+    </header>
 
     <div class="tabs">
       <button class="tab active" data-platform="Ozon">Ozon</button>
@@ -19,7 +25,7 @@
     <div class="top">
       <div class="summary">
         <div class="big">
-          <label>💰 预设售价（人民币）</label>
+          <label>预设售价（人民币）</label>
           <input id="salePrice" type="number" step="0.01" min="0.01" placeholder="请输入预设售价">
         </div>
 
@@ -55,7 +61,7 @@
           <div class="preset-status" id="presetApplyStatus"></div>
         </div>
 
-        <div class="title">🚚 物流与商品信息</div>
+        <div class="title">物流与商品信息</div>
         <div class="grid">
           <div>
             <label>物流供应商</label>
@@ -69,9 +75,9 @@
             <label>人民币兑卢布汇率</label>
             <div class="rate-helper-row">
               <input id="rubRate" type="number" value="12.5" step="0.01" min="0">
-              <button class="rate-helper-button" id="fetchReferenceRateButton" type="button">获取当日参考汇率</button>
+              <button class="rate-helper-button" id="fetchReferenceRateButton" type="button">今日参考</button>
             </div>
-            <div class="rate-helper-status" id="referenceRateStatus">可手动填写；点击按钮获取当日参考汇率。</div>
+            <div class="rate-helper-status" id="referenceRateStatus">默认手动填写；需要时点“今日参考”。</div>
           </div>
           <div>
             <label>售价折合卢布</label>
@@ -95,7 +101,7 @@
           </div>
         </div>
 
-        <div class="title">🧾 成本明细填写</div>
+        <div class="title">成本明细填写</div>
         <div class="grid">
           <div>
             <label>采购成本</label>
@@ -134,7 +140,7 @@
 
       <div>
         <div class="fee-panel">
-          <div class="title">📦 计算结果明细</div>
+          <div class="title">计算结果明细</div>
           <div class="fee-metrics">
             <div class="metric">
               <div class="name">匹配渠道</div>
@@ -237,7 +243,7 @@
         </div>
 
         <div class="subsidy-panel">
-          <div class="title">🏷️ 补贴信息</div>
+          <div class="title">补贴信息</div>
           <div class="subsidy-metrics">
             <div class="big">
               <label>补贴后售价（人民币）</label>
@@ -267,7 +273,7 @@
         </div>
 
         <div class="section future-panel">
-          <div class="title">🤖 未来 API / AI 功能预留</div>
+          <div class="title">未来 API / AI 功能预留</div>
           <div class="grid">
             <div>
               <label>商品链接</label>
@@ -291,7 +297,7 @@
       </div>
     </div>
 
-    <button class="export" onclick="exportToCSV()">📥 导出为 CSV</button>
+    <button class="export" onclick="exportToCSV()">导出为 CSV</button>
   </div>
 
   <script src="js/data-rules.js"></script>
