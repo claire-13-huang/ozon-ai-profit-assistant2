@@ -179,12 +179,18 @@ h1 {
   border: 0;
   border-radius: 8px;
   padding: 10px 16px;
-  background: #d1d1d6;
-  color: #515154;
+  background: var(--brand);
+  color: #fff;
   font-size: 14px;
   font-weight: 800;
-  cursor: not-allowed;
+  cursor: pointer;
   white-space: nowrap;
+}
+
+.auto-analysis-button:disabled {
+  background: #d1d1d6;
+  color: #515154;
+  cursor: wait;
 }
 
 .auto-selection-note {
@@ -192,6 +198,100 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.analysis-status {
+  margin-bottom: 10px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted-strong);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.analysis-status.is-loading {
+  border-color: color-mix(in srgb, var(--brand) 28%, var(--line));
+  background: var(--soft);
+  color: var(--brand);
+}
+
+.analysis-status.is-error {
+  border-color: #ffd1d1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+.analysis-progress {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.analysis-progress span {
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.analysis-progress span.is-active {
+  border-color: color-mix(in srgb, var(--brand) 35%, var(--line));
+  background: var(--soft);
+  color: var(--brand);
+}
+
+.analysis-progress span.is-done {
+  border-color: #ccebd9;
+  background: #f5fbf7;
+  color: #1f6b43;
+}
+
+.analysis-insight-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.analysis-insight-grid > div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .75);
+}
+
+.analysis-insight-grid span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.analysis-insight-grid p {
+  color: var(--muted-strong);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.demo-analysis-button {
+  min-height: 38px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .manual-fallback-panel {
@@ -810,6 +910,8 @@ input.input-warning:focus {
 
   .top,
   .auto-selection-entry,
+  .analysis-progress,
+  .analysis-insight-grid,
   .summary .grid,
   .future-panel .grid,
   .future-panel .product-selection-grid,

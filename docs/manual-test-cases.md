@@ -249,3 +249,29 @@
 10. Existing features still work
     - Input: after using product selection fields, apply preset, change exchange rate, and export CSV.
     - Expected: preset, exchange rate helper, profit calculation, diagnosis, cost explanation, and CSV export remain usable.
+
+## Phase 4A Ozon AI Product Recognition
+
+1. Empty source URL should not start analysis
+   - Input: leave source product URL empty and click `开始智能分析`.
+   - Expected: status shows that a source product link is required; existing profit calculation remains unchanged.
+
+2. Invalid source URL should show a clear error
+   - Input: enter `abc` and click `开始智能分析`.
+   - Expected: status says the link format is invalid; no confident product report is generated.
+
+3. Worker not configured should still show a result state
+   - Input: enter a valid `https://example.com/product` URL and click `开始智能分析` while `PRODUCT_SELECTION_API_BASE_URL` is not configured.
+   - Expected: report shows `API 服务未连接`, explains that Cloudflare Worker is required, and displays current profit judgment if calculator inputs are valid.
+
+4. Demo report should render without backend
+   - Input: click `查看示例报告`.
+   - Expected: product recognition, keywords, Ozon API status, report summary, and next actions are visible.
+
+5. Low profit should warn against advertising
+   - Input: create a calculation where profit margin is below 10%, then load demo report or analyze a URL.
+   - Expected: report status is risk-oriented and warns against direct advertising tests.
+
+6. Existing workflows should remain usable
+   - Input: after using the Ozon AI product section, change price, exchange rate, preset, and export CSV.
+   - Expected: original calculator, exchange rate helper, preset, localStorage, diagnosis, and CSV export still work.

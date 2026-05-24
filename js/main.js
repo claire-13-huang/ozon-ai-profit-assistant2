@@ -2,6 +2,8 @@
 let platform = 'Ozon';
 let lastSubsidyField = 'subsidySalePrice';
 let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
+let lastProfitSnapshot = null;
+let lastOzonAutoAnalysis = null;
 
 const savedFieldIds = [
   'salePrice',
@@ -520,6 +522,18 @@ function renderNextAction(action) {
 
 function renderInvalidInputState() {
   const firstError = currentValidation.errors[0] || '请先修正输入错误。';
+  lastProfitSnapshot = {
+    mainInputValid: false,
+    blockingMessage: firstError,
+    sale: 0,
+    saleRub: 0,
+    profit: 0,
+    profitRate: 0,
+    purchaseCost: 0,
+    logisticsCost: 0,
+    adCost: 0,
+    commissionCost: 0
+  };
 
   setInput('rubPrice', '请先修正输入');
   setText('totalCost', '待校验');
@@ -555,18 +569,7 @@ function renderInvalidInputState() {
     type: 'waiting',
     text: '请先修正输入错误，再查看下一步建议。'
   });
-  renderProductSelection({
-    mainInputValid: false,
-    blockingMessage: firstError,
-    sale: 0,
-    saleRub: 0,
-    profit: 0,
-    profitRate: 0,
-    purchaseCost: 0,
-    logisticsCost: 0,
-    adCost: 0,
-    commissionCost: 0
-  });
+  renderProductSelection(lastProfitSnapshot);
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
@@ -708,7 +711,129 @@ function renderProductSelectionReport(report) {
   });
 }
 
+function setAutoAnalysisStatus(message, type = '') {
+  const el = document.getElementById('autoAnalysisStatus');
+  if (!el) return;
+
+  el.classList.remove('is-loading', 'is-error');
+  if (type) el.classList.add(type);
+  el.textContent = message;
+}
+
+function setAutoAnalysisProgress(activeStep, doneSteps = []) {
+  document.querySelectorAll('#autoAnalysisProgress [data-step]').forEach(step => {
+    const name = step.dataset.step;
+    step.classList.toggle('is-active', name === activeStep);
+    step.classList.toggle('is-done', doneSteps.includes(name));
+  });
+}
+
+function renderOzonAnalysisDetails(analysis) {
+  const source = analysis && analysis.source ? analysis.source : {};
+  const insights = analysis && analysis.insights ? analysis.insights : {};
+  const ozon = analysis && analysis.ozon ? analysis.ozon : {};
+  const keywords = typeof formatList === 'function' ? formatList(insights.keywords, '等待提取') : '等待提取';
+  const tags = typeof formatList === 'function' ? formatList(insights.tags, '等待提取') : '等待提取';
+
+  setText('sourceProductInsight', `${source.title || '未识别标题'} · ${source.host || '未知来源'} · ${insights.category || '类目待复核'}`);
+  setText('sourceKeywordInsight', `关键词：${keywords}。标签：${tags}。`);
+  setText('ozonApiInsight', ozon.message || '等待 Ozon API 状态。');
+  setText('analysisLimitInsight', (analysis && analysis.limitations && analysis.limitations.length)
+    ? analysis.limitations.join('；')
+    : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
+  renderProductImagePreview(source.image || fieldValue('imageUrl'));
+}
+
+function renderOzonAutoAnalysis(analysis) {
+  if (!analysis) return;
+
+  lastOzonAutoAnalysis = analysis;
+  renderOzonAnalysisDetails(analysis);
+  renderProductSelectionReport(analysis.report);
+}
+
+function getAnalysisPayload() {
+  return {
+    sourceUrl: fieldValue('sourceProductUrl'),
+    activePlatform: platform,
+    profitSnapshot: lastProfitSnapshot,
+    assumptions: {
+      adShare: readOptionalNumber('selectionAdShare'),
+      adType: fieldValue('selectionAdType') || 'Ozon 搜索与推荐',
+      storeType: fieldValue('storeType'),
+      storeOrderRange: fieldValue('storeOrderRange'),
+      localPreference: fieldValue('localPreference')
+    }
+  };
+}
+
+async function runOzonAutoAnalysis() {
+  const sourceUrl = fieldValue('sourceProductUrl');
+  const button = document.getElementById('autoAnalysisButton');
+
+  if (!sourceUrl) {
+    setAutoAnalysisStatus('请先粘贴来源商品链接。', 'is-error');
+    setAutoAnalysisProgress('', []);
+    return;
+  }
+
+  try {
+    const parsed = new URL(sourceUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) {
+      throw new Error('只支持 http 或 https 链接。');
+    }
+  } catch (error) {
+    setAutoAnalysisStatus('商品链接格式不正确，请检查后再分析。', 'is-error');
+    setAutoAnalysisProgress('', []);
+    return;
+  }
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = '分析中...';
+  }
+
+  setAutoAnalysisStatus('正在读取链接并生成 Ozon 选品报告...', 'is-loading');
+  setAutoAnalysisProgress('link', []);
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 180));
+    setAutoAnalysisProgress('identify', ['link']);
+
+    const analysis = await requestOzonProductAnalysis(getAnalysisPayload());
+    setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
+    renderOzonAutoAnalysis(analysis);
+    setAutoAnalysisStatus(analysis.ok ? '分析完成。请根据报告复核利润、广告和 Ozon 数据状态。' : analysis.report.summary, analysis.ok ? '' : 'is-error');
+    setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
+    persistFormState();
+  } catch (error) {
+    const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot);
+    fallback.report.summary = error.message || fallback.report.summary;
+    renderOzonAutoAnalysis(fallback);
+    setAutoAnalysisStatus(error.message || 'API 服务异常，请稍后重试。', 'is-error');
+    setAutoAnalysisProgress('', ['link']);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = '开始智能分析';
+    }
+  }
+}
+
+function loadDemoOzonAnalysis() {
+  const demo = buildDemoOzonAnalysis(lastProfitSnapshot);
+  renderOzonAutoAnalysis(demo);
+  setAutoAnalysisStatus('已加载示例报告。真实数据需要部署 Worker 并配置 Ozon API 凭证。');
+  setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
+}
+
 function renderProductSelection(profitSnapshot) {
+  if (lastOzonAutoAnalysis && fieldValue('sourceProductUrl') === (lastOzonAutoAnalysis.source && lastOzonAutoAnalysis.source.url)) {
+    renderOzonAnalysisDetails(lastOzonAutoAnalysis);
+    renderProductSelectionReport(lastOzonAutoAnalysis.report);
+    return;
+  }
+
   renderProductImagePreview(fieldValue('imageUrl'));
 
   if (typeof analyzeProductSelection !== 'function') return;
@@ -824,6 +949,23 @@ function bindPresetControls() {
   });
 }
 
+function bindOzonAnalysisControls() {
+  const analyzeButton = document.getElementById('autoAnalysisButton');
+  const demoButton = document.getElementById('loadDemoAnalysisButton');
+
+  if (analyzeButton) {
+    analyzeButton.addEventListener('click', () => {
+      runOzonAutoAnalysis();
+    });
+  }
+
+  if (demoButton) {
+    demoButton.addEventListener('click', () => {
+      loadDemoOzonAnalysis();
+    });
+  }
+}
+
 function calc() {
   currentValidation = validateInputs();
   renderValidation(currentValidation);
@@ -901,7 +1043,7 @@ function calc() {
     adCost: costs.ad,
     otherCost: v('otherCostInput')
   }));
-  renderProductSelection({
+  lastProfitSnapshot = {
     mainInputValid: true,
     sale,
     saleRub: rub,
@@ -911,7 +1053,8 @@ function calc() {
     logisticsCost: log,
     adCost: costs.ad,
     commissionCost: costs.com
-  });
+  };
+  renderProductSelection(lastProfitSnapshot);
 
   if (r) {
     setText('matchedChannel', r.c);
@@ -973,6 +1116,12 @@ document.querySelectorAll('input,select').forEach(e => {
       setReferenceRateStatus('已手动修改 · 请自行确认汇率假设。');
     }
 
+    if (e.id === 'sourceProductUrl') {
+      lastOzonAutoAnalysis = null;
+      setAutoAnalysisStatus('链接已修改，请重新开始智能分析。');
+      setAutoAnalysisProgress('', []);
+    }
+
     persistFormState();
     calc();
   });
@@ -986,6 +1135,12 @@ document.querySelectorAll('input,select').forEach(e => {
       setReferenceRateStatus('已手动修改 · 请自行确认汇率假设。');
     }
 
+    if (e.id === 'sourceProductUrl') {
+      lastOzonAutoAnalysis = null;
+      setAutoAnalysisStatus('链接已修改，请重新开始智能分析。');
+      setAutoAnalysisProgress('', []);
+    }
+
     persistFormState();
     calc();
   });
@@ -993,6 +1148,7 @@ document.querySelectorAll('input,select').forEach(e => {
 
 bindExchangeRateHelper();
 bindPresetControls();
+bindOzonAnalysisControls();
 applyTheme();
 updateActivePlatformTab();
 fillSuppliers();

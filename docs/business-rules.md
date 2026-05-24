@@ -95,6 +95,20 @@
 - Required report inputs are source product link, target category, competitor count, competitor average price, estimated advertising share, store type, and valid profit calculation.
 - If required inputs are missing, show a waiting state and do not generate a confident conclusion.
 - Missing competitor/category data should be explained as waiting for future backend/API collection.
+
+## Phase 4A Ozon API Product Recognition Rules
+
+- The Ozon AI product selection assistant starts from one source product URL.
+- The first automatic version prioritizes Ozon only; Wildberries and Yandex remain future platform adapters.
+- The frontend must not call Ozon directly because Ozon credentials must not be exposed in browser JavaScript.
+- A Cloudflare Worker may read public source-page metadata and check Ozon API connection status.
+- If the Worker is not deployed, the page must show `API 服务未连接`.
+- If Ozon credentials are not configured, the page must show `等待 Ozon API 授权`.
+- If the source website blocks reading, the report should say that the source page cannot be automatically read.
+- The report may use the existing profit, profit rate, logistics cost, purchase cost, commission cost, and advertising cost.
+- If profit rate is below 10%, the report should warn against direct advertising tests.
+- If profit rate is between 10% and 20%, the report should recommend only small-budget cautious testing.
+- If official Ozon API data does not provide competitor count, average price, ratings, reviews, traffic, or sales, the report must label that limitation instead of generating fake data.
 - Available conclusions are `建议小量测试`, `谨慎测试`, `暂不建议`, and `等待数据`.
 - If profit is negative, show `暂不建议`.
 - If profit margin is below 10% and estimated advertising share is 30% or higher, show `暂不建议`.

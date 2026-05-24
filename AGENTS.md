@@ -407,3 +407,42 @@ Execution rules:
 
 Recommended first Phase 3 task:
 Add seller scenario examples documentation before building interactive preset templates.
+
+---
+
+## Phase 4A Development Rules
+
+Current focus:
+Phase 4A is the first controlled real API milestone for the Ozon AI product selection assistant.
+
+The goal is to make the product selection assistant feel intelligent by letting the seller paste one source product URL, then showing an automatic product recognition report and Ozon API connection status.
+
+Allowed in Phase 4A:
+
+- Cloudflare Worker backend as a lightweight API proxy
+- Ozon Seller API health check and gradual official API integration
+- source URL public metadata reading from the backend
+- rule-based product title/image/category/keyword extraction
+- AI-ready report structure
+- frontend loading, error, empty, and demo states
+- documentation for API setup and safety rules
+
+Do NOT do in Phase 4A:
+
+- store API keys in frontend files
+- commit real secrets to GitHub
+- ask the user to paste API keys into chat
+- scrape Ozon, Wildberries, or Yandex pages without compliance review
+- promise exact competitor count, average price, rating, or sales if the official API or data source does not provide it
+- rebuild the app with React, Vue, TypeScript, or a large framework
+- replace the existing profit formula
+- build ERP, inventory, orders, login, or database features
+
+Execution rules:
+
+- Keep the existing static frontend understandable for a beginner developer.
+- Keep Cloudflare Worker code small and isolated under `worker/`.
+- Frontend must call the Worker, not Ozon directly.
+- If the Worker is not deployed or credentials are missing, show a clear state instead of a blank result.
+- Update `docs/DEVELOPMENT_LOG.md` after each completed task.
+- Run `node --check` on modified frontend JavaScript and Worker JavaScript.

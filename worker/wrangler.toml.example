@@ -1,0 +1,8 @@
+name = "ozon-ai-profit-assistant"
+main = "index.js"
+compatibility_date = "2026-05-24"
+
+# Configure real values in the Cloudflare dashboard or with wrangler secret.
+# Do not commit real API keys.
+# OZON_CLIENT_ID = ""
+# OZON_API_KEY = ""

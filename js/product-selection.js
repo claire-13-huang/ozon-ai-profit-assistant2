@@ -6,6 +6,8 @@ const STORE_TYPE_TEXT = {
   mature: '成熟店'
 };
 
+const PRODUCT_SELECTION_API_BASE_URL = window.PRODUCT_SELECTION_API_BASE_URL || '';
+
 function isBlank(value) {
   return String(value || '').trim() === '';
 }
@@ -36,6 +38,193 @@ function buildWaitingSelectionReport(missing, blockingMessage) {
     storeText: '等待店铺类型和订单区间。',
     actions: ['后续需要新增后端采集服务，前端不能直接完成跨网站抓取。', '正式自动版应优先使用官方 API 或合规数据源，必要时再评估爬虫方案。']
   };
+}
+
+function uniqueList(items, maxItems = 8) {
+  return [...new Set((items || [])
+    .map(item => String(item || '').trim())
+    .filter(Boolean))].slice(0, maxItems);
+}
+
+function formatList(items, fallback) {
+  const clean = uniqueList(items);
+  return clean.length ? clean.join('、') : fallback;
+}
+
+function normalizeHost(url) {
+  try {
+    return new URL(url).hostname.replace(/^www\./, '');
+  } catch (error) {
+    return '未知来源';
+  }
+}
+
+function getProfitReportType(profitSnapshot) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) return 'waiting';
+  if (!Number.isFinite(profitSnapshot.profitRate)) return 'waiting';
+  if (profitSnapshot.profit < 0 || profitSnapshot.profitRate < 10) return 'risk';
+  if (profitSnapshot.profitRate < 20) return 'warning';
+  return 'test';
+}
+
+function buildProfitReportText(profitSnapshot) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    return '请先修正利润测算输入，再生成选品报告。';
+  }
+
+  if (!Number.isFinite(profitSnapshot.profitRate)) {
+    return '等待有效利润率。';
+  }
+
+  const base = `当前利润约 ¥${profitSnapshot.profit.toFixed(2)}，利润率约 ${percent(profitSnapshot.profitRate)}。`;
+
+  if (profitSnapshot.profit < 0 || profitSnapshot.profitRate < 10) {
+    return base + ' 利润空间过低，暂不建议直接开广告或放大库存。';
+  }
+
+  if (profitSnapshot.profitRate < 20) {
+    return base + ' 只能作为小预算谨慎测试，重点复核采购、物流和广告假设。';
+  }
+
+  return base + ' 利润具备测试空间，但还需要结合 Ozon 流量、转化和评价门槛复盘。';
+}
+
+function buildOzonAutoReport(analysis, profitSnapshot) {
+  const source = analysis.source || {};
+  const ozon = analysis.ozon || {};
+  const insights = analysis.insights || {};
+  const type = getProfitReportType(profitSnapshot);
+  const hasTitle = !isBlank(source.title);
+  const hasImage = !isBlank(source.image);
+  const hasCategory = !isBlank(insights.category);
+  const hasOzonData = ozon.status === 'connected';
+  const actions = [];
+
+  if (!hasTitle || !hasImage) {
+    actions.push('来源链接读取不完整，先人工复核商品主图、标题和规格。');
+  }
+
+  if (!hasCategory) {
+    actions.push('类目识别不完整，上架前需要人工确认 Ozon 目标类目。');
+  }
+
+  if (!hasOzonData) {
+    actions.push('先完成 Ozon API 凭证配置，再查看后台数据状态。');
+  }
+
+  if (profitSnapshot && profitSnapshot.profitRate < 10) {
+    actions.push('当前利润率低于 10%，不建议直接开广告测试。');
+  } else if (profitSnapshot && profitSnapshot.profitRate < 20) {
+    actions.push('只用小预算测试关键词，不要直接放量。');
+  } else {
+    actions.push('可以进入小量测试，但要记录广告消耗、点击、加购、订单和退货。');
+  }
+
+  if (uniqueList(insights.keywords).length) {
+    actions.push('用识别出的关键词先检查 Ozon 搜索结果和头部商品卡片质量。');
+  }
+
+  const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '数据不足' : '建议小量测试';
+  const sourceTitle = hasTitle ? source.title : '未识别标题';
+  const sourceHost = source.host || normalizeHost(source.url);
+  const summary = `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + sourceTitle + '”。' : '商品标题暂未完整识别。'} ${ozon.message || '等待 Ozon API 状态。'}`;
+
+  return {
+    type,
+    status,
+    summary,
+    priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。Phase 4A 暂不生成 Ozon 全平台竞品均价；若官方 API 或合规数据源可用，后续再补价格带。`,
+    profitText: buildProfitReportText(profitSnapshot),
+    competitionText: hasOzonData
+      ? 'Ozon API 已通过后端连接检查。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。'
+      : (ozon.message || 'Ozon API 尚未配置，不能读取后台数据。'),
+    adText: '广告判断沿用当前利润测算中的广告率；搜索与推荐广告应先小预算验证点击、加购和订单，不以低价作为唯一策略。',
+    storeText: `识别类目候选：${insights.category || '待人工复核'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
+    actions: uniqueList(actions, 5)
+  };
+}
+
+function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
+  return {
+    ok: false,
+    source: {
+      url: sourceUrl,
+      host: normalizeHost(sourceUrl),
+      title: '',
+      image: ''
+    },
+    insights: {
+      category: '',
+      keywords: [],
+      tags: [],
+      sellingPoints: [],
+      painPoints: []
+    },
+    ozon: {
+      status: 'api_not_connected',
+      message: 'API 服务未连接。请先部署 Cloudflare Worker，并在前端配置 PRODUCT_SELECTION_API_BASE_URL。'
+    },
+    report: {
+      type: getProfitReportType(profitSnapshot),
+      status: '数据不足',
+      summary: '已收到商品链接，但当前前端还没有连接 Cloudflare Worker 后端，所以不能自动读取商品页面或 Ozon API。',
+      priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。等待后端连接后再补充 Ozon 数据。`,
+      profitText: buildProfitReportText(profitSnapshot),
+      competitionText: 'Ozon API 未连接，不能生成真实竞品数量、均价、评分或评论判断。',
+      adText: '广告判断暂时只基于当前利润测算。真实投放前需要后端和 Ozon 数据联调。',
+      storeText: '商品类目、关键词和主题标签等待后端识别。',
+      actions: ['先部署 Cloudflare Worker 后端。', '在 Worker 环境变量配置 Ozon Client ID 和 API Key。', '部署后再用同一链接重新分析。']
+    }
+  };
+}
+
+function buildDemoOzonAnalysis(profitSnapshot) {
+  const analysis = {
+    ok: true,
+    source: {
+      url: 'https://example.com/product/demo',
+      host: 'example.com',
+      title: '示例商品：便携收纳包',
+      image: ''
+    },
+    insights: {
+      category: '家居 / 收纳',
+      keywords: ['收纳包', '旅行收纳', '便携整理', 'organizer'],
+      tags: ['轻小件', '可测款', '图片影响转化'],
+      sellingPoints: ['轻便', '多规格', '适合组合销售'],
+      painPoints: ['同质化强', '评价门槛明显', '广告成本需要控制']
+    },
+    ozon: {
+      status: 'missing_credentials',
+      message: '示例报告：Ozon API 凭证未配置时，真实后台数据会显示为等待授权。'
+    }
+  };
+
+  analysis.report = buildOzonAutoReport(analysis, profitSnapshot);
+  analysis.report.summary = '这是示例报告，用于确认页面结果形态。真实报告需要部署 Worker 并配置 Ozon API 凭证。';
+  return analysis;
+}
+
+async function requestOzonProductAnalysis(payload) {
+  if (!PRODUCT_SELECTION_API_BASE_URL) {
+    return buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
+  }
+
+  const response = await fetch(PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/analyze-product', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  if (!response.ok) {
+    throw new Error('API 服务返回异常：' + response.status);
+  }
+
+  const analysis = await response.json();
+  if (!analysis.report) {
+    analysis.report = buildOzonAutoReport(analysis, payload.profitSnapshot);
+  }
+  return analysis;
 }
 
 function analyzeProductSelection(input) {

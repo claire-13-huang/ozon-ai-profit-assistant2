@@ -273,20 +273,49 @@
         </div>
 
         <div class="section future-panel">
-          <div class="title">选品预判助手</div>
-          <p class="panel-intro">目标体验是：粘贴全球任意网站的一条商品链接后，系统自动识别商品图片、类目、卖点和痛点，再到 Ozon / Wildberries / Yandex 查找相似产品，汇总数量、均价、评分评价、关键词和主题标签，最后结合当前利润测算生成报告。当前静态版只做入口和回填结构预留，不会假装已经能自动抓取。</p>
+          <div class="title">Ozon AI 选品识别报告</div>
+          <p class="panel-intro">第一版先跑通 Ozon：粘贴任意来源商品链接后，系统读取公开商品信息，识别图片、标题、类目候选、关键词和主题标签，再结合当前利润测算与 Ozon API 连接状态生成选品报告。Ozon API 密钥只放在后端环境变量里，不会写进前端或 GitHub。</p>
 
           <div class="auto-selection-entry">
             <div>
               <label>来源商品链接（全球任意网站）</label>
               <input id="sourceProductUrl" type="url" placeholder="粘贴 1688、淘宝、Amazon、品牌站或其他任意商品链接">
             </div>
-            <button class="auto-analysis-button" type="button" disabled>自动识别（后端接入后启用）</button>
+            <button class="auto-analysis-button" id="autoAnalysisButton" type="button">开始智能分析</button>
           </div>
-          <div class="auto-selection-note">未来自动版流程：读取来源链接 → 识别商品图、类目、属性、卖点和痛点 → 在 Ozon / WB / Yandex 搜索相似竞品 → 汇总竞品数量、均价、评分评论、关键词和主题标签 → 结合当前利润与广告假设生成报告。</div>
+          <div class="auto-selection-note">当前 Phase 4A 优先接 Ozon。若后端或 Ozon API 凭证未配置，页面会直接显示连接状态和示例报告，不会停留在空白等待。</div>
+
+          <div class="analysis-status" id="autoAnalysisStatus">等待粘贴链接并开始分析。</div>
+          <div class="analysis-progress" id="autoAnalysisProgress">
+            <span data-step="link">读取链接</span>
+            <span data-step="identify">识别商品</span>
+            <span data-step="ozon">连接 Ozon</span>
+            <span data-step="report">生成报告</span>
+          </div>
+
+          <div class="analysis-insight-grid">
+            <div>
+              <span>商品识别</span>
+              <p id="sourceProductInsight">等待分析来源链接。</p>
+            </div>
+            <div>
+              <span>关键词 / 标签</span>
+              <p id="sourceKeywordInsight">等待提取关键词和主题标签。</p>
+            </div>
+            <div>
+              <span>Ozon API 状态</span>
+              <p id="ozonApiInsight">等待后端健康检查。</p>
+            </div>
+            <div>
+              <span>数据限制</span>
+              <p id="analysisLimitInsight">未开始分析。</p>
+            </div>
+          </div>
+
+          <button class="demo-analysis-button" id="loadDemoAnalysisButton" type="button">查看示例报告</button>
 
           <details class="manual-fallback-panel">
-            <summary>临时校验字段：未来由自动采集和 AI 回填</summary>
+            <summary>开发调试字段：正常使用不需要手动填写</summary>
             <div class="grid product-selection-grid">
               <div>
                 <label>目标平台</label>

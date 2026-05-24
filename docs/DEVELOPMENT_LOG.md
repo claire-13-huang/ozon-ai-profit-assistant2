@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-05-24 Phase 4A / Ozon 官方 API + 商品识别报告竖切片
+
+- 修改目标：将选品预判助手从手动占位升级为 Ozon 优先的智能分析入口，并为 Cloudflare Worker 后端和 Ozon API 凭证安全接入做第一版实现。
+- 涉及文件：AGENTS.md、index.html、css/style.css、js/main.js、js/product-selection.js、worker/index.js、worker/wrangler.toml.example、docs/PHASE_4A_OZON_API_AI_PLAN.md、docs/business-rules.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：启用 `开始智能分析` 按钮；新增分析进度、商品识别摘要、关键词/标签、Ozon API 状态和数据限制展示；新增无后端时的明确错误报告和示例报告；新增 Cloudflare Worker 的 `/api/health` 与 `/api/analyze-product`；Worker 支持公开页面 meta 读取、规则关键词/类目提取、Ozon API 凭证健康检查。
+- 验收方式：点击空链接/无效链接应显示错误；无 Worker URL 时应显示 `API 服务未连接` 而不是空白等待；示例报告可直接渲染；原利润计算、汇率、预设、localStorage、CSV 导出保持可用；运行 `node --check js/product-selection.js js/main.js worker/index.js`。
+- 已知风险：尚未部署 Cloudflare Worker，也未配置真实 Ozon 凭证；Phase 4A 只做 Ozon API 健康检查和来源链接公开信息识别，不生成未经验证的全平台竞品数量、均价、评分评论或销量。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。
