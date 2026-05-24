@@ -337,11 +337,13 @@ input.input-warning:focus {
   font-size: 21px;
   font-weight: 800;
   line-height: 1.2;
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+  word-break: normal;
 }
 
 .summary .metric .num {
   font-size: 22px;
+  white-space: nowrap;
 }
 
 .green {
