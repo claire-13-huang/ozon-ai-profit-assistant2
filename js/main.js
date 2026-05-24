@@ -23,6 +23,18 @@ const savedFieldIds = [
   'subsidyRateInput',
   'productUrl',
   'imageUrl',
+  'productSelectionPlatform',
+  'targetCategory',
+  'competitorCount',
+  'competitorAvgPrice',
+  'competitorMinPrice',
+  'competitorMaxPrice',
+  'topCompetitorRating',
+  'topCompetitorReviews',
+  'selectionAdShare',
+  'selectionAdType',
+  'storeType',
+  'storeOrderRange',
   'localPreference'
 ];
 
@@ -92,6 +104,7 @@ function restoreFormState() {
 
   applyTheme();
   updateActivePlatformTab();
+  syncProductSelectionPlatform();
   fillSuppliers();
 
   const supplierEl = document.getElementById('supplier');
@@ -129,6 +142,21 @@ function readNumber(id) {
 
   const n = Number(raw);
   return Number.isFinite(n) ? { value: n, empty: false, invalid: false } : { value: 0, empty: false, invalid: true };
+}
+
+function readOptionalNumber(id) {
+  const parsed = readNumber(id);
+  return parsed.empty || parsed.invalid ? null : parsed.value;
+}
+
+function fieldValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : '';
+}
+
+function syncProductSelectionPlatform() {
+  const select = document.getElementById('productSelectionPlatform');
+  if (select && optionExists(select, platform)) select.value = platform;
 }
 
 function v(id) {
@@ -526,6 +554,18 @@ function renderInvalidInputState() {
     type: 'waiting',
     text: '请先修正输入错误，再查看下一步建议。'
   });
+  renderProductSelection({
+    mainInputValid: false,
+    blockingMessage: firstError,
+    sale: 0,
+    saleRub: 0,
+    profit: 0,
+    profitRate: 0,
+    purchaseCost: 0,
+    logisticsCost: 0,
+    adCost: 0,
+    commissionCost: 0
+  });
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
@@ -618,6 +658,83 @@ function renderInitialReferenceRateStatus() {
   setReferenceRateStatus(`${cached.source} · ${cached.sourceDate} · 今日已缓存；仅作运营测算参考，非实时/官方/利润保证。`);
 }
 
+function renderProductImagePreview(imageUrl) {
+  const box = document.getElementById('productImagePreview');
+  const img = document.getElementById('productImagePreviewImg');
+
+  if (!box || !img) return;
+
+  const raw = String(imageUrl || '').trim();
+  box.classList.add('is-empty');
+  img.removeAttribute('src');
+
+  if (!raw) return;
+
+  try {
+    const url = new URL(raw);
+    if (!['http:', 'https:'].includes(url.protocol)) return;
+    img.src = raw;
+    box.classList.remove('is-empty');
+  } catch (error) {
+    box.classList.add('is-empty');
+  }
+}
+
+function renderProductSelectionReport(report) {
+  const card = document.getElementById('productSelectionReport');
+  if (!card || !report) return;
+
+  card.classList.remove('selection-waiting', 'selection-risk', 'selection-warning', 'selection-test');
+  card.classList.add('selection-' + report.type);
+
+  setText('productSelectionStatus', report.status);
+  setText('productSelectionSummary', report.summary);
+  setText('selectionPriceText', report.priceText);
+  setText('selectionProfitText', report.profitText);
+  setText('selectionCompetitionText', report.competitionText);
+  setText('selectionAdText', report.adText);
+  setText('selectionStoreText', report.storeText);
+  setText('aiResultBox', report.summary);
+
+  const list = document.getElementById('selectionNextActions');
+  if (!list) return;
+
+  list.textContent = '';
+  report.actions.forEach(action => {
+    const li = document.createElement('li');
+    li.textContent = action;
+    list.appendChild(li);
+  });
+}
+
+function renderProductSelection(profitSnapshot) {
+  renderProductImagePreview(fieldValue('imageUrl'));
+
+  if (typeof analyzeProductSelection !== 'function') return;
+
+  const report = analyzeProductSelection({
+    activePlatform: platform,
+    targetPlatform: fieldValue('productSelectionPlatform') || platform,
+    productUrl: fieldValue('productUrl'),
+    imageUrl: fieldValue('imageUrl'),
+    targetCategory: fieldValue('targetCategory'),
+    competitorCount: readOptionalNumber('competitorCount'),
+    competitorAvgPrice: readOptionalNumber('competitorAvgPrice'),
+    competitorMinPrice: readOptionalNumber('competitorMinPrice'),
+    competitorMaxPrice: readOptionalNumber('competitorMaxPrice'),
+    topCompetitorRating: readOptionalNumber('topCompetitorRating'),
+    topCompetitorReviews: readOptionalNumber('topCompetitorReviews'),
+    adShare: readOptionalNumber('selectionAdShare'),
+    adType: fieldValue('selectionAdType'),
+    storeType: fieldValue('storeType'),
+    storeOrderRange: fieldValue('storeOrderRange'),
+    localPreference: fieldValue('localPreference'),
+    ...profitSnapshot
+  });
+
+  renderProductSelectionReport(report);
+}
+
 async function applyDailyReferenceRate() {
   if (typeof getDailyReferenceExchangeRate !== 'function') return;
 
@@ -670,6 +787,7 @@ function applyPresetTemplate(templateId) {
 
   applyTheme();
   updateActivePlatformTab();
+  syncProductSelectionPlatform();
   fillSuppliers();
 
   const supplierEl = document.getElementById('supplier');
@@ -781,6 +899,17 @@ function calc() {
     adCost: costs.ad,
     otherCost: v('otherCostInput')
   }));
+  renderProductSelection({
+    mainInputValid: true,
+    sale,
+    saleRub: rub,
+    profit: costs.profit,
+    profitRate: costs.profitRate,
+    purchaseCost: v('purchaseCost'),
+    logisticsCost: log,
+    adCost: costs.ad,
+    commissionCost: costs.com
+  });
 
   if (r) {
     setText('matchedChannel', r.c);
@@ -815,6 +944,7 @@ document.querySelectorAll('.tab').forEach(b => b.onclick = () => {
   platform = b.dataset.platform;
   updateActivePlatformTab();
   applyTheme();
+  syncProductSelectionPlatform();
   fillSuppliers();
   persistFormState();
   calc();
@@ -865,5 +995,6 @@ applyTheme();
 updateActivePlatformTab();
 fillSuppliers();
 restoreFormState();
+syncProductSelectionPlatform();
 renderInitialReferenceRateStatus();
 calc();

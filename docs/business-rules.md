@@ -83,3 +83,25 @@
 - Preset values are examples for testing and learning only. They do not represent real-time platform data or guaranteed profit.
 - Applying a preset replaces current input values, so users should review all fields before using the result.
 - Users can edit any preset-filled field after applying the preset; edited values should recalculate and save normally.
+
+## Product Selection Pre-Decision Rules
+
+- The product selection assistant is manual / semi-automatic in this version.
+- It does not scrape marketplace pages, read product images automatically, call AI APIs, connect seller accounts, or use backend services.
+- The report must combine manually entered competitor signals with the current profit calculation.
+- Required report inputs are product link, target category, competitor count, competitor average price, estimated advertising share, store type, and valid profit calculation.
+- If required inputs are missing, show a waiting state and do not generate a confident conclusion.
+- Available conclusions are `建议小量测试`, `谨慎测试`, `暂不建议`, and `等待数据`.
+- If profit is negative, show `暂不建议`.
+- If profit margin is below 10% and estimated advertising share is 30% or higher, show `暂不建议`.
+- If profit margin is from 10% to below 20%, show `谨慎测试` and recommend small-budget validation only.
+- Compare the current selling price converted to RUB with the manually entered competitor average price.
+- If current RUB price is at least 30% higher than competitor average price and the store is new or mixed, warn about conversion pressure.
+- If current RUB price is lower than competitor average price while profit margin is still healthy, warn that low price should not be the only strategy.
+- If competitor count is high or the top competitor review count is high, warn that the competition barrier is high.
+- Store type affects wording only:
+  - vertical store: emphasize category fit, keyword accumulation, and reviews
+  - mixed store: emphasize lightweight testing and inventory risk
+  - new store: emphasize small ad budgets and first-order cost
+  - mature store: emphasize historical traffic and customer fit
+- The report is an operating reference only and does not guarantee orders, profit, traffic, or advertising results.

@@ -207,3 +207,45 @@
 6. CSV export still works after visual changes
    - Input: complete a valid calculation and click `导出为 CSV`.
    - Expected: CSV export still downloads with current calculated values.
+
+## Product Selection Pre-Decision Assistant
+
+1. Empty key fields should show waiting state
+   - Input: clear product link or competitor average price, while keeping the profit calculator valid.
+   - Expected: product selection report shows `等待数据` and does not give a confident decision.
+
+2. High profit, low competition, vertical store
+   - Input: sale price 120, exchange rate 12.5, valid weight/dimensions/costs with profit margin above 20%; product link filled; target category filled; competitor count 15; competitor average price 1600 RUB; ad share 15%; store type vertical.
+   - Expected: report shows `建议小量测试` or cautious small-test wording, with next actions focused on validating ads, clicks, orders, and returns.
+
+3. Low profit with 30% ad share
+   - Input: adjust current calculator until profit margin is below 10%, fill product link/category, competitor count 30, competitor average price near current RUB price, ad share 30%, store type vertical.
+   - Expected: report shows `暂不建议` and says current profit/ad assumption is not suitable for direct advertising.
+
+4. Moderate profit should stay cautious
+   - Input: use Healthy Profit Baseline or set profit margin between 10% and 20%, fill required selection fields.
+   - Expected: report shows `谨慎测试` and recommends small-budget validation only.
+
+5. Price higher than competitor average for a new store
+   - Input: set current RUB price at least 30% higher than competitor average price, store type new, required fields filled.
+   - Expected: price section warns that stronger images, reviews, ads, or differentiation are needed.
+
+6. Price lower than competitor average but healthy profit
+   - Input: set current RUB price below competitor average, profit margin above 20%, required fields filled.
+   - Expected: report does not blindly encourage low-price selling; it asks the user to confirm ad and return volatility.
+
+7. High competition barrier
+   - Input: required fields filled; competitor count 100 or top competitor reviews 1500.
+   - Expected: competition section warns that the barrier is high and suggests long-tail keywords or differentiated positioning.
+
+8. Product image URL preview is optional
+   - Input: enter a valid image URL.
+   - Expected: image preview appears. Clear the image URL and the preview disappears. Calculation should not be affected.
+
+9. localStorage restores selection fields
+   - Input: fill product selection fields, refresh the page.
+   - Expected: product selection fields restore and the report recalculates after page load.
+
+10. Existing features still work
+    - Input: after using product selection fields, apply preset, change exchange rate, and export CSV.
+    - Expected: preset, exchange rate helper, profit calculation, diagnosis, cost explanation, and CSV export remain usable.
