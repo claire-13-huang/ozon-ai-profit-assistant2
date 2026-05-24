@@ -274,103 +274,116 @@
 
         <div class="section future-panel">
           <div class="title">选品预判助手</div>
-          <p class="panel-intro">第一版为手动/半自动分析：不抓取平台、不接真实 AI API、不读取卖家后台，只把竞品信息、广告假设、店铺状态和当前利润测算合并成决策报告。</p>
-          <div class="grid product-selection-grid">
+          <p class="panel-intro">目标体验是：粘贴全球任意网站的一条商品链接后，系统自动识别商品图片、类目、卖点和痛点，再到 Ozon / Wildberries / Yandex 查找相似产品，汇总数量、均价、评分评价、关键词和主题标签，最后结合当前利润测算生成报告。当前静态版只做入口和回填结构预留，不会假装已经能自动抓取。</p>
+
+          <div class="auto-selection-entry">
             <div>
-              <label>目标平台</label>
-              <select id="productSelectionPlatform">
-                <option value="Ozon">Ozon</option>
-                <option value="Wildberries">Wildberries</option>
-                <option value="Yandex">Yandex</option>
-              </select>
+              <label>来源商品链接（全球任意网站）</label>
+              <input id="sourceProductUrl" type="url" placeholder="粘贴 1688、淘宝、Amazon、品牌站或其他任意商品链接">
             </div>
-            <div>
-              <label>商品链接</label>
-              <input id="productUrl" type="url" placeholder="粘贴 Ozon / WB / Yandex 商品链接">
-            </div>
-            <div>
-              <label>图片地址</label>
-              <input id="imageUrl" type="url" placeholder="可手动粘贴商品图片 URL">
-            </div>
-            <div>
-              <label>目标类目</label>
-              <input id="targetCategory" placeholder="例如 家居 / 服饰 / 车品">
-            </div>
-            <div>
-              <label>竞品数量</label>
-              <input id="competitorCount" type="number" step="1" min="0" placeholder="例如 35">
-            </div>
-            <div>
-              <label>竞品均价（卢布）</label>
-              <input id="competitorAvgPrice" type="number" step="0.01" min="0" placeholder="例如 1300">
-            </div>
-            <div>
-              <label>竞品最低价（卢布）</label>
-              <input id="competitorMinPrice" type="number" step="0.01" min="0" placeholder="可选">
-            </div>
-            <div>
-              <label>竞品最高价（卢布）</label>
-              <input id="competitorMaxPrice" type="number" step="0.01" min="0" placeholder="可选">
-            </div>
-            <div>
-              <label>Top 竞品评分</label>
-              <input id="topCompetitorRating" type="number" step="0.1" min="0" max="5" placeholder="例如 4.7">
-            </div>
-            <div>
-              <label>Top 竞品评论数</label>
-              <input id="topCompetitorReviews" type="number" step="1" min="0" placeholder="例如 800">
-            </div>
-            <div>
-              <label>预估广告占比（%）</label>
-              <input id="selectionAdShare" type="number" step="0.1" min="0" value="30">
-            </div>
-            <div>
-              <label>广告类型</label>
-              <select id="selectionAdType">
-                <option value="Ozon 搜索与推荐">Ozon 搜索与推荐</option>
-                <option value="Wildberries 搜索广告">Wildberries 搜索广告</option>
-                <option value="Yandex Sales Boost">Yandex Sales Boost</option>
-                <option value="手动填写广告假设">手动填写广告假设</option>
-              </select>
-            </div>
-            <div>
-              <label>店铺类型</label>
-              <select id="storeType">
-                <option value="vertical">垂直店</option>
-                <option value="mixed">杂货店</option>
-                <option value="new">新店</option>
-                <option value="mature">成熟店</option>
-              </select>
-            </div>
-            <div>
-              <label>近 30 天订单区间</label>
-              <select id="storeOrderRange">
-                <option value="">未填写</option>
-                <option value="0-30">0-30 单</option>
-                <option value="31-100">31-100 单</option>
-                <option value="101-300">101-300 单</option>
-                <option value="300+">300 单以上</option>
-              </select>
-            </div>
-            <div>
-              <label>API 状态</label>
-              <input id="apiStatus" readonly value="静态规则版，未接入 API">
-            </div>
-            <div>
-              <label>本地备注 / 偏好</label>
-              <input id="localPreference" placeholder="例如 不压库存 / 只小预算测试">
-            </div>
+            <button class="auto-analysis-button" type="button" disabled>自动识别（后端接入后启用）</button>
           </div>
+          <div class="auto-selection-note">未来自动版流程：读取来源链接 → 识别商品图、类目、属性、卖点和痛点 → 在 Ozon / WB / Yandex 搜索相似竞品 → 汇总竞品数量、均价、评分评论、关键词和主题标签 → 结合当前利润与广告假设生成报告。</div>
+
+          <details class="manual-fallback-panel">
+            <summary>临时校验字段：未来由自动采集和 AI 回填</summary>
+            <div class="grid product-selection-grid">
+              <div>
+                <label>目标平台</label>
+                <select id="productSelectionPlatform">
+                  <option value="Ozon">Ozon</option>
+                  <option value="Wildberries">Wildberries</option>
+                  <option value="Yandex">Yandex</option>
+                </select>
+              </div>
+              <div>
+                <label>目标平台相似商品链接</label>
+                <input id="productUrl" type="url" placeholder="未来自动匹配 Ozon / WB / Yandex 相似商品">
+              </div>
+              <div>
+                <label>图片地址</label>
+                <input id="imageUrl" type="url" placeholder="可手动粘贴商品图片 URL">
+              </div>
+              <div>
+                <label>目标类目</label>
+                <input id="targetCategory" placeholder="例如 家居 / 服饰 / 车品">
+              </div>
+              <div>
+                <label>竞品数量</label>
+                <input id="competitorCount" type="number" step="1" min="0" placeholder="例如 35">
+              </div>
+              <div>
+                <label>竞品均价（卢布）</label>
+                <input id="competitorAvgPrice" type="number" step="0.01" min="0" placeholder="例如 1300">
+              </div>
+              <div>
+                <label>竞品最低价（卢布）</label>
+                <input id="competitorMinPrice" type="number" step="0.01" min="0" placeholder="可选">
+              </div>
+              <div>
+                <label>竞品最高价（卢布）</label>
+                <input id="competitorMaxPrice" type="number" step="0.01" min="0" placeholder="可选">
+              </div>
+              <div>
+                <label>Top 竞品评分</label>
+                <input id="topCompetitorRating" type="number" step="0.1" min="0" max="5" placeholder="例如 4.7">
+              </div>
+              <div>
+                <label>Top 竞品评论数</label>
+                <input id="topCompetitorReviews" type="number" step="1" min="0" placeholder="例如 800">
+              </div>
+              <div>
+                <label>预估广告占比（%）</label>
+                <input id="selectionAdShare" type="number" step="0.1" min="0" value="30">
+              </div>
+              <div>
+                <label>广告类型</label>
+                <select id="selectionAdType">
+                  <option value="Ozon 搜索与推荐">Ozon 搜索与推荐</option>
+                  <option value="Wildberries 搜索广告">Wildberries 搜索广告</option>
+                  <option value="Yandex Sales Boost">Yandex Sales Boost</option>
+                  <option value="手动填写广告假设">手动填写广告假设</option>
+                </select>
+              </div>
+              <div>
+                <label>店铺类型</label>
+                <select id="storeType">
+                  <option value="vertical">垂直店</option>
+                  <option value="mixed">杂货店</option>
+                  <option value="new">新店</option>
+                  <option value="mature">成熟店</option>
+                </select>
+              </div>
+              <div>
+                <label>近 30 天订单区间</label>
+                <select id="storeOrderRange">
+                  <option value="">未填写</option>
+                  <option value="0-30">0-30 单</option>
+                  <option value="31-100">31-100 单</option>
+                  <option value="101-300">101-300 单</option>
+                  <option value="300+">300 单以上</option>
+                </select>
+              </div>
+              <div>
+                <label>API 状态</label>
+                <input id="apiStatus" readonly value="自动采集未接入，当前为静态预留">
+              </div>
+              <div>
+                <label>本地备注 / 偏好</label>
+                <input id="localPreference" placeholder="例如 不压库存 / 只小预算测试">
+              </div>
+            </div>
+          </details>
           <div class="product-image-preview is-empty" id="productImagePreview">
             <img id="productImagePreviewImg" alt="商品图片预览">
           </div>
-          <div class="notice" id="aiResultBox">补充商品链接、竞品数量、竞品均价和当前利润测算后，系统会生成规则版选品预判报告。</div>
+          <div class="notice" id="aiResultBox">粘贴来源商品链接后，未来自动版会自动采集类目、相似竞品、均价、评分评价、痛点、关键词和主题标签。当前静态版需要后端/API 接入后才能真正自动生成。</div>
           <div class="selection-report selection-waiting" id="productSelectionReport">
             <div class="decision-head">
               <span class="decision-label">选品预判报告</span>
               <span class="decision-status" id="productSelectionStatus">等待数据</span>
             </div>
-            <div class="selection-summary" id="productSelectionSummary">请先补充商品链接、竞品均价和利润测算数据。第一版不会自动抓取平台商品或竞品数据。</div>
+            <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接。当前静态版不会自动抓取任意网站或平台竞品数据，后续需要后端采集服务接入。</div>
             <div class="selection-report-grid">
               <div>
                 <span>价格判断</span>
@@ -382,7 +395,7 @@
               </div>
               <div>
                 <span>竞争判断</span>
-                <p id="selectionCompetitionText">等待竞品数量、评分和评论。</p>
+                <p id="selectionCompetitionText">等待相似竞品数量、评分、评价和痛点。</p>
               </div>
               <div>
                 <span>广告判断</span>

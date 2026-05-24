@@ -4,16 +4,37 @@
 
 This document defines the first safe version of the product selection pre-decision assistant.
 
-The goal is to help Ozon / Wildberries / Yandex sellers combine:
+The intended long-term goal is: the seller pastes one product URL from any source website worldwide, and the system automatically builds a product selection report for Ozon / Wildberries / Yandex.
+
+The source URL can come from:
+
+- 1688, Taobao, Pinduoduo, JD, or other China supply sites
+- Amazon, AliExpress, Shopify stores, brand sites, or independent websites
+- any public product page that can be legally and technically read by a future backend service
+
+The future automatic system should identify:
+
+- source product image
+- product category
+- core attributes
+- selling points
+- possible buyer pain points
+- search keywords
+- topic tags
+
+Then it should search the three target platforms and combine:
 
 - current profit calculation
 - competitor count
+- similar product links
 - competitor price range
 - top competitor rating and review barrier
+- competitor pain points from reviews where data is available
+- search keywords and topic tags
 - advertising cost assumption
 - store type and traffic/order context
 
-The first version is a manual / semi-automatic decision helper. It does not scrape marketplace pages, does not call AI APIs, does not connect seller accounts, and does not read platform data automatically.
+The current static page is only an interface and data-shape reservation for that future automatic workflow. It does not scrape marketplace pages, does not call AI APIs, does not connect seller accounts, and does not read platform data automatically.
 
 ## Development Workflow Applied
 
@@ -27,12 +48,22 @@ This milestone follows the Codex workflow recommended in the provided Chinese PD
 - verify the page in a real browser after frontend changes
 - document changed rules and manual test cases
 
-## First Version Data Source
+## Future Automatic Data Source
 
-The user manually enters or copies the key marketplace signals:
+The desired automatic workflow is:
+
+1. User pastes one source product URL.
+2. Backend fetches or extracts the source product page where legally and technically allowed.
+3. AI or product parsing logic identifies product image, category, attributes, selling points, pain points, keywords, and topic tags.
+4. Backend searches Ozon / Wildberries / Yandex for similar products.
+5. Backend aggregates competitor count, average price, price range, rating, review count, review pain points, keywords, and topic tags.
+6. Frontend receives structured data and renders the report.
+
+Temporary static fields in the current page represent future auto-filled data:
 
 - target platform
-- product link
+- source product link
+- target platform similar product link
 - product image URL
 - target category
 - competitor count
@@ -40,6 +71,9 @@ The user manually enters or copies the key marketplace signals:
 - competitor minimum and maximum price
 - top competitor rating
 - top competitor review count
+- competitor review pain points
+- search keywords
+- topic tags
 - estimated advertising share
 - advertising type
 - store type
@@ -79,7 +113,8 @@ The report explains:
 
 ## First Version Rules
 
-- If the product link, target category, competitor count, competitor average price, ad share, store type, or valid profit calculation is missing, show a waiting state.
+- If the source product link, category, competitor count, competitor average price, ad share, store type, or valid profit calculation is missing, show a waiting state.
+- In the current static version, missing auto-collected data should be explained as `waiting for backend/API collection`, not as the final desired user behavior.
 - If profit is negative, show `暂不建议`.
 - If profit margin is below 10% and estimated ad share is 30% or higher, show `暂不建议`.
 - If profit margin is from 10% to below 20%, show `谨慎测试`.
@@ -93,7 +128,7 @@ The report explains:
 
 ## Future API Gate
 
-Automatic data collection should only be considered after the rule-based workflow is stable.
+Automatic data collection requires a new backend/API phase. It cannot be completed inside the current static frontend alone.
 
 Future API work requires:
 
@@ -102,7 +137,12 @@ Future API work requires:
 - clear seller authorization
 - platform-specific API limits and error handling
 - privacy and data retention rules
-- fallback to manual input
+- fallback to manual review
+- compliance review for scraping or third-party data sources
+- rate limits and anti-abuse controls
+- source URL parser for many website structures
+- image search or visual similarity matching
+- keyword extraction and translation between Chinese / English / Russian where useful
 
 Potential future sources:
 
@@ -110,6 +150,8 @@ Potential future sources:
 - Wildberries Analytics API
 - Yandex Market Partner API
 - compliant third-party marketplace analytics providers
+- computer vision or multimodal AI for product image/category recognition
+- search APIs or approved crawling only where allowed
 
 ## Explicit Non-Goals
 

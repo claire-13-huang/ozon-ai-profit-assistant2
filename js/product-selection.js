@@ -23,18 +23,18 @@ function percent(n) {
 }
 
 function buildWaitingSelectionReport(missing, blockingMessage) {
-  const reason = blockingMessage || `请先补充：${missing.join('、')}。`;
+  const reason = blockingMessage || `等待自动采集数据：${missing.join('、')}。`;
 
   return {
     type: 'waiting',
     status: '等待数据',
-    summary: reason + ' 第一版不会自动抓取平台商品或竞品数据，避免生成不可靠结论。',
-    priceText: '等待商品链接、竞品均价和当前折合售价。',
+    summary: reason + ' 当前静态版不会自动抓取任意网站或平台竞品数据，后续需要后端采集服务接入。',
+    priceText: '等待来源链接解析、相似竞品均价和当前折合售价。',
     profitText: '等待有效售价、成本和利润测算。',
-    competitionText: '等待竞品数量、评分和评论数据。',
+    competitionText: '等待相似竞品数量、评分、评价、痛点、关键词和主题标签。',
     adText: '等待广告占比假设。',
     storeText: '等待店铺类型和订单区间。',
-    actions: ['补齐关键字段后再查看建议。', '如果暂时没有竞品数据，可以先手动从搜索结果页抽样记录。']
+    actions: ['后续需要新增后端采集服务，前端不能直接完成跨网站抓取。', '正式自动版应优先使用官方 API 或合规数据源，必要时再评估爬虫方案。']
   };
 }
 
@@ -45,11 +45,11 @@ function analyzeProductSelection(input) {
     return buildWaitingSelectionReport([], input.blockingMessage || '请先修正利润测算输入。');
   }
 
+  if (isBlank(input.sourceProductUrl)) missing.push('来源商品链接');
   if (!hasPositiveNumber(input.saleRub)) missing.push('有效售价和汇率');
-  if (isBlank(input.productUrl)) missing.push('商品链接');
-  if (isBlank(input.targetCategory)) missing.push('目标类目');
-  if (!hasPositiveNumber(input.competitorCount)) missing.push('竞品数量');
-  if (!hasPositiveNumber(input.competitorAvgPrice)) missing.push('竞品均价');
+  if (isBlank(input.targetCategory)) missing.push('自动识别类目');
+  if (!hasPositiveNumber(input.competitorCount)) missing.push('三平台相似竞品数量');
+  if (!hasPositiveNumber(input.competitorAvgPrice)) missing.push('三平台相似竞品均价');
   if (!Number.isFinite(input.adShare) || input.adShare < 0) missing.push('预估广告占比');
   if (isBlank(input.storeType)) missing.push('店铺类型');
 
@@ -81,7 +81,7 @@ function analyzeProductSelection(input) {
   }
 
   if (hasPositiveNumber(input.competitorMinPrice) && hasPositiveNumber(input.competitorMaxPrice)) {
-    priceText += ` 手动记录的竞品价格带约为 ${rub(input.competitorMinPrice)} - ${rub(input.competitorMaxPrice)}。`;
+    priceText += ` 相似竞品价格带约为 ${rub(input.competitorMinPrice)} - ${rub(input.competitorMaxPrice)}。`;
   }
 
   let profitText = `当前利润率约 ${percent(input.profitRate)}，利润约 ¥${input.profit.toFixed(2)}。`;
@@ -99,7 +99,7 @@ function analyzeProductSelection(input) {
     profitText += ' 利润空间较强，但不代表流量、转化和广告成本已经稳定。';
   }
 
-  let competitionText = `当前手动记录竞品约 ${input.competitorCount} 个。`;
+  let competitionText = `当前相似竞品约 ${input.competitorCount} 个。`;
   if (competitionHigh || strongTopCompetitor) {
     if (type !== 'risk') type = 'warning';
     competitionText += ' 竞争门槛偏高，建议寻找细分类目、差异化卖点或更精准关键词。';

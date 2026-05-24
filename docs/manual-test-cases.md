@@ -211,15 +211,15 @@
 ## Product Selection Pre-Decision Assistant
 
 1. Empty key fields should show waiting state
-   - Input: clear product link or competitor average price, while keeping the profit calculator valid.
-   - Expected: product selection report shows `等待数据` and does not give a confident decision.
+   - Input: clear source product URL or competitor average price, while keeping the profit calculator valid.
+   - Expected: product selection report shows `等待数据`, explains that backend/API collection is not connected yet, and does not give a confident decision.
 
 2. High profit, low competition, vertical store
-   - Input: sale price 120, exchange rate 12.5, valid weight/dimensions/costs with profit margin above 20%; product link filled; target category filled; competitor count 15; competitor average price 1600 RUB; ad share 15%; store type vertical.
+   - Input: sale price 120, exchange rate 12.5, valid weight/dimensions/costs with profit margin above 20%; source product URL filled; temporary auto-filled target category filled; competitor count 15; competitor average price 1600 RUB; ad share 15%; store type vertical.
    - Expected: report shows `建议小量测试` or cautious small-test wording, with next actions focused on validating ads, clicks, orders, and returns.
 
 3. Low profit with 30% ad share
-   - Input: adjust current calculator until profit margin is below 10%, fill product link/category, competitor count 30, competitor average price near current RUB price, ad share 30%, store type vertical.
+   - Input: adjust current calculator until profit margin is below 10%, fill source product URL/category, competitor count 30, competitor average price near current RUB price, ad share 30%, store type vertical.
    - Expected: report shows `暂不建议` and says current profit/ad assumption is not suitable for direct advertising.
 
 4. Moderate profit should stay cautious
@@ -243,8 +243,8 @@
    - Expected: image preview appears. Clear the image URL and the preview disappears. Calculation should not be affected.
 
 9. localStorage restores selection fields
-   - Input: fill product selection fields, refresh the page.
-   - Expected: product selection fields restore and the report recalculates after page load.
+   - Input: fill source product URL and temporary product selection fields, refresh the page.
+   - Expected: source product URL and product selection fields restore and the report recalculates after page load.
 
 10. Existing features still work
     - Input: after using product selection fields, apply preset, change exchange rate, and export CSV.

@@ -21,6 +21,7 @@ const savedFieldIds = [
   'subsidySalePrice',
   'subsidyAmountInput',
   'subsidyRateInput',
+  'sourceProductUrl',
   'productUrl',
   'imageUrl',
   'productSelectionPlatform',
@@ -715,6 +716,7 @@ function renderProductSelection(profitSnapshot) {
   const report = analyzeProductSelection({
     activePlatform: platform,
     targetPlatform: fieldValue('productSelectionPlatform') || platform,
+    sourceProductUrl: fieldValue('sourceProductUrl'),
     productUrl: fieldValue('productUrl'),
     imageUrl: fieldValue('imageUrl'),
     targetCategory: fieldValue('targetCategory'),

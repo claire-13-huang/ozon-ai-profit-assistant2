@@ -86,11 +86,15 @@
 
 ## Product Selection Pre-Decision Rules
 
-- The product selection assistant is manual / semi-automatic in this version.
-- It does not scrape marketplace pages, read product images automatically, call AI APIs, connect seller accounts, or use backend services.
-- The report must combine manually entered competitor signals with the current profit calculation.
-- Required report inputs are product link, target category, competitor count, competitor average price, estimated advertising share, store type, and valid profit calculation.
+- The intended product selection assistant starts from one source product URL from any website worldwide.
+- The future automatic version should identify product category, images, attributes, selling points, pain points, keywords, and topic tags from that source link.
+- It should then search Ozon / Wildberries / Yandex for similar products and collect competitor count, average price, price range, rating, review count, review pain points, keywords, and topic tags.
+- The current static frontend does not scrape marketplace pages, read product images automatically, call AI APIs, connect seller accounts, or use backend services.
+- Temporary manual fields represent future auto-filled data and should not be treated as the final intended workflow.
+- The report must combine collected competitor signals with the current profit calculation.
+- Required report inputs are source product link, target category, competitor count, competitor average price, estimated advertising share, store type, and valid profit calculation.
 - If required inputs are missing, show a waiting state and do not generate a confident conclusion.
+- Missing competitor/category data should be explained as waiting for future backend/API collection.
 - Available conclusions are `建议小量测试`, `谨慎测试`, `暂不建议`, and `等待数据`.
 - If profit is negative, show `暂不建议`.
 - If profit margin is below 10% and estimated advertising share is 30% or higher, show `暂不建议`.

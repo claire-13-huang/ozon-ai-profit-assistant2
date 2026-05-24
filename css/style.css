@@ -162,6 +162,57 @@ h1 {
   line-height: 1.65;
 }
 
+.auto-selection-entry {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid #ededf0;
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.auto-analysis-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 16px;
+  background: #d1d1d6;
+  color: #515154;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: not-allowed;
+  white-space: nowrap;
+}
+
+.auto-selection-note {
+  margin-bottom: 12px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.manual-fallback-panel {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.manual-fallback-panel summary {
+  padding: 12px 14px;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.manual-fallback-panel .product-selection-grid {
+  padding: 0 14px 14px;
+}
+
 label,
 .top label {
   display: block;
@@ -756,6 +807,7 @@ input.input-warning:focus {
   }
 
   .top,
+  .auto-selection-entry,
   .summary .grid,
   .future-panel .grid,
   .future-panel .product-selection-grid,
