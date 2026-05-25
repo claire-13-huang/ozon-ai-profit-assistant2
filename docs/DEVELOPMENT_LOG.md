@@ -210,3 +210,11 @@
 - 修改内容：将入口文案改为“来源商品链接（全球任意网站）”；说明未来自动流程包括识别商品图、类目、属性、卖点、痛点、关键词和主题标签，并在 Ozon/Wildberries/Yandex 搜索相似竞品；将临时手动字段收进折叠区，标记为未来自动采集和 AI 回填字段；将等待状态改为提示后端/API 采集尚未接入。
 - 验收方式：页面应优先展示来源商品链接入口；折叠区仍可用于临时校验规则报告；缺少自动采集数据时显示等待状态而不是误导为最终人工录入流程；现有利润计算、汇率助手、预设、localStorage 和 CSV 导出保持可用。
 - 已知风险：当前仍未实现真实自动采集；要完成用户目标，后续必须新增后端、合规数据源/API、图片/文本识别和三平台相似商品检索能力。
+
+## 2026-05-25 Phase 4A / 安全部署入口与 Worker 部署自动化
+
+- 修改目标：开始真实部署流程，并在不泄露 API Key 的前提下补齐 Worker 地址配置和 GitHub Actions 部署入口。
+- 涉及文件：index.html、css/style.css、js/config.js、js/product-selection.js、js/main.js、.github/workflows/deploy-worker.yml、docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 `Cloudflare Worker 地址` 前端配置框，支持把已部署 Worker 公网地址保存到浏览器 localStorage 并立即用于健康检查、店铺同步和智能分析；将产品分析 API 地址改为运行时读取，避免保存地址后仍使用旧空值；新增手动触发的 GitHub Actions Worker 部署流程，按官方 Wrangler Action 的 `secrets` 方式写入 Worker Secrets，所有 Cloudflare/Ozon/WB/Yandex 凭证只从 GitHub Secrets 或 Cloudflare 环境变量读取。
+- 验收方式：运行 `npx wrangler deploy --dry-run` 验证 Worker 包可部署；实际 `npx wrangler deploy` 在 Codex 非交互环境中因缺少 `CLOUDFLARE_API_TOKEN` 被 Cloudflare 拒绝；运行 `node --check` 检查新增/修改 JS 文件；确认 `.dev.vars` 被 `.gitignore` 忽略。
+- 已知风险：真正上线仍需要用户本人在 Cloudflare 或 GitHub Secrets 中配置 `CLOUDFLARE_API_TOKEN` 和平台 API 凭证；不能把任何真实密钥发到聊天、前端或 GitHub 普通文件。

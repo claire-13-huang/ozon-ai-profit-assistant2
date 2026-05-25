@@ -6,7 +6,13 @@ const STORE_TYPE_TEXT = {
   mature: '成熟店'
 };
 
-const PRODUCT_SELECTION_API_BASE_URL = window.PRODUCT_SELECTION_API_BASE_URL || '';
+function getProductSelectionApiBaseUrl() {
+  if (typeof normalizeWorkerBaseUrl === 'function') {
+    return normalizeWorkerBaseUrl(window.PRODUCT_SELECTION_API_BASE_URL || '');
+  }
+
+  return String(window.PRODUCT_SELECTION_API_BASE_URL || '').trim().replace(/\/+$/, '');
+}
 
 function isBlank(value) {
   return String(value || '').trim() === '';
@@ -216,11 +222,13 @@ function buildDemoOzonAnalysis(profitSnapshot) {
 }
 
 async function requestOzonProductAnalysis(payload) {
-  if (!PRODUCT_SELECTION_API_BASE_URL) {
+  const apiBaseUrl = getProductSelectionApiBaseUrl();
+
+  if (!apiBaseUrl) {
     return buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
   }
 
-  const response = await fetch(PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/analyze-product', {
+  const response = await fetch(apiBaseUrl + '/api/analyze-product', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -238,7 +246,9 @@ async function requestOzonProductAnalysis(payload) {
 }
 
 async function requestOzonWorkerHealth() {
-  if (!PRODUCT_SELECTION_API_BASE_URL) {
+  const apiBaseUrl = getProductSelectionApiBaseUrl();
+
+  if (!apiBaseUrl) {
     return {
       ok: false,
       service: 'frontend-only',
@@ -249,7 +259,7 @@ async function requestOzonWorkerHealth() {
     };
   }
 
-  const response = await fetch(PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/health');
+  const response = await fetch(apiBaseUrl + '/api/health');
 
   if (!response.ok) {
     throw new Error('API 健康检查失败：' + response.status);

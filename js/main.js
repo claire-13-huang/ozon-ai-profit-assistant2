@@ -1008,6 +1008,32 @@ function setStoreApiStatus(message, type = '') {
   el.textContent = message;
 }
 
+function renderBackendWorkerUrl() {
+  const input = document.getElementById('backendWorkerUrl');
+  if (!input) return;
+
+  input.value = window.PRODUCT_SELECTION_API_BASE_URL || '';
+}
+
+function bindBackendWorkerUrlControls() {
+  const saveButton = document.getElementById('saveBackendWorkerUrlButton');
+  const input = document.getElementById('backendWorkerUrl');
+
+  if (!input || !saveButton || typeof setSavedWorkerBaseUrl !== 'function') return;
+
+  renderBackendWorkerUrl();
+  saveButton.addEventListener('click', async () => {
+    try {
+      const savedUrl = setSavedWorkerBaseUrl(input.value);
+      input.value = savedUrl;
+      setStoreApiStatus('Worker 地址已保存，正在检查后端连接...', 'is-ok');
+      await checkOzonWorkerHealth();
+    } catch (error) {
+      setStoreApiStatus(error.message || 'Worker 地址保存失败。', 'is-error');
+    }
+  });
+}
+
 function renderStoreApiManager() {
   if (typeof loadStoreApiState !== 'function') return;
 
@@ -1393,6 +1419,7 @@ document.querySelectorAll('input,select').forEach(e => {
 bindExchangeRateHelper();
 bindPresetControls();
 bindOzonAnalysisControls();
+bindBackendWorkerUrlControls();
 bindStoreApiManager();
 applyTheme();
 updateActivePlatformTab();

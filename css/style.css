@@ -318,6 +318,7 @@ h1 {
 }
 
 .store-plan-row,
+.store-backend-row,
 .store-api-form {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -379,6 +380,7 @@ h1 {
 }
 
 .store-api-add-button,
+.store-api-save-button,
 .store-api-sync-button,
 .store-api-test-button,
 .store-api-remove-button {
@@ -396,6 +398,10 @@ h1 {
 
 .store-api-sync-button {
   margin-bottom: 12px;
+}
+
+.store-api-save-button {
+  min-width: 108px;
 }
 
 .store-api-remove-button,

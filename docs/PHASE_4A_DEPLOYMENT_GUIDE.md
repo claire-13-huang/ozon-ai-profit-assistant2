@@ -28,6 +28,14 @@ window.PRODUCT_SELECTION_API_BASE_URL = 'https://your-worker.your-subdomain.work
 
 Do not add `/api/health` or `/api/analyze-product` to this value. The frontend appends those paths automatically.
 
+The page also provides a safer runtime shortcut in `店铺 API 管理`:
+
+1. Paste the deployed Worker base URL into `Cloudflare Worker 地址`.
+2. Click `保存地址`.
+3. The URL is saved in browser localStorage and used immediately for `/api/health`, `/api/stores`, `/api/store-health`, and `/api/analyze-product`.
+
+This runtime field does not store platform API keys. It only stores the public Worker URL.
+
 ## Cloudflare Worker
 
 Worker files:
@@ -57,6 +65,24 @@ In the Codex desktop non-interactive terminal, Wrangler may refuse deployment un
 - run `npx wrangler deploy` yourself in a normal terminal after logging in to Cloudflare
 - deploy from the Cloudflare dashboard by uploading/connecting this Worker code
 - set `CLOUDFLARE_API_TOKEN` only in your own local terminal session or secure CI secret store, then run the deploy command there
+
+## GitHub Actions Deployment
+
+The repository includes:
+
+```text
+.github/workflows/deploy-worker.yml
+```
+
+This workflow is manual-only (`workflow_dispatch`) and deploys the Worker through Cloudflare Wrangler. Before running it, add these GitHub repository secrets:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+- `OZON_CLIENT_ID`
+- `OZON_API_KEY`
+- `STORE_API_CREDENTIALS_JSON` if multiple real stores are needed; if not used, set it to `[]`
+
+Do not put these values into source files, issues, commits, or chat messages. After the workflow succeeds, copy the public Worker URL into the page's `Cloudflare Worker 地址` field or into `js/config.js`.
 
 Dry-run check:
 

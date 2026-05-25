@@ -280,9 +280,9 @@
    - Input: open the page with `window.PRODUCT_SELECTION_API_BASE_URL = ''` in `js/config.js`.
    - Expected: Ozon API status explains that the frontend is not connected to Cloudflare Worker.
 
-8. Worker URL config should not require code changes outside config
-   - Input: after deploying Worker, set only `js/config.js` to the Worker base URL.
-   - Expected: the page uses `/api/health` and `/api/analyze-product` through that base URL.
+8. Worker URL config should not require code edits during testing
+   - Input: after deploying Worker, paste the Worker base URL into `Cloudflare Worker 地址` and click `保存地址`.
+   - Expected: the page stores the public Worker URL in localStorage and uses `/api/health` and `/api/analyze-product` through that base URL.
 
 9. Valid Ozon credentials should show real shop sample
    - Input: run Worker with valid `OZON_CLIENT_ID` and `OZON_API_KEY`, then open `/api/health`.
@@ -291,6 +291,10 @@
 10. Frontend should show Ozon shop sample after API connection
     - Input: configure `js/config.js` to the running Worker URL and refresh the page.
     - Expected: Ozon API status text includes connection success and sample product identifiers when Ozon returns products.
+
+11. GitHub Actions deploy workflow should not contain secrets
+    - Input: inspect `.github/workflows/deploy-worker.yml`.
+    - Expected: workflow reads Cloudflare and platform credentials from GitHub Secrets only, passes Worker secrets through the official Wrangler Action `secrets` input, and no real token or API key is committed.
 
 ## Phase 4B Store API Profile Management
 
