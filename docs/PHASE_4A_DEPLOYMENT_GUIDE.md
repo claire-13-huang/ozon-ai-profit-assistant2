@@ -33,6 +33,7 @@ Do not add `/api/health` or `/api/analyze-product` to this value. The frontend a
 Worker files:
 
 - `worker/index.js`
+- `worker/wrangler.toml`
 - `worker/wrangler.toml.example`
 
 Expected endpoints:
@@ -40,7 +41,16 @@ Expected endpoints:
 - `GET /api/health`
 - `POST /api/analyze-product`
 
-The Worker can be deployed with Cloudflare dashboard or Wrangler. If using Wrangler, copy the example config to Cloudflare's expected config name locally and do not commit secrets.
+The Worker can be deployed with Cloudflare dashboard or Wrangler. `worker/wrangler.toml` is safe to commit because it does not contain real secrets.
+
+Wrangler command:
+
+```bash
+cd worker
+npx wrangler deploy
+```
+
+If Wrangler asks for login, complete Cloudflare login in the browser with your own account.
 
 ## Ozon Credentials
 

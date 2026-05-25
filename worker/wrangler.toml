@@ -1,0 +1,7 @@
+name = "ozon-ai-profit-assistant"
+main = "index.js"
+compatibility_date = "2026-05-25"
+
+# Real Ozon credentials must be configured as Cloudflare secrets or environment variables:
+# OZON_CLIENT_ID
+# OZON_API_KEY

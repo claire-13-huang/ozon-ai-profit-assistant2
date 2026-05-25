@@ -19,6 +19,14 @@
 - 验收方式：`node --check js/config.js js/product-selection.js js/main.js worker/index.js`；`git diff --check`；打开页面确认未配置 Worker 时显示 API 服务未连接。
 - 已知风险：仍未执行 Cloudflare 真实部署，也未配置 Ozon 凭证；这些步骤需要用户本人登录 Cloudflare/Ozon 后台完成。
 
+## 2026-05-25 Phase 4A / Cloudflare Worker 部署配置文件
+
+- 修改目标：补齐可直接用于 Wrangler 部署的 Cloudflare Worker 配置文件。
+- 涉及文件：worker/wrangler.toml、docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增不含密钥的 `worker/wrangler.toml`；文档补充 `cd worker` 与 `npx wrangler deploy` 部署命令；强调登录和密钥配置由用户本人完成。
+- 验收方式：确认 `worker/wrangler.toml` 不包含真实 Ozon 凭证；继续使用 `node --check worker/index.js`。
+- 已知风险：Cloudflare 真实部署仍依赖用户账号登录，Ozon 凭证仍需后续在 Cloudflare 后台配置。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。
