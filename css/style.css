@@ -139,7 +139,6 @@ h1 {
 .summary > .big,
 .summary > .metrics,
 .summary > .grid,
-.preset-panel,
 .fee-panel .fee-metrics:nth-of-type(2) {
   margin-bottom: 14px;
   padding: 14px;
@@ -871,8 +870,7 @@ input.input-warning:focus {
 }
 
 .explanation-title,
-.diagnosis-title,
-.preset-title {
+.diagnosis-title {
   margin-bottom: 8px;
   color: var(--text);
   font-size: 14px;
@@ -935,14 +933,6 @@ input.input-warning:focus {
   margin-top: 2px;
 }
 
-.preset-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: end;
-}
-
-.preset-apply-button,
 .export {
   border: 0;
   border-radius: 8px;
@@ -952,29 +942,10 @@ input.input-warning:focus {
   font-weight: 800;
 }
 
-.preset-apply-button {
-  min-width: 112px;
-  min-height: 42px;
-  padding: 10px 16px;
-  font-size: 15px;
-}
-
-.preset-note,
-.preset-status,
 .rate-helper-status {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.6;
-}
-
-.preset-note {
-  margin-top: 10px;
-}
-
-.preset-status {
-  margin-top: 8px;
-  color: #23613a;
-  font-weight: 800;
 }
 
 .rate-helper-row {
@@ -1068,7 +1039,6 @@ input.input-warning:focus {
   .summary > .metrics,
   .fee-metrics,
   .subsidy-metrics,
-  .preset-controls,
   .cards,
   .selection-report-grid {
     grid-template-columns: 1fr;

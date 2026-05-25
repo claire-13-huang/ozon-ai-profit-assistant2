@@ -226,3 +226,11 @@
 - 修改内容：新增 Phase 3 全流程复核文档；确认 Healthy Profit Baseline 在当前规则下利润率约 15.88%，应显示保守小量测试语义；修正汇率助手文档中的旧按钮文案，将 `获取当日参考汇率` 改为当前 UI 的 `今日参考`；补充 Phase 3 复核范围边界，明确多方案保存、渠道比较、账号历史、后端/API/AI 自动化仍不是当前已完成的 Phase 3 功能。
 - 验收方式：检查 Phase 3 文档与实现文件；运行 HTML ID 引用检查；运行 `node --check` 检查 Phase 3 JS；运行 `git diff --check`。
 - 已知风险：本次未修改公式、物流规则或页面交互代码；当前环境的浏览器工具阻止访问 `127.0.0.1`，因此未重新做浏览器截图验证。
+
+## 2026-05-25 UI / 移除常用预设板块
+
+- 修改目标：删除左侧 `常用预设` 可见板块，减少无用入口和误操作。
+- 涉及文件：index.html、css/style.css、js/main.js、docs/business-rules.md、docs/manual-test-cases.md、docs/PHASE_3_FLOW_AUDIT.md、docs/PRESET_TEMPLATE_DESIGN.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：移除预设面板 HTML 和 `js/presets.js` 页面加载；移除 `main.js` 中预设绑定/应用逻辑；清理 `.preset-*` 样式；文档改为说明预设是历史设计参考，当前页面以手动输入为主。
+- 验收方式：页面不再显示 `常用预设`、`预设模板` 或 `应用预设`；手动输入、汇率助手、利润计算、诊断、选品报告入口和 CSV 导出不受影响；运行 `node --check` 和 `git diff --check`。
+- 已知风险：`js/presets.js` 文件作为历史参考暂时保留但不再由页面加载；后续如果确定不再需要预设，可单独删除该文件并同步清理历史文档。

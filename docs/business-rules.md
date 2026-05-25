@@ -76,13 +76,10 @@
 
 ## Preset Template Rules
 
-- Phase 3 currently implements only one preset: Healthy Profit Baseline.
-- The preset only fills existing input fields and existing platform/supplier/service selections.
-- The preset does not change formulas, logistics rules, validation rules, diagnosis rules, or CSV export rules.
-- After applying the preset, the normal calculation, validation, diagnosis, cost explanation, and localStorage save flow should run.
-- Preset values are examples for testing and learning only. They do not represent real-time platform data or guaranteed profit.
-- Applying a preset replaces current input values, so users should review all fields before using the result.
-- Users can edit any preset-filled field after applying the preset; edited values should recalculate and save normally.
+- The visible `常用预设` panel has been removed from the current page because it is not useful enough for the main seller workflow.
+- No preset should auto-fill or overwrite seller inputs in the current UI.
+- Historical preset design notes may remain in documentation, but they are not active product behavior.
+- If presets are reintroduced later, they must remain example-only and must not change formulas, logistics rules, validation rules, diagnosis rules, or CSV export rules.
 
 ## Product Selection Pre-Decision Rules
 

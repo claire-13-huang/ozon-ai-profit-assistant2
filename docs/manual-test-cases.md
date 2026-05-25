@@ -102,49 +102,17 @@
    - Input: test in private/restricted storage mode if available.
    - Expected: app still calculates normally; values may simply not persist.
 
-## Healthy Profit Baseline Preset
+## Preset Panel Removal
 
-1. Apply Healthy Profit Baseline preset
-   - Input: click the preset apply button for `Healthy Profit Baseline`.
-   - Expected: platform switches to Ozon, supplier is CEL, service is automatic, and the preset status confirms the template was applied.
+1. Common preset panel should not appear
+   - Input: open the page and inspect the left-side input area.
+   - Expected: the `常用预设` panel, preset selector, and `应用预设` button are not visible.
 
-2. Confirm input fields are filled
-   - Input: inspect the form after applying the preset.
-   - Expected: sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 50, commission 10%, advertising 5%, tax 0%, withdrawal 0%, return 0%, label fee 1, and other cost 2 are filled.
+2. Manual input still works after preset removal
+   - Input: manually fill sale price, exchange rate, weight, dimensions, purchase cost, commission, and advertising rate.
+   - Expected: total cost, profit, profit margin, diagnosis, next action, and cost explanation update through the normal calculation flow.
 
-3. Confirm profit calculation updates
-   - Input: apply the preset and review the result area.
-   - Expected: total cost, profit, profit margin, logistics match, diagnosis, next action, and cost explanation update through the normal calculation flow.
-
-4. Confirm conservative wording for moderate margin
-   - Input: apply the preset and review the profit decision, next action, diagnosis, and cost explanation.
-   - Expected: because the current preset margin is around 10%-20%, the tool should describe it as only barely testable or requiring small validation, not as healthy or guaranteed; the diagnosis panel should no longer show the default placeholder.
-
-5. Confirm preset warning explains replacement behavior
-   - Input: read the preset note before applying the preset.
-   - Expected: the note says applying a preset replaces current input values and that preset values are only for learning/testing, not real-time data or profit guarantee.
-
-6. Refresh page and confirm localStorage restores preset values
-   - Input: apply the preset, refresh the page.
-   - Expected: platform, supplier, service, and preset-filled inputs restore; calculation runs again after restore.
-
-7. Modify one preset-filled value and confirm calculation updates
-   - Input: after applying the preset, change purchase cost or advertising rate.
-   - Expected: total cost, profit, profit margin, diagnosis, next action, and cost explanation update automatically.
-
-8. Enter invalid value after applying preset and confirm validation still works
-   - Input: after applying the preset, set exchange rate to 0 or purchase cost to -1.
-   - Expected: validation shows an error, misleading profit output is blocked, and normal calculation returns after fixing the value.
-
-9. CSV export after applying preset
-   - Input: apply the preset, confirm valid calculation, then click CSV export.
-   - Expected: CSV still downloads with the current calculated result.
-
-10. Edit purchase cost after applying preset
-   - Input: apply `Healthy Profit Baseline`, then change purchase cost from 50 to 120.
-   - Expected: purchase cost display, total cost, profit, profit margin, diagnosis, next action, and cost explanation update using 120. The preset should not keep purchase cost fixed after manual editing.
-
-11. Same inputs should keep the same diagnosis
+3. Same inputs should keep the same diagnosis
    - Input: use the same values twice, including any equal-cost edge case.
    - Expected: decision text, risk wording, next action, and cost-pressure diagnosis stay the same for the same inputs.
 
@@ -174,9 +142,9 @@
    - Input: set exchange rate to 0 after using the helper.
    - Expected: validation shows an error and misleading profit output is blocked.
 
-7. Apply Healthy Profit Baseline, then fetch reference rate
-   - Input: apply `Healthy Profit Baseline`, then click `今日参考`.
-   - Expected: preset fields remain filled, the exchange rate updates to the reference value, and calculation/diagnosis/cost explanation recalculate.
+7. Fill manual values, then fetch reference rate
+   - Input: manually fill a valid calculation, then click `今日参考`.
+   - Expected: the exchange rate updates to the reference value, and calculation/diagnosis/cost explanation recalculate.
 
 8. CSV export after using fetched reference rate
    - Input: fetch the reference rate, confirm valid calculation, then click CSV export.
@@ -189,11 +157,11 @@
    - Expected: the page uses a light gray background, white panels, thin borders, low shadow, and no large colorful gradient container; the title reads `利润决策助手`.
 
 2. Left input area remains readable
-   - Input: inspect selling price, preset, logistics/product info, and cost fields.
+   - Input: inspect selling price, logistics/product info, and cost fields.
    - Expected: inputs stay grouped on the left, labels are readable, and the user can still edit the same fields without layout overlap.
 
 3. Right result area remains decision-focused
-   - Input: enter valid calculation data or apply `Healthy Profit Baseline`.
+   - Input: enter valid calculation data.
    - Expected: calculation result cards, decision card, next action, explanation, diagnosis, and logistics notice remain visible and update normally.
 
 4. Exchange rate control is easier to understand
@@ -223,7 +191,7 @@
    - Expected: report shows `暂不建议` and says current profit/ad assumption is not suitable for direct advertising.
 
 4. Moderate profit should stay cautious
-   - Input: use Healthy Profit Baseline or set profit margin between 10% and 20%, fill required selection fields.
+   - Input: manually set profit margin between 10% and 20%, fill required selection fields.
    - Expected: report shows `谨慎测试` and recommends small-budget validation only.
 
 5. Price higher than competitor average for a new store
@@ -247,8 +215,8 @@
    - Expected: source product URL and product selection fields restore and the report recalculates after page load.
 
 10. Existing features still work
-    - Input: after using product selection fields, apply preset, change exchange rate, and export CSV.
-    - Expected: preset, exchange rate helper, profit calculation, diagnosis, cost explanation, and CSV export remain usable.
+    - Input: after using product selection fields, change exchange rate and export CSV.
+    - Expected: exchange rate helper, profit calculation, diagnosis, cost explanation, and CSV export remain usable.
 
 ## Phase 4A Ozon AI Product Recognition
 
@@ -273,8 +241,8 @@
    - Expected: report status is risk-oriented and warns against direct advertising tests.
 
 6. Existing workflows should remain usable
-   - Input: after using the Ozon AI product section, change price, exchange rate, preset, and export CSV.
-   - Expected: original calculator, exchange rate helper, preset, localStorage, diagnosis, and CSV export still work.
+   - Input: after using the Ozon AI product section, change price, exchange rate, and export CSV.
+   - Expected: original calculator, exchange rate helper, localStorage, diagnosis, and CSV export still work.
 
 7. Worker health status should be visible on page load
    - Input: open the page with `window.PRODUCT_SELECTION_API_BASE_URL = ''` in `js/config.js`.

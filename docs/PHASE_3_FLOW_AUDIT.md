@@ -9,7 +9,7 @@ This document re-checks the full Phase 3 productization flow after later Phase 4
 The review focuses only on Phase 3 behavior:
 
 - seller scenario examples
-- Healthy Profit Baseline preset
+- historical Healthy Profit Baseline preset, now removed from the visible page
 - conservative diagnosis wording
 - daily reference exchange-rate helper
 - visual polish and exchange-rate UX
@@ -24,7 +24,6 @@ Phase 3 was a productization roadmap with several candidate milestones. The curr
 Implemented in the current app:
 
 - seller scenario documentation
-- one safe preset: Healthy Profit Baseline
 - conservative decision wording for moderate margins
 - daily reference exchange-rate helper
 - visual polish and compact exchange-rate UX
@@ -34,6 +33,7 @@ Not implemented as Phase 3 product features:
 
 - multiple saved calculation schemes
 - channel comparison UI
+- visible preset panel or active preset workflow
 - advanced CSV/report export changes
 - account-level history
 - backend/API/AI automation
@@ -63,32 +63,32 @@ Risk check:
 
 Status: OK.
 
-`docs/PRESET_TEMPLATE_DESIGN.md` recommends multiple preset ideas but marks only Healthy Profit Baseline as implemented.
+`docs/PRESET_TEMPLATE_DESIGN.md` records the historical preset idea. The visible preset panel has now been removed from the current UI because it does not add enough value to the main seller workflow.
 
 Business intent:
 
-- let sellers start from a safe learning example
-- keep all preset values editable after applying
+- keep preset ideas as historical design notes only
+- avoid auto-filling or overwriting seller inputs in the current UI
 - avoid turning examples into platform recommendations
 
 Risk check:
 
-- Delayed presets remain delayed.
-- The implemented preset only fills existing fields.
-- The document states that formulas, validation, logistics rules, diagnosis, and CSV export should remain unchanged.
+- Presets are not active product behavior.
+- The current page relies on manual seller input instead of template-filled values.
+- Historical preset design must not be treated as a required UI feature.
 
-### 3. Healthy Profit Baseline Implementation
+### 3. Healthy Profit Baseline Historical Check
 
-Status: OK.
+Status: removed from visible UI.
 
-Implemented files:
+Historical implementation files:
 
 - `index.html`
 - `js/presets.js`
 - `js/main.js`
 - `css/style.css`
 
-Verified current preset result with local rules:
+Historical preset result with local rules:
 
 - Platform: Ozon
 - Supplier: CEL
@@ -108,8 +108,9 @@ Expected decision wording:
 
 Risk check:
 
-- The preset does not lock purchase cost or other values.
-- Manual edits after applying the preset should recalculate normally.
+- The visible `常用预设` panel is removed.
+- Manual input remains the current workflow.
+- If presets are reintroduced later, the historical 15.88% result should still be treated as cautious, not as guaranteed healthy.
 
 ### 4. Conservative Diagnosis Correction
 
@@ -176,13 +177,13 @@ Phase 3 originally kept this as a static/manual placeholder. Later Phase 4A/4B a
 Risk check:
 
 - Later Phase 4 behavior is isolated in Worker/store API rules.
-- Phase 3 preset, exchange-rate, localStorage, CSV, and calculation flows remain independent.
+- Phase 3 exchange-rate, localStorage, CSV, and calculation flows remain independent from later Phase 4 behavior.
 
 ## Verification Performed
 
 - Reviewed Phase 3 roadmap, review summary, seller scenarios, preset template design, business rules, manual tests, and implementation files.
 - Checked that all reviewed `getElementById`, `setText`, and `setInput` literal ID references exist in `index.html`.
-- Recomputed Healthy Profit Baseline using current local rules and formulas.
+- Recomputed historical Healthy Profit Baseline using current local rules and formulas before removing the visible panel.
 - Ran `node --check` on Phase 3 JavaScript files.
 
 ## Issues Found And Fixed
@@ -196,4 +197,4 @@ Risk check:
 
 Phase 3 is internally consistent after the documentation label cleanup.
 
-No formula error, missing HTML ID, preset calculation mismatch, or Phase 3 flow-breaking issue was found in this review.
+No formula error, missing HTML ID, or Phase 3 flow-breaking issue was found in this review.

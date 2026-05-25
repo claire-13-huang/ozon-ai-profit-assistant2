@@ -475,20 +475,18 @@ Before any future preset UI implementation:
 
 ## 8. Current Implementation Status
 
-Implemented first preset:
+Historical first preset:
 Healthy Profit Baseline.
 
 Current behavior:
 
-- The page has one preset selector and one apply button.
-- Applying the preset fills only existing fields and platform/supplier/service selections.
-- Applying the preset replaces current input values.
-- The implementation uses the existing UI service value `自动`, which corresponds to the design intent of `Auto`.
-- After applying the preset, the existing calculation, validation, diagnosis, cost explanation, localStorage, and CSV export behavior are expected to continue normally.
-- If the resulting margin is only around 10%-20%, the decision wording should be conservative and should recommend small validation rather than calling the result healthy.
-- No other preset templates are implemented yet.
+- The visible `常用预设` panel has been removed from the current page.
+- The current workflow is manual input first; no preset selector or apply button is active.
+- The historical preset values remain useful as documentation/test reference only.
+- If the preset is reintroduced later, it should still fill only existing fields and should not change formulas, validation, logistics rules, diagnosis, localStorage, or CSV export behavior.
+- If the resulting margin is only around 10%-20%, the decision wording should remain conservative and should recommend small validation rather than calling the result healthy.
 
-Current preset values:
+Historical preset values:
 
 - Platform: Ozon
 - Supplier: CEL
