@@ -313,6 +313,124 @@ h1 {
   padding: 0 14px 14px;
 }
 
+.store-api-panel {
+  margin-bottom: 18px;
+}
+
+.store-plan-row,
+.store-api-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.store-api-form {
+  grid-template-columns: 150px minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.store-capacity,
+.store-api-status {
+  min-height: 42px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1.5;
+}
+
+.store-api-status {
+  margin-top: 10px;
+  font-weight: 700;
+}
+
+.store-api-status.is-error {
+  border-color: #ffd1d1;
+  background: #fff5f5;
+  color: var(--danger);
+}
+
+.store-api-status.is-ok {
+  border-color: #ccebd9;
+  background: #f5fbf7;
+  color: #1f6b43;
+}
+
+.store-platform-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.store-platform-summary span {
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.store-api-add-button,
+.store-api-remove-button {
+  min-height: 42px;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 14px;
+  background: var(--brand);
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.store-api-remove-button {
+  min-height: 34px;
+  background: #f1f3f5;
+  color: var(--muted-strong);
+}
+
+.store-api-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.store-api-card {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.store-api-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.store-api-card-title {
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.store-api-card-meta {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
 label,
 .top label {
   display: block;
@@ -912,6 +1030,10 @@ input.input-warning:focus {
   .auto-selection-entry,
   .analysis-progress,
   .analysis-insight-grid,
+  .store-plan-row,
+  .store-api-form,
+  .store-platform-summary,
+  .store-api-list,
   .summary .grid,
   .future-panel .grid,
   .future-panel .product-selection-grid,

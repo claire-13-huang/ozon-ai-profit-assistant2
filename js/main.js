@@ -990,6 +990,139 @@ function bindOzonAnalysisControls() {
   }
 }
 
+function setStoreApiStatus(message, type = '') {
+  const el = document.getElementById('storeApiStatus');
+  if (!el) return;
+
+  el.classList.remove('is-ok', 'is-error');
+  if (type) el.classList.add(type);
+  el.textContent = message;
+}
+
+function renderStoreApiManager() {
+  if (typeof loadStoreApiState !== 'function') return;
+
+  const state = loadStoreApiState();
+  const planSelect = document.getElementById('storeApiPlan');
+  const capacity = document.getElementById('storeApiCapacity');
+  const summary = document.getElementById('storePlatformSummary');
+  const list = document.getElementById('storeApiList');
+  const limit = storeApiLimit(state.plan);
+  const counts = platformStoreCounts(state.stores);
+
+  if (planSelect) planSelect.value = state.plan;
+  if (capacity) {
+    capacity.textContent = `${STORE_API_PLAN_LABELS[state.plan]} · 已添加 ${state.stores.length} / ${limit} 个店铺`;
+  }
+  if (summary) {
+    summary.innerHTML = ['Ozon', 'Wildberries', 'Yandex']
+      .map(name => `<span>${name} ${counts[name] || 0}</span>`)
+      .join('');
+  }
+  if (!list) return;
+
+  list.textContent = '';
+  state.stores.forEach(store => {
+    const card = document.createElement('div');
+    card.className = 'store-api-card';
+
+    const head = document.createElement('div');
+    head.className = 'store-api-card-head';
+
+    const textBox = document.createElement('div');
+    const title = document.createElement('div');
+    title.className = 'store-api-card-title';
+    title.textContent = store.name;
+
+    const meta = document.createElement('div');
+    meta.className = 'store-api-card-meta';
+    meta.textContent = `${store.platform} · ${store.status}`;
+
+    const removeButton = document.createElement('button');
+    removeButton.className = 'store-api-remove-button';
+    removeButton.type = 'button';
+    removeButton.dataset.storeId = store.id;
+    removeButton.textContent = '移除';
+
+    const credential = document.createElement('div');
+    credential.className = 'store-api-card-meta';
+    credential.textContent = `后端密钥编号：${store.credentialRef}`;
+
+    textBox.appendChild(title);
+    textBox.appendChild(meta);
+    head.appendChild(textBox);
+    head.appendChild(removeButton);
+    card.appendChild(head);
+    card.appendChild(credential);
+    list.appendChild(card);
+  });
+
+  if (!state.stores.length) {
+    setStoreApiStatus('未添加店铺。真实 API Key 后续请配置到 Worker/后端，不要放在前端。');
+  }
+}
+
+function bindStoreApiManager() {
+  const planSelect = document.getElementById('storeApiPlan');
+  const addButton = document.getElementById('addStoreApiButton');
+  const list = document.getElementById('storeApiList');
+
+  if (planSelect) {
+    planSelect.addEventListener('change', () => {
+      const state = loadStoreApiState();
+      state.plan = planSelect.value;
+      saveStoreApiState(state);
+      renderStoreApiManager();
+      setStoreApiStatus('会员档位已更新。店铺数量限制会按当前档位执行。', 'is-ok');
+    });
+  }
+
+  if (addButton) {
+    addButton.addEventListener('click', () => {
+      const state = loadStoreApiState();
+      const limit = storeApiLimit(state.plan);
+
+      if (state.stores.length >= limit) {
+        setStoreApiStatus(`当前档位最多添加 ${limit} 个店铺，请升级会员档位后再添加。`, 'is-error');
+        return;
+      }
+
+      const result = createStoreApiProfile({
+        platform: fieldValue('storeApiPlatform'),
+        name: fieldValue('storeApiName'),
+        credentialRef: fieldValue('storeApiCredentialRef')
+      });
+
+      if (result.error) {
+        setStoreApiStatus(result.error, 'is-error');
+        return;
+      }
+
+      state.stores.push(result.store);
+      saveStoreApiState(state);
+      setInput('storeApiName', '');
+      setInput('storeApiCredentialRef', '');
+      renderStoreApiManager();
+      setStoreApiStatus('店铺 API 档案已添加。请在后端配置对应密钥编号的真实凭证。', 'is-ok');
+    });
+  }
+
+  if (list) {
+    list.addEventListener('click', event => {
+      const button = event.target.closest('[data-store-id]');
+      if (!button) return;
+
+      const state = loadStoreApiState();
+      state.stores = state.stores.filter(store => store.id !== button.dataset.storeId);
+      saveStoreApiState(state);
+      renderStoreApiManager();
+      setStoreApiStatus('店铺 API 档案已移除。本操作不会删除后端真实密钥。', 'is-ok');
+    });
+  }
+
+  renderStoreApiManager();
+}
+
 function calc() {
   currentValidation = validateInputs();
   renderValidation(currentValidation);
@@ -1173,6 +1306,7 @@ document.querySelectorAll('input,select').forEach(e => {
 bindExchangeRateHelper();
 bindPresetControls();
 bindOzonAnalysisControls();
+bindStoreApiManager();
 applyTheme();
 updateActivePlatformTab();
 fillSuppliers();

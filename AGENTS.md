@@ -446,3 +446,34 @@ Execution rules:
 - If the Worker is not deployed or credentials are missing, show a clear state instead of a blank result.
 - Update `docs/DEVELOPMENT_LOG.md` after each completed task.
 - Run `node --check` on modified frontend JavaScript and Worker JavaScript.
+
+---
+
+## Phase 4B Development Rules
+
+Current focus:
+Phase 4B adds multi-platform store API profile management for Ozon / Wildberries / Yandex.
+
+Allowed in Phase 4B:
+
+- frontend store API profile management
+- membership-tier store count limits
+- localStorage for non-secret store metadata
+- backend credential reference names
+- documentation for future encrypted credential storage
+
+Do NOT do in Phase 4B:
+
+- store real API keys in localStorage
+- store real API keys in frontend JavaScript
+- commit seller credentials to GitHub
+- pretend a frontend-only profile is a live API connection
+- build paid membership billing before the API workflow is stable
+
+MVP limits:
+
+- no membership: 1 store
+- monthly card: 5 stores
+- yearly card: 10 stores
+
+These limits are product rules for the current MVP and can be adjusted later.

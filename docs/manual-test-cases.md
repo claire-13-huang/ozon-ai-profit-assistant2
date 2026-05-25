@@ -291,3 +291,29 @@
 10. Frontend should show Ozon shop sample after API connection
     - Input: configure `js/config.js` to the running Worker URL and refresh the page.
     - Expected: Ozon API status text includes connection success and sample product identifiers when Ozon returns products.
+
+## Phase 4B Store API Profile Management
+
+1. Free tier should allow only one store
+   - Input: choose `未开通会员`, add one store profile, then try to add another.
+   - Expected: first store is added; second add is blocked with a clear limit message.
+
+2. Monthly card should allow up to five stores
+   - Input: choose `月卡`, add five store profiles across Ozon / Wildberries / Yandex, then try a sixth.
+   - Expected: five profiles are allowed; sixth is blocked.
+
+3. Yearly card should allow ten stores
+   - Input: choose `年卡`, add store profiles until capacity shows 10 / 10.
+   - Expected: the panel shows total capacity and platform counts correctly.
+
+4. Store profile should not ask for real API key
+   - Input: inspect the add store form.
+   - Expected: the form asks for backend credential reference, not an API key or token value.
+
+5. Removing a store updates capacity
+   - Input: add several store profiles, remove one.
+   - Expected: capacity and platform counts update; status explains that backend secrets are not deleted.
+
+6. Store profiles should restore after refresh
+   - Input: add profiles and refresh the page.
+   - Expected: membership tier, capacity, platform counts, and store cards restore from localStorage.

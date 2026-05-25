@@ -43,6 +43,14 @@
 - 验收方式：`node --check js/product-selection.js js/main.js worker/index.js`；`git diff --check`；无真实凭证时不应泄露任何密钥；有真实凭证时 `/api/health` 应返回 `connected` 和样本商品信息。
 - 已知风险：真实 Ozon 商品详情字段取决于 Ozon API 实际返回；若店铺暂无商品或权限不足，样本列表可能为空或只显示连接状态。
 
+## 2026-05-25 Phase 4B / 多平台店铺 API 档案与会员数量限制
+
+- 修改目标：为 Ozon / Wildberries / Yandex 增加店铺 API 档案管理入口，并按会员档位限制可添加店铺数量。
+- 涉及文件：AGENTS.md、index.html、css/style.css、js/store-api.js、js/main.js、docs/PHASE_4B_MULTI_STORE_API_PLAN.md、docs/business-rules.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增店铺 API 管理面板；支持未开通会员 1 个店铺、月卡 5 个店铺、年卡 10 个店铺；显示平台统计和容量；新增店铺名称、平台、后端密钥编号字段；新增移除店铺；使用 localStorage 保存非密钥元信息；明确真实 API Key 不得保存在前端。
+- 验收方式：`node --check js/store-api.js js/main.js`；未开通会员添加第二个店铺应被拦截；月卡最多 5 个；年卡最多 10 个；刷新后档案恢复；真实 API Key 不应出现在 Git diff。
+- 已知风险：当前是前端店铺档案和会员规则 MVP，不是完整付费会员系统；真实多店铺 API 绑定仍需要后端加密密钥存储、账号系统和权限校验。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。

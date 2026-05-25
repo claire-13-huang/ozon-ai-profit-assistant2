@@ -109,6 +109,18 @@
 - If profit rate is below 10%, the report should warn against direct advertising tests.
 - If profit rate is between 10% and 20%, the report should recommend only small-budget cautious testing.
 - If official Ozon API data does not provide competitor count, average price, ratings, reviews, traffic, or sales, the report must label that limitation instead of generating fake data.
+
+## Phase 4B Store API Profile Rules
+
+- Store API profiles are supported for Ozon, Wildberries, and Yandex.
+- The frontend can store store display name, platform, backend credential reference, and connection status.
+- The frontend must not store real API keys, API tokens, OAuth tokens, or seller backend secrets.
+- No membership allows 1 store profile.
+- Monthly card allows 5 store profiles.
+- Yearly card allows 10 store profiles.
+- The current limit is counted across all platforms together.
+- If the current tier limit is reached, adding another store profile should be blocked with a clear message.
+- Removing a frontend store profile does not delete backend secrets.
 - Available conclusions are `建议小量测试`, `谨慎测试`, `暂不建议`, and `等待数据`.
 - If profit is negative, show `暂不建议`.
 - If profit margin is below 10% and estimated advertising share is 30% or higher, show `暂不建议`.

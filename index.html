@@ -22,6 +22,52 @@
       <button class="tab" data-platform="Yandex">Yandex</button>
     </div>
 
+    <div class="section store-api-panel">
+      <div class="title">店铺 API 管理</div>
+      <p class="panel-intro">为 Ozon / Wildberries / Yandex 分别添加店铺 API 档案。这里不会保存真实 API Key，只保存店铺名称和后端密钥编号；真实密钥必须放在 Cloudflare Worker 或后端环境变量里。</p>
+
+      <div class="store-plan-row">
+        <div>
+          <label>会员档位</label>
+          <select id="storeApiPlan">
+            <option value="free">未开通会员：最多 1 个店铺</option>
+            <option value="monthly">月卡：最多 5 个店铺</option>
+            <option value="yearly">年卡：最多 10 个店铺</option>
+          </select>
+        </div>
+        <div class="store-capacity" id="storeApiCapacity">已添加 0 / 1 个店铺</div>
+      </div>
+
+      <div class="store-platform-summary" id="storePlatformSummary">
+        <span>Ozon 0</span>
+        <span>Wildberries 0</span>
+        <span>Yandex 0</span>
+      </div>
+
+      <div class="store-api-form">
+        <div>
+          <label>平台</label>
+          <select id="storeApiPlatform">
+            <option value="Ozon">Ozon</option>
+            <option value="Wildberries">Wildberries</option>
+            <option value="Yandex">Yandex</option>
+          </select>
+        </div>
+        <div>
+          <label>店铺名称</label>
+          <input id="storeApiName" placeholder="例如 Ozon 主店 / WB 服饰店">
+        </div>
+        <div>
+          <label>后端密钥编号</label>
+          <input id="storeApiCredentialRef" placeholder="例如 OZON_MAIN，不要填写真实 API Key">
+        </div>
+        <button class="store-api-add-button" id="addStoreApiButton" type="button">添加店铺</button>
+      </div>
+
+      <div class="store-api-status" id="storeApiStatus">未添加店铺。真实 API Key 后续请配置到 Worker/后端，不要放在前端。</div>
+      <div class="store-api-list" id="storeApiList"></div>
+    </div>
+
     <div class="top">
       <div class="summary">
         <div class="big">
@@ -450,6 +496,7 @@
   <script src="js/data-rules.js"></script>
   <script src="js/calculations.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/store-api.js"></script>
   <script src="js/exchange-rate.js"></script>
   <script src="js/presets.js"></script>
   <script src="js/config.js"></script>
