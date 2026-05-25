@@ -218,3 +218,11 @@
 - 修改内容：新增 `Cloudflare Worker 地址` 前端配置框，支持把已部署 Worker 公网地址保存到浏览器 localStorage 并立即用于健康检查、店铺同步和智能分析；将产品分析 API 地址改为运行时读取，避免保存地址后仍使用旧空值；新增手动触发的 GitHub Actions Worker 部署流程，按官方 Wrangler Action 的 `secrets` 方式写入 Worker Secrets，所有 Cloudflare/Ozon/WB/Yandex 凭证只从 GitHub Secrets 或 Cloudflare 环境变量读取。
 - 验收方式：运行 `npx wrangler deploy --dry-run` 验证 Worker 包可部署；实际 `npx wrangler deploy` 在 Codex 非交互环境中因缺少 `CLOUDFLARE_API_TOKEN` 被 Cloudflare 拒绝；运行 `node --check` 检查新增/修改 JS 文件；确认 `.dev.vars` 被 `.gitignore` 忽略。
 - 已知风险：真正上线仍需要用户本人在 Cloudflare 或 GitHub Secrets 中配置 `CLOUDFLARE_API_TOKEN` 和平台 API 凭证；不能把任何真实密钥发到聊天、前端或 GitHub 普通文件。
+
+## 2026-05-25 Phase 3 / 全流程复核与文档修正
+
+- 修改目标：重新梳理 Phase 3 产品化流程，检查文档、预设、汇率助手、诊断阈值和页面字段引用是否一致。
+- 涉及文件：docs/PHASE_3_FLOW_AUDIT.md、docs/business-rules.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Phase 3 全流程复核文档；确认 Healthy Profit Baseline 在当前规则下利润率约 15.88%，应显示保守小量测试语义；修正汇率助手文档中的旧按钮文案，将 `获取当日参考汇率` 改为当前 UI 的 `今日参考`。
+- 验收方式：检查 Phase 3 文档与实现文件；运行 HTML ID 引用检查；运行 `node --check` 检查 Phase 3 JS；运行 `git diff --check`。
+- 已知风险：本次未修改公式、物流规则或页面交互代码；当前环境的浏览器工具阻止访问 `127.0.0.1`，因此未重新做浏览器截图验证。

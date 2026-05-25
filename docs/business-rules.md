@@ -64,7 +64,7 @@
 ## Daily Reference Exchange Rate Rules
 
 - The exchange rate field remains manually editable.
-- The user must click `获取当日参考汇率` before the app fills a reference exchange rate.
+- The user must click the compact `今日参考` button before the app fills a reference exchange rate.
 - The app must not silently overwrite a user-entered exchange rate on page load.
 - The current reference source is Frankfurter, using a no-key public API.
 - The UI wording must use `当日参考汇率`, not `实时汇率`.

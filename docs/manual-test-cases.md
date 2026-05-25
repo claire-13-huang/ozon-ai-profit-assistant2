@@ -155,7 +155,7 @@
    - Expected: ruble price, logistics matching, total cost, profit, diagnosis, and cost explanation update normally; the helper status says the rate was manually changed.
 
 2. Fetch daily reference exchange rate
-   - Input: click `获取当日参考汇率`.
+   - Input: click `今日参考`.
    - Expected: the exchange rate field is filled with a positive reference CNY/RUB value when the public source is available; the compact status note shows source, date, and reference-only wording without stretching the form row.
 
 3. Confirm calculation updates after fetched rate fills
@@ -175,7 +175,7 @@
    - Expected: validation shows an error and misleading profit output is blocked.
 
 7. Apply Healthy Profit Baseline, then fetch reference rate
-   - Input: apply `Healthy Profit Baseline`, then click `获取当日参考汇率`.
+   - Input: apply `Healthy Profit Baseline`, then click `今日参考`.
    - Expected: preset fields remain filled, the exchange rate updates to the reference value, and calculation/diagnosis/cost explanation recalculate.
 
 8. CSV export after using fetched reference rate
