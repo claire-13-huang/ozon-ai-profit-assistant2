@@ -52,6 +52,21 @@ npx wrangler deploy
 
 If Wrangler asks for login, complete Cloudflare login in the browser with your own account.
 
+In the Codex desktop non-interactive terminal, Wrangler may refuse deployment unless `CLOUDFLARE_API_TOKEN` is set. Do not paste that token into chat or commit it to the repository. Use one of these safer options:
+
+- run `npx wrangler deploy` yourself in a normal terminal after logging in to Cloudflare
+- deploy from the Cloudflare dashboard by uploading/connecting this Worker code
+- set `CLOUDFLARE_API_TOKEN` only in your own local terminal session or secure CI secret store, then run the deploy command there
+
+Dry-run check:
+
+```bash
+cd worker
+npx wrangler deploy --dry-run
+```
+
+The dry-run should finish without requiring Ozon credentials.
+
 ## Ozon Credentials
 
 Required Cloudflare environment variables:

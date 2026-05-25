@@ -27,6 +27,14 @@
 - 验收方式：确认 `worker/wrangler.toml` 不包含真实 Ozon 凭证；继续使用 `node --check worker/index.js`。
 - 已知风险：Cloudflare 真实部署仍依赖用户账号登录，Ozon 凭证仍需后续在 Cloudflare 后台配置。
 
+## 2026-05-25 Phase 4A / Wrangler dry-run 与部署阻塞记录
+
+- 修改目标：验证 Cloudflare Worker 配置是否能进入 Wrangler 部署流程，并记录真实部署阻塞原因。
+- 涉及文件：docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：执行 `npx wrangler deploy --dry-run`，Worker 打包通过；执行 `npx wrangler deploy` 时，Wrangler 因非交互环境缺少 `CLOUDFLARE_API_TOKEN` 而拒绝部署；文档补充不要把 Cloudflare API Token 发到聊天或提交到仓库，应由用户在本地终端、Cloudflare dashboard 或安全 secret store 中完成部署。
+- 验收方式：dry-run 输出 `Total Upload: 11.86 KiB / gzip: 4.24 KiB` 且无绑定错误；确认仓库未产生 token、node_modules、package-lock 或 Wrangler 临时目录。
+- 已知风险：真实部署仍未完成；需要用户本人完成 Cloudflare 登录或提供安全的本地/CI secret 环境。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。
