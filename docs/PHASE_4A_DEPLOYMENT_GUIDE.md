@@ -81,6 +81,44 @@ Rules:
 - Do not commit these values to GitHub.
 - Configure them only in Cloudflare environment variables or secrets.
 
+## Local Real API Test
+
+For local testing, Wrangler can read secrets from:
+
+```text
+worker/.dev.vars
+```
+
+This file is ignored by Git and must not be committed. Use `worker/.dev.vars.example` only as a template.
+
+Local test steps:
+
+1. Create `worker/.dev.vars` on your own machine.
+2. Add:
+
+```text
+OZON_CLIENT_ID="your_real_client_id"
+OZON_API_KEY="your_real_api_key"
+```
+
+3. Start the Worker locally:
+
+```bash
+cd worker
+npx wrangler dev --local --port 8787
+```
+
+4. In another local frontend run, set `js/config.js`:
+
+```js
+window.PRODUCT_SELECTION_API_BASE_URL = 'http://127.0.0.1:8787';
+```
+
+5. Open `/api/health` or refresh the frontend.
+6. Expected with valid credentials: Ozon status should show `connected`, and the report can display a small sample from your Ozon product list.
+
+After testing, do not commit `worker/.dev.vars` or any real credential value.
+
 ## Manual Verification
 
 1. Open the frontend.
@@ -89,7 +127,7 @@ Rules:
 4. Expected without credentials: `missing_credentials`.
 5. Add Ozon credentials in Cloudflare.
 6. Open `/api/health` again.
-7. Expected with valid credentials: `connected`.
+7. Expected with valid credentials: `connected`, plus a small shop product sample if Ozon returns products.
 8. Paste a product URL in the frontend and click `开始智能分析`.
 
 ## Current Limitation

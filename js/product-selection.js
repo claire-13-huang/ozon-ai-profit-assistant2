@@ -98,6 +98,12 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const hasImage = !isBlank(source.image);
   const hasCategory = !isBlank(insights.category);
   const hasOzonData = ozon.status === 'connected';
+  const ozonProducts = Array.isArray(ozon.products) ? ozon.products : [];
+  const ozonSampleText = ozonProducts.length
+    ? ' 店铺样本商品：' + ozonProducts
+      .map(item => `${item.offer_id || item.product_id || '未命名'}${item.name ? ' / ' + item.name : ''}`)
+      .join('；')
+    : '';
   const actions = [];
 
   if (!hasTitle || !hasImage) {
@@ -136,7 +142,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。Phase 4A 暂不生成 Ozon 全平台竞品均价；若官方 API 或合规数据源可用，后续再补价格带。`,
     profitText: buildProfitReportText(profitSnapshot),
     competitionText: hasOzonData
-      ? 'Ozon API 已通过后端连接检查。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。'
+      ? 'Ozon API 已通过后端连接检查，已能读取你店铺的商品样本。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。' + ozonSampleText
       : (ozon.message || 'Ozon API 尚未配置，不能读取后台数据。'),
     adText: '广告判断沿用当前利润测算中的广告率；搜索与推荐广告应先小预算验证点击、加购和订单，不以低价作为唯一策略。',
     storeText: `识别类目候选：${insights.category || '待人工复核'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
@@ -196,7 +202,11 @@ function buildDemoOzonAnalysis(profitSnapshot) {
     },
     ozon: {
       status: 'missing_credentials',
-      message: '示例报告：Ozon API 凭证未配置时，真实后台数据会显示为等待授权。'
+      message: '示例报告：Ozon API 凭证未配置时，真实后台数据会显示为等待授权。',
+      products: [
+        { offer_id: 'DEMO-001', product_id: 100001, name: '示例 Ozon 店铺商品 A' },
+        { offer_id: 'DEMO-002', product_id: 100002, name: '示例 Ozon 店铺商品 B' }
+      ]
     }
   };
 

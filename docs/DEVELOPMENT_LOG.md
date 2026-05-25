@@ -35,6 +35,14 @@
 - 验收方式：dry-run 输出 `Total Upload: 11.86 KiB / gzip: 4.24 KiB` 且无绑定错误；确认仓库未产生 token、node_modules、package-lock 或 Wrangler 临时目录。
 - 已知风险：真实部署仍未完成；需要用户本人完成 Cloudflare 登录或提供安全的本地/CI secret 环境。
 
+## 2026-05-25 Phase 4A / Ozon 真实 API 样本商品读取
+
+- 修改目标：让 Ozon API 连接后不只显示健康检查，而是能返回少量真实店铺商品样本，方便用户看到实际接入效果。
+- 涉及文件：.gitignore、worker/index.js、worker/.dev.vars.example、js/main.js、js/product-selection.js、docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/PHASE_4A_OZON_API_AI_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：Worker 新增 Ozon 请求封装；`/api/health` 和 `/api/analyze-product` 在凭证有效时调用 `/v3/product/list` 并尝试用 `/v3/product/info/list` 获取商品详情样本；前端 Ozon API 状态和报告竞争判断会展示样本商品 offer_id/product_id；新增 `.dev.vars.example`，并在 `.gitignore` 中忽略 `worker/.dev.vars`。
+- 验收方式：`node --check js/product-selection.js js/main.js worker/index.js`；`git diff --check`；无真实凭证时不应泄露任何密钥；有真实凭证时 `/api/health` 应返回 `connected` 和样本商品信息。
+- 已知风险：真实 Ozon 商品详情字段取决于 Ozon API 实际返回；若店铺暂无商品或权限不足，样本列表可能为空或只显示连接状态。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。

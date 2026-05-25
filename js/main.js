@@ -732,12 +732,16 @@ function renderOzonAnalysisDetails(analysis) {
   const source = analysis && analysis.source ? analysis.source : {};
   const insights = analysis && analysis.insights ? analysis.insights : {};
   const ozon = analysis && analysis.ozon ? analysis.ozon : {};
+  const ozonProducts = Array.isArray(ozon.products) ? ozon.products : [];
   const keywords = typeof formatList === 'function' ? formatList(insights.keywords, '等待提取') : '等待提取';
   const tags = typeof formatList === 'function' ? formatList(insights.tags, '等待提取') : '等待提取';
+  const productText = ozonProducts.length
+    ? ` 样本：${ozonProducts.map(item => item.offer_id || item.product_id || '未命名商品').join('、')}`
+    : '';
 
   setText('sourceProductInsight', `${source.title || '未识别标题'} · ${source.host || '未知来源'} · ${insights.category || '类目待复核'}`);
   setText('sourceKeywordInsight', `关键词：${keywords}。标签：${tags}。`);
-  setText('ozonApiInsight', ozon.message || '等待 Ozon API 状态。');
+  setText('ozonApiInsight', (ozon.message || '等待 Ozon API 状态。') + productText);
   setText('analysisLimitInsight', (analysis && analysis.limitations && analysis.limitations.length)
     ? analysis.limitations.join('；')
     : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
@@ -758,7 +762,11 @@ async function checkOzonWorkerHealth() {
   try {
     const health = await requestOzonWorkerHealth();
     const ozon = health.ozon || {};
-    setText('ozonApiInsight', ozon.message || '等待 Ozon API 状态。');
+    const products = Array.isArray(ozon.products) ? ozon.products : [];
+    const productText = products.length
+      ? ` 样本：${products.map(item => item.offer_id || item.product_id || '未命名商品').join('、')}`
+      : '';
+    setText('ozonApiInsight', (ozon.message || '等待 Ozon API 状态。') + productText);
     setText('analysisLimitInsight', health.ok
       ? '后端服务已响应。若 Ozon 凭证缺失，请在 Cloudflare 环境变量中配置。'
       : '前端当前未连接 Cloudflare Worker，智能分析会显示 API 服务未连接。');

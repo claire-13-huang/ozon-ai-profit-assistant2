@@ -283,3 +283,11 @@
 8. Worker URL config should not require code changes outside config
    - Input: after deploying Worker, set only `js/config.js` to the Worker base URL.
    - Expected: the page uses `/api/health` and `/api/analyze-product` through that base URL.
+
+9. Valid Ozon credentials should show real shop sample
+   - Input: run Worker with valid `OZON_CLIENT_ID` and `OZON_API_KEY`, then open `/api/health`.
+   - Expected: Ozon status is `connected`; response includes `sampleCount`; if the shop has products, response includes up to five sample products.
+
+10. Frontend should show Ozon shop sample after API connection
+    - Input: configure `js/config.js` to the running Worker URL and refresh the page.
+    - Expected: Ozon API status text includes connection success and sample product identifiers when Ozon returns products.

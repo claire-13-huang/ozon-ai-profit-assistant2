@@ -56,6 +56,7 @@ The Worker can:
 - infer a rough category candidate from visible text
 - extract simple keywords and tags
 - call Ozon product list as a health check when credentials are configured
+- display a small Ozon shop product sample after credentials are valid
 
 The Worker cannot guarantee:
 
@@ -89,6 +90,7 @@ Manual checks:
 
 - invalid URL shows an error
 - no Worker URL shows `API 服务未连接`
+- valid Ozon credentials show `connected` and a small shop product sample
 - demo report renders without backend
 - existing profit calculator still works
 - exchange rate helper still works

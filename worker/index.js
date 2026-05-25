@@ -134,6 +134,59 @@ function hasOzonCredentials(env) {
   return Boolean(env.OZON_CLIENT_ID && env.OZON_API_KEY);
 }
 
+async function ozonRequest(env, path, body) {
+  const response = await fetch(OZON_API_BASE + path, {
+    method: 'POST',
+    headers: {
+      'Client-Id': env.OZON_CLIENT_ID,
+      'Api-Key': env.OZON_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+
+  const text = await response.text();
+  let data = null;
+
+  try {
+    data = text ? JSON.parse(text) : null;
+  } catch (error) {
+    data = { raw: cleanText(text, 500) };
+  }
+
+  return { response, data };
+}
+
+function normalizeOzonProductItem(item) {
+  return {
+    product_id: item.product_id || item.id || null,
+    offer_id: item.offer_id || '',
+    sku: item.sku || null,
+    name: item.name || item.title || '',
+    visibility: item.visibility || item.status || '',
+    price: item.price || item.marketing_price || item.old_price || '',
+    currency_code: item.currency_code || item.currency || ''
+  };
+}
+
+function extractOzonListItems(data) {
+  const result = data && data.result ? data.result : {};
+  const items = Array.isArray(result.items) ? result.items : [];
+
+  return items.map(normalizeOzonProductItem);
+}
+
+function extractOzonInfoItems(data) {
+  const result = data && data.result ? data.result : {};
+  const items = Array.isArray(result.items)
+    ? result.items
+    : Array.isArray(result)
+      ? result
+      : [];
+
+  return items.map(normalizeOzonProductItem);
+}
+
 async function checkOzonApi(env) {
   if (!hasOzonCredentials(env)) {
     return {
@@ -143,17 +196,9 @@ async function checkOzonApi(env) {
   }
 
   try {
-    const response = await fetch(OZON_API_BASE + '/v3/product/list', {
-      method: 'POST',
-      headers: {
-        'Client-Id': env.OZON_CLIENT_ID,
-        'Api-Key': env.OZON_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        filter: { visibility: 'ALL' },
-        limit: 1
-      })
+    const { response, data } = await ozonRequest(env, '/v3/product/list', {
+      filter: { visibility: 'ALL' },
+      limit: 10
     });
 
     if (!response.ok) {
@@ -163,12 +208,34 @@ async function checkOzonApi(env) {
       };
     }
 
-    const data = await response.json();
-    const count = data && data.result && Array.isArray(data.result.items) ? data.result.items.length : 0;
+    const listProducts = extractOzonListItems(data);
+    const productIds = listProducts.map(item => item.product_id).filter(Boolean).slice(0, 10);
+    const offerIds = listProducts.map(item => item.offer_id).filter(Boolean).slice(0, 10);
+    let products = listProducts;
+    let detailStatus = productIds.length || offerIds.length ? 'not_requested' : 'empty_catalog';
+
+    if (productIds.length || offerIds.length) {
+      const infoBody = productIds.length
+        ? { product_id: productIds }
+        : { offer_id: offerIds };
+      const info = await ozonRequest(env, '/v3/product/info/list', infoBody);
+
+      if (info.response.ok) {
+        const detailProducts = extractOzonInfoItems(info.data);
+        if (detailProducts.length) products = detailProducts;
+        detailStatus = 'connected';
+      } else {
+        detailStatus = `product_info_error_${info.response.status}`;
+      }
+    }
+
+    const count = listProducts.length;
     return {
       status: 'connected',
-      message: `Ozon API 已连接，已完成商品列表健康检查。返回 ${count} 条样本商品。`,
-      sampleCount: count
+      message: `Ozon API 已连接，已读取 ${count} 条店铺商品样本。`,
+      sampleCount: count,
+      detailStatus,
+      products: products.slice(0, 5)
     };
   } catch (error) {
     return {
@@ -196,6 +263,11 @@ function buildReport(sourceData, ozon, profitSnapshot) {
     ozon.status === 'connected' ? '下一步可继续接入 Ozon 商品、价格或广告报告接口。' : '先完成 Ozon API 授权和 Worker 环境变量配置。',
     '人工复核类目、主图、标题和规格，避免 AI 识别误判。'
   ];
+  const sampleText = Array.isArray(ozon.products) && ozon.products.length
+    ? ' 店铺样本商品：' + ozon.products
+      .map(item => `${item.offer_id || item.product_id || '未命名'}${item.name ? ' / ' + item.name : ''}`)
+      .join('；')
+    : '';
 
   return {
     type,
@@ -206,7 +278,7 @@ function buildReport(sourceData, ozon, profitSnapshot) {
       ? '等待有效利润测算。'
       : `当前利润约 ¥${profit.toFixed(2)}，利润率约 ${percent(profitRate)}。`,
     competitionText: ozon.status === 'connected'
-      ? 'Ozon API 健康检查已通过；相似竞品数量、均价、评分评论需要后续接入可用报告或合规数据源。'
+      ? 'Ozon API 健康检查已通过，已能读取你店铺的商品样本。相似竞品数量、均价、评分评论仍需要后续接入可用报告或合规数据源。' + sampleText
       : ozon.message,
     adText: '广告判断基于当前利润测算。新品建议先小预算测试搜索与推荐，不直接放量。',
     storeText: `类目候选：${sourceData.insights.category}。关键词：${sourceData.insights.keywords.join('、') || '待提取'}。`,
