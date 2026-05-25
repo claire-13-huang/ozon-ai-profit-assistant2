@@ -379,6 +379,8 @@ h1 {
 }
 
 .store-api-add-button,
+.store-api-sync-button,
+.store-api-test-button,
 .store-api-remove-button {
   min-height: 42px;
   border: 0;
@@ -392,7 +394,12 @@ h1 {
   white-space: nowrap;
 }
 
-.store-api-remove-button {
+.store-api-sync-button {
+  margin-bottom: 12px;
+}
+
+.store-api-remove-button,
+.store-api-test-button {
   min-height: 34px;
   background: #f1f3f5;
   color: var(--muted-strong);
@@ -419,6 +426,13 @@ h1 {
   margin-bottom: 8px;
 }
 
+.store-api-card-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-shrink: 0;
+}
+
 .store-api-card-title {
   color: var(--text);
   font-size: 14px;
@@ -429,6 +443,14 @@ h1 {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.6;
+}
+
+.analysis-store-row {
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid #ededf0;
+  border-radius: 8px;
+  background: var(--surface-soft);
 }
 
 label,

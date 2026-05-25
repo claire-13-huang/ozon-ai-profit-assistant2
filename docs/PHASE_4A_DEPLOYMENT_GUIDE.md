@@ -73,6 +73,7 @@ Required Cloudflare environment variables:
 
 - `OZON_CLIENT_ID`
 - `OZON_API_KEY`
+- `STORE_API_CREDENTIALS_JSON` for multiple real stores
 
 Rules:
 
@@ -101,6 +102,34 @@ OZON_CLIENT_ID="your_real_client_id"
 OZON_API_KEY="your_real_api_key"
 ```
 
+For multiple real stores, use:
+
+```text
+STORE_API_CREDENTIALS_JSON='[
+  {
+    "platform": "Ozon",
+    "name": "Ozon 主店",
+    "credentialRef": "OZON_MAIN",
+    "clientId": "your_real_client_id",
+    "apiKey": "your_real_api_key"
+  },
+  {
+    "platform": "Wildberries",
+    "name": "WB 主店",
+    "credentialRef": "WB_MAIN",
+    "token": "your_real_wb_token"
+  },
+  {
+    "platform": "Yandex",
+    "name": "Yandex 主店",
+    "credentialRef": "YANDEX_MAIN",
+    "apiKey": "your_real_yandex_api_key"
+  }
+]'
+```
+
+The frontend can then click `同步后端真实店铺` and choose one store for product analysis.
+
 3. Start the Worker locally:
 
 ```bash
@@ -128,7 +157,8 @@ After testing, do not commit `worker/.dev.vars` or any real credential value.
 5. Add Ozon credentials in Cloudflare.
 6. Open `/api/health` again.
 7. Expected with valid credentials: `connected`, plus a small shop product sample if Ozon returns products.
-8. Paste a product URL in the frontend and click `开始智能分析`.
+8. Open `/api/stores` to confirm the backend returns sanitized store profiles without secrets.
+9. Paste a product URL in the frontend, choose a store, and click `开始智能分析`.
 
 ## Current Limitation
 

@@ -79,3 +79,45 @@ function createStoreApiProfile(input) {
     }
   };
 }
+
+async function requestBackendStoreProfiles() {
+  if (!window.PRODUCT_SELECTION_API_BASE_URL) {
+    return {
+      ok: false,
+      stores: [],
+      message: '前端未配置 Worker URL，无法同步后端真实店铺。'
+    };
+  }
+
+  const response = await fetch(window.PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/stores');
+
+  if (!response.ok) {
+    throw new Error('后端店铺同步失败：' + response.status);
+  }
+
+  return response.json();
+}
+
+async function requestStoreApiHealth(platform, credentialRef) {
+  if (!window.PRODUCT_SELECTION_API_BASE_URL) {
+    return {
+      ok: false,
+      result: {
+        status: 'api_not_connected',
+        message: '前端未配置 Worker URL，不能测试真实店铺 API。'
+      }
+    };
+  }
+
+  const response = await fetch(window.PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/store-health', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ platform, credentialRef })
+  });
+
+  if (!response.ok) {
+    throw new Error('店铺 API 测试失败：' + response.status);
+  }
+
+  return response.json();
+}

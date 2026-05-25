@@ -43,6 +43,7 @@
         <span>Wildberries 0</span>
         <span>Yandex 0</span>
       </div>
+      <button class="store-api-sync-button" id="syncBackendStoresButton" type="button">同步后端真实店铺</button>
 
       <div class="store-api-form">
         <div>
@@ -328,6 +329,14 @@
               <input id="sourceProductUrl" type="url" placeholder="粘贴 1688、淘宝、Amazon、品牌站或其他任意商品链接">
             </div>
             <button class="auto-analysis-button" id="autoAnalysisButton" type="button">开始智能分析</button>
+          </div>
+          <div class="analysis-store-row">
+            <div>
+              <label>选择用于分析的店铺</label>
+              <select id="analysisStoreProfile">
+                <option value="">默认 Ozon 凭证 / 未选择店铺</option>
+              </select>
+            </div>
           </div>
           <div class="auto-selection-note">当前 Phase 4A 优先接 Ozon。若后端或 Ozon API 凭证未配置，页面会直接显示连接状态和示例报告，不会停留在空白等待。</div>
 

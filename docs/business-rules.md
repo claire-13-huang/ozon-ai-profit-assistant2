@@ -121,6 +121,8 @@
 - The current limit is counted across all platforms together.
 - If the current tier limit is reached, adding another store profile should be blocked with a clear message.
 - Removing a frontend store profile does not delete backend secrets.
+- Backend store sync returns sanitized store profiles only and must never return real API keys.
+- Product analysis can use a selected store profile to decide which backend API credentials should be used.
 - Available conclusions are `建议小量测试`, `谨慎测试`, `暂不建议`, and `等待数据`.
 - If profit is negative, show `暂不建议`.
 - If profit margin is below 10% and estimated advertising share is 30% or higher, show `暂不建议`.

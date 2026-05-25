@@ -5,6 +5,8 @@ const CORS_HEADERS = {
 };
 
 const OZON_API_BASE = 'https://api-seller.ozon.ru';
+const WB_ANALYTICS_API_BASE = 'https://seller-analytics-api.wildberries.ru';
+const YANDEX_MARKET_API_BASE = 'https://api.partner.market.yandex.ru';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -134,12 +136,64 @@ function hasOzonCredentials(env) {
   return Boolean(env.OZON_CLIENT_ID && env.OZON_API_KEY);
 }
 
-async function ozonRequest(env, path, body) {
+function parseStoreRegistry(env) {
+  const stores = [];
+
+  if (env.STORE_API_CREDENTIALS_JSON) {
+    try {
+      const parsed = JSON.parse(env.STORE_API_CREDENTIALS_JSON);
+      if (Array.isArray(parsed)) {
+        parsed.forEach(item => {
+          if (item && item.platform && item.credentialRef) stores.push(item);
+        });
+      }
+    } catch (error) {
+      // Invalid registry JSON is reported through health endpoints.
+    }
+  }
+
+  if (hasOzonCredentials(env) && !stores.some(item => item.platform === 'Ozon' && item.credentialRef === 'OZON_MAIN')) {
+    stores.push({
+      platform: 'Ozon',
+      name: 'Ozon 默认店铺',
+      credentialRef: 'OZON_MAIN',
+      clientId: env.OZON_CLIENT_ID,
+      apiKey: env.OZON_API_KEY
+    });
+  }
+
+  return stores;
+}
+
+function publicStoreProfile(store) {
+  return {
+    platform: store.platform,
+    name: store.name || store.credentialRef,
+    credentialRef: store.credentialRef,
+    status: '后端已配置真实凭证'
+  };
+}
+
+function findStoreCredentials(env, platform, credentialRef) {
+  return parseStoreRegistry(env).find(store => {
+    return store.platform === platform && store.credentialRef === credentialRef;
+  }) || null;
+}
+
+function hasStoreCredentials(store) {
+  if (!store) return false;
+  if (store.platform === 'Ozon') return Boolean(store.clientId && store.apiKey);
+  if (store.platform === 'Wildberries') return Boolean(store.token || store.apiKey);
+  if (store.platform === 'Yandex') return Boolean(store.apiKey || store.token);
+  return false;
+}
+
+async function ozonRequest(credentials, path, body) {
   const response = await fetch(OZON_API_BASE + path, {
     method: 'POST',
     headers: {
-      'Client-Id': env.OZON_CLIENT_ID,
-      'Api-Key': env.OZON_API_KEY,
+      'Client-Id': credentials.clientId,
+      'Api-Key': credentials.apiKey,
       'Content-Type': 'application/json'
     },
     body: JSON.stringify(body)
@@ -187,8 +241,10 @@ function extractOzonInfoItems(data) {
   return items.map(normalizeOzonProductItem);
 }
 
-async function checkOzonApi(env) {
-  if (!hasOzonCredentials(env)) {
+async function checkOzonApi(env, store) {
+  const credentials = store || findStoreCredentials(env, 'Ozon', 'OZON_MAIN');
+
+  if (!credentials || !credentials.clientId || !credentials.apiKey) {
     return {
       status: 'missing_credentials',
       message: '等待 Ozon API 授权：Cloudflare 环境变量 OZON_CLIENT_ID / OZON_API_KEY 尚未完整配置。'
@@ -196,7 +252,7 @@ async function checkOzonApi(env) {
   }
 
   try {
-    const { response, data } = await ozonRequest(env, '/v3/product/list', {
+    const { response, data } = await ozonRequest(credentials, '/v3/product/list', {
       filter: { visibility: 'ALL' },
       limit: 10
     });
@@ -218,7 +274,7 @@ async function checkOzonApi(env) {
       const infoBody = productIds.length
         ? { product_id: productIds }
         : { offer_id: offerIds };
-      const info = await ozonRequest(env, '/v3/product/info/list', infoBody);
+      const info = await ozonRequest(credentials, '/v3/product/info/list', infoBody);
 
       if (info.response.ok) {
         const detailProducts = extractOzonInfoItems(info.data);
@@ -232,7 +288,7 @@ async function checkOzonApi(env) {
     const count = listProducts.length;
     return {
       status: 'connected',
-      message: `Ozon API 已连接，已读取 ${count} 条店铺商品样本。`,
+      message: `${credentials.name || 'Ozon 店铺'} API 已连接，已读取 ${count} 条店铺商品样本。`,
       sampleCount: count,
       detailStatus,
       products: products.slice(0, 5)
@@ -243,6 +299,99 @@ async function checkOzonApi(env) {
       message: 'Ozon API 连接异常：' + error.message
     };
   }
+}
+
+async function checkWildberriesApi(store) {
+  const token = store && (store.token || store.apiKey);
+
+  if (!token) {
+    return {
+      status: 'missing_credentials',
+      message: '等待 Wildberries API Token。'
+    };
+  }
+
+  try {
+    const response = await fetch(WB_ANALYTICS_API_BASE + '/ping', {
+      headers: { Authorization: token }
+    });
+
+    if (!response.ok) {
+      return {
+        status: response.status === 401 || response.status === 403 ? 'permission_error' : 'api_error',
+        message: `Wildberries API 已配置但连接失败：HTTP ${response.status}。`
+      };
+    }
+
+    return {
+      status: 'connected',
+      message: `${store.name || 'Wildberries 店铺'} API 已连接，后续可接入分析和报表数据。`,
+      products: []
+    };
+  } catch (error) {
+    return {
+      status: 'api_error',
+      message: 'Wildberries API 连接异常：' + error.message
+    };
+  }
+}
+
+async function checkYandexApi(store) {
+  const token = store && (store.apiKey || store.token);
+
+  if (!token) {
+    return {
+      status: 'missing_credentials',
+      message: '等待 Yandex Market API Key。'
+    };
+  }
+
+  try {
+    const response = await fetch(YANDEX_MARKET_API_BASE + '/campaigns', {
+      headers: { Authorization: 'Api-Key ' + token }
+    });
+
+    if (!response.ok) {
+      return {
+        status: response.status === 401 || response.status === 403 ? 'permission_error' : 'api_error',
+        message: `Yandex Market API 已配置但连接失败：HTTP ${response.status}。`
+      };
+    }
+
+    const data = await response.json().catch(() => ({}));
+    const campaigns = data && data.campaigns && Array.isArray(data.campaigns) ? data.campaigns : [];
+    return {
+      status: 'connected',
+      message: `${store.name || 'Yandex 店铺'} API 已连接，返回 ${campaigns.length} 个 campaign。`,
+      sampleCount: campaigns.length,
+      products: []
+    };
+  } catch (error) {
+    return {
+      status: 'api_error',
+      message: 'Yandex Market API 连接异常：' + error.message
+    };
+  }
+}
+
+async function checkStoreApi(env, platform, credentialRef) {
+  const store = findStoreCredentials(env, platform, credentialRef);
+
+  if (!store || !hasStoreCredentials(store)) {
+    return {
+      status: 'missing_credentials',
+      message: `${platform} 店铺 ${credentialRef || ''} 未在后端配置真实 API 凭证。`
+    };
+  }
+
+  if (platform === 'Ozon') return checkOzonApi(env, store);
+  if (platform === 'Wildberries') return checkWildberriesApi(store);
+  if (platform === 'Yandex') return checkYandexApi(store);
+
+  return {
+    status: 'not_supported',
+    message: `${platform} 暂未接入 API adapter。`
+  };
 }
 
 function percent(value) {
@@ -289,6 +438,7 @@ function buildReport(sourceData, ozon, profitSnapshot) {
 async function handleAnalyze(request, env) {
   const body = await request.json().catch(() => null);
   const sourceUrl = body && body.sourceUrl;
+  const selectedStore = body && body.selectedStore ? body.selectedStore : null;
 
   if (!isValidHttpUrl(sourceUrl)) {
     return json({ ok: false, error: '请提供有效的 http/https 商品链接。' }, 400);
@@ -319,7 +469,9 @@ async function handleAnalyze(request, env) {
     limitations.push(error.message);
   }
 
-  const ozon = await checkOzonApi(env);
+  const ozon = selectedStore && selectedStore.platform && selectedStore.credentialRef
+    ? await checkStoreApi(env, selectedStore.platform, selectedStore.credentialRef)
+    : await checkOzonApi(env);
   const report = buildReport(sourceData, ozon, body.profitSnapshot || {});
 
   return json({
@@ -344,8 +496,22 @@ export default {
       return json({
         ok: true,
         service: 'ozon-ai-profit-assistant-worker',
-        ozon
+        ozon,
+        stores: parseStoreRegistry(env).map(publicStoreProfile)
       });
+    }
+
+    if (url.pathname === '/api/stores') {
+      return json({
+        ok: true,
+        stores: parseStoreRegistry(env).map(publicStoreProfile)
+      });
+    }
+
+    if (url.pathname === '/api/store-health' && request.method === 'POST') {
+      const body = await request.json().catch(() => ({}));
+      const result = await checkStoreApi(env, body.platform, body.credentialRef);
+      return json({ ok: true, store: body, result });
     }
 
     if (url.pathname === '/api/analyze-product' && request.method === 'POST') {

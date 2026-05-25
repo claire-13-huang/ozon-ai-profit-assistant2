@@ -317,3 +317,15 @@
 6. Store profiles should restore after refresh
    - Input: add profiles and refresh the page.
    - Expected: membership tier, capacity, platform counts, and store cards restore from localStorage.
+
+7. Backend store sync should not expose secrets
+   - Input: configure `STORE_API_CREDENTIALS_JSON` in Worker and open `/api/stores`.
+   - Expected: response includes platform, name, credentialRef, and status; it does not include apiKey, token, clientId, or OAuth secret.
+
+8. Store connection test should call backend
+   - Input: sync backend stores, then click `测试连接` on one store card.
+   - Expected: status shows connected or a clear API/auth error from the backend.
+
+9. Product analysis should use selected store
+   - Input: sync backend stores, choose one store in `选择用于分析的店铺`, paste product URL, and click `开始智能分析`.
+   - Expected: backend receives platform and credentialRef for the selected store and uses that store's real API credentials.

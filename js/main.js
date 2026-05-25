@@ -777,9 +777,18 @@ async function checkOzonWorkerHealth() {
 }
 
 function getAnalysisPayload() {
+  const selectedStoreId = fieldValue('analysisStoreProfile');
+  const storeState = typeof loadStoreApiState === 'function' ? loadStoreApiState() : { stores: [] };
+  const selectedStore = storeState.stores.find(store => store.id === selectedStoreId) || null;
+
   return {
     sourceUrl: fieldValue('sourceProductUrl'),
     activePlatform: platform,
+    selectedStore: selectedStore ? {
+      platform: selectedStore.platform,
+      credentialRef: selectedStore.credentialRef,
+      name: selectedStore.name
+    } : null,
     profitSnapshot: lastProfitSnapshot,
     assumptions: {
       adShare: readOptionalNumber('selectionAdShare'),
@@ -1007,6 +1016,7 @@ function renderStoreApiManager() {
   const capacity = document.getElementById('storeApiCapacity');
   const summary = document.getElementById('storePlatformSummary');
   const list = document.getElementById('storeApiList');
+  const analysisSelect = document.getElementById('analysisStoreProfile');
   const limit = storeApiLimit(state.plan);
   const counts = platformStoreCounts(state.stores);
 
@@ -1018,6 +1028,26 @@ function renderStoreApiManager() {
     summary.innerHTML = ['Ozon', 'Wildberries', 'Yandex']
       .map(name => `<span>${name} ${counts[name] || 0}</span>`)
       .join('');
+  }
+  if (analysisSelect) {
+    const selected = analysisSelect.value;
+    analysisSelect.textContent = '';
+
+    const defaultOption = document.createElement('option');
+    defaultOption.value = '';
+    defaultOption.textContent = '默认 Ozon 凭证 / 未选择店铺';
+    analysisSelect.appendChild(defaultOption);
+
+    state.stores.forEach(store => {
+      const option = document.createElement('option');
+      option.value = store.id;
+      option.textContent = `${store.platform} · ${store.name}`;
+      analysisSelect.appendChild(option);
+    });
+
+    if (selected && state.stores.some(store => store.id === selected)) {
+      analysisSelect.value = selected;
+    }
   }
   if (!list) return;
 
@@ -1038,6 +1068,15 @@ function renderStoreApiManager() {
     meta.className = 'store-api-card-meta';
     meta.textContent = `${store.platform} · ${store.status}`;
 
+    const actions = document.createElement('div');
+    actions.className = 'store-api-card-actions';
+
+    const testButton = document.createElement('button');
+    testButton.className = 'store-api-test-button';
+    testButton.type = 'button';
+    testButton.dataset.testStoreId = store.id;
+    testButton.textContent = '测试连接';
+
     const removeButton = document.createElement('button');
     removeButton.className = 'store-api-remove-button';
     removeButton.type = 'button';
@@ -1050,8 +1089,10 @@ function renderStoreApiManager() {
 
     textBox.appendChild(title);
     textBox.appendChild(meta);
+    actions.appendChild(testButton);
+    actions.appendChild(removeButton);
     head.appendChild(textBox);
-    head.appendChild(removeButton);
+    head.appendChild(actions);
     card.appendChild(head);
     card.appendChild(credential);
     list.appendChild(card);
@@ -1065,6 +1106,7 @@ function renderStoreApiManager() {
 function bindStoreApiManager() {
   const planSelect = document.getElementById('storeApiPlan');
   const addButton = document.getElementById('addStoreApiButton');
+  const syncButton = document.getElementById('syncBackendStoresButton');
   const list = document.getElementById('storeApiList');
 
   if (planSelect) {
@@ -1107,8 +1149,53 @@ function bindStoreApiManager() {
     });
   }
 
+  if (syncButton) {
+    syncButton.addEventListener('click', async () => {
+      try {
+        setStoreApiStatus('正在从后端同步真实店铺档案...');
+        const result = await requestBackendStoreProfiles();
+        const state = loadStoreApiState();
+        const limit = storeApiLimit(state.plan);
+        const existingKeys = new Set(state.stores.map(store => `${store.platform}:${store.credentialRef}`));
+        const incoming = (result.stores || []).filter(store => !existingKeys.has(`${store.platform}:${store.credentialRef}`));
+        const available = Math.max(0, limit - state.stores.length);
+        const accepted = incoming.slice(0, available).map(store => ({
+          id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8),
+          platform: store.platform,
+          name: store.name,
+          credentialRef: store.credentialRef,
+          status: store.status || '后端已配置真实凭证',
+          createdAt: new Date().toISOString()
+        }));
+
+        state.stores.push(...accepted);
+        saveStoreApiState(state);
+        renderStoreApiManager();
+        setStoreApiStatus(`已同步 ${accepted.length} 个后端店铺。${incoming.length > accepted.length ? '当前会员档位容量不足，部分店铺未加入。' : ''}`, 'is-ok');
+      } catch (error) {
+        setStoreApiStatus(error.message || '后端店铺同步失败。', 'is-error');
+      }
+    });
+  }
+
   if (list) {
-    list.addEventListener('click', event => {
+    list.addEventListener('click', async event => {
+      const testButton = event.target.closest('[data-test-store-id]');
+      if (testButton) {
+        const state = loadStoreApiState();
+        const store = state.stores.find(item => item.id === testButton.dataset.testStoreId);
+        if (!store) return;
+
+        try {
+          setStoreApiStatus(`正在测试 ${store.name} 的真实 API 连接...`);
+          const result = await requestStoreApiHealth(store.platform, store.credentialRef);
+          setStoreApiStatus(result.result ? result.result.message : '测试完成。', result.result && result.result.status === 'connected' ? 'is-ok' : 'is-error');
+        } catch (error) {
+          setStoreApiStatus(error.message || '店铺 API 测试失败。', 'is-error');
+        }
+        return;
+      }
+
       const button = event.target.closest('[data-store-id]');
       if (!button) return;
 

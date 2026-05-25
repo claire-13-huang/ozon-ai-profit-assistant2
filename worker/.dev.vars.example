@@ -1,2 +1,23 @@
 OZON_CLIENT_ID="paste_client_id_here"
 OZON_API_KEY="paste_api_key_here"
+STORE_API_CREDENTIALS_JSON='[
+  {
+    "platform": "Ozon",
+    "name": "Ozon 主店",
+    "credentialRef": "OZON_MAIN",
+    "clientId": "paste_client_id_here",
+    "apiKey": "paste_api_key_here"
+  },
+  {
+    "platform": "Wildberries",
+    "name": "WB 主店",
+    "credentialRef": "WB_MAIN",
+    "token": "paste_wb_token_here"
+  },
+  {
+    "platform": "Yandex",
+    "name": "Yandex 主店",
+    "credentialRef": "YANDEX_MAIN",
+    "apiKey": "paste_yandex_api_key_here"
+  }
+]'

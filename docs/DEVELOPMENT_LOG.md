@@ -51,6 +51,14 @@
 - 验收方式：`node --check js/store-api.js js/main.js`；未开通会员添加第二个店铺应被拦截；月卡最多 5 个；年卡最多 10 个；刷新后档案恢复；真实 API Key 不应出现在 Git diff。
 - 已知风险：当前是前端店铺档案和会员规则 MVP，不是完整付费会员系统；真实多店铺 API 绑定仍需要后端加密密钥存储、账号系统和权限校验。
 
+## 2026-05-25 Phase 4B / 真实后端店铺同步与选店铺分析
+
+- 修改目标：回应真实 API Key 接入需求，让卖家可以从后端真实凭证注册表同步店铺，并在选品分析时选择具体店铺。
+- 涉及文件：worker/index.js、worker/.dev.vars.example、index.html、css/style.css、js/store-api.js、js/main.js、docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/PHASE_4B_MULTI_STORE_API_PLAN.md、docs/business-rules.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：Worker 新增 `STORE_API_CREDENTIALS_JSON` 解析；新增 `/api/stores` 返回脱敏店铺档案；新增 `/api/store-health` 测试 Ozon / Wildberries / Yandex 店铺连接；选品分析 payload 增加 selectedStore；前端新增同步后端真实店铺、测试连接、选择用于分析的店铺。
+- 验收方式：`node --check worker/index.js js/store-api.js js/main.js`；`npx wrangler deploy --dry-run`；`/api/stores` 不返回真实 apiKey/token/clientId；选择店铺后分析请求应带 platform 和 credentialRef。
+- 已知风险：当前没有账号系统和数据库，`STORE_API_CREDENTIALS_JSON` 适合 MVP/管理员配置，不适合长期多租户商业化；正式版本仍需登录、加密数据库、权限隔离和会员支付校验。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。
