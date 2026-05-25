@@ -752,6 +752,22 @@ function renderOzonAutoAnalysis(analysis) {
   renderProductSelectionReport(analysis.report);
 }
 
+async function checkOzonWorkerHealth() {
+  if (typeof requestOzonWorkerHealth !== 'function') return;
+
+  try {
+    const health = await requestOzonWorkerHealth();
+    const ozon = health.ozon || {};
+    setText('ozonApiInsight', ozon.message || '等待 Ozon API 状态。');
+    setText('analysisLimitInsight', health.ok
+      ? '后端服务已响应。若 Ozon 凭证缺失，请在 Cloudflare 环境变量中配置。'
+      : '前端当前未连接 Cloudflare Worker，智能分析会显示 API 服务未连接。');
+  } catch (error) {
+    setText('ozonApiInsight', error.message || 'API 健康检查失败。');
+    setText('analysisLimitInsight', '请检查 js/config.js 中的 Worker 地址和 Cloudflare Worker 部署状态。');
+  }
+}
+
 function getAnalysisPayload() {
   return {
     sourceUrl: fieldValue('sourceProductUrl'),
@@ -1156,3 +1172,4 @@ restoreFormState();
 syncProductSelectionPlatform();
 renderInitialReferenceRateStatus();
 calc();
+checkOzonWorkerHealth();

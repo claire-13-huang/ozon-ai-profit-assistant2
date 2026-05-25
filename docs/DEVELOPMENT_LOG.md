@@ -11,6 +11,14 @@
 - 验收方式：点击空链接/无效链接应显示错误；无 Worker URL 时应显示 `API 服务未连接` 而不是空白等待；示例报告可直接渲染；原利润计算、汇率、预设、localStorage、CSV 导出保持可用；运行 `node --check js/product-selection.js js/main.js worker/index.js`。
 - 已知风险：尚未部署 Cloudflare Worker，也未配置真实 Ozon 凭证；Phase 4A 只做 Ozon API 健康检查和来源链接公开信息识别，不生成未经验证的全平台竞品数量、均价、评分评论或销量。
 
+## 2026-05-25 Phase 4A / Worker 连接配置与部署说明
+
+- 修改目标：补齐上次未完成的前端 Worker 地址配置入口、页面加载健康检查和部署说明。
+- 涉及文件：index.html、js/config.js、js/main.js、js/product-selection.js、docs/PHASE_4A_OZON_API_AI_PLAN.md、docs/PHASE_4A_DEPLOYMENT_GUIDE.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 `js/config.js` 作为唯一前端 Worker URL 配置位置；页面加载时调用 Worker health helper，未配置 Worker 时在 Ozon API 状态卡中显示明确说明；新增部署文档，说明 Cloudflare Worker URL、Ozon 环境变量和手动验证步骤。
+- 验收方式：`node --check js/config.js js/product-selection.js js/main.js worker/index.js`；`git diff --check`；打开页面确认未配置 Worker 时显示 API 服务未连接。
+- 已知风险：仍未执行 Cloudflare 真实部署，也未配置 Ozon 凭证；这些步骤需要用户本人登录 Cloudflare/Ozon 后台完成。
+
 ## 2026-05-21 Phase 2 / 任务 1：基础输入校验与提示
 
 - 修改目标：补齐售价、汇率、重量、尺寸、成本、费率、补贴相关输入的基础校验和页面提示。

@@ -103,3 +103,5 @@ Manual checks:
 3. Add Ozon credentials in Cloudflare environment variables.
 4. Verify `/api/health`.
 5. Expand Ozon adapter only after confirming which official API methods provide useful seller data.
+
+Deployment details are documented in `docs/PHASE_4A_DEPLOYMENT_GUIDE.md`.

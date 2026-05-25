@@ -227,6 +227,27 @@ async function requestOzonProductAnalysis(payload) {
   return analysis;
 }
 
+async function requestOzonWorkerHealth() {
+  if (!PRODUCT_SELECTION_API_BASE_URL) {
+    return {
+      ok: false,
+      service: 'frontend-only',
+      ozon: {
+        status: 'api_not_connected',
+        message: 'API 服务未连接。部署 Cloudflare Worker 后，请在 js/config.js 配置 PRODUCT_SELECTION_API_BASE_URL。'
+      }
+    };
+  }
+
+  const response = await fetch(PRODUCT_SELECTION_API_BASE_URL.replace(/\/$/, '') + '/api/health');
+
+  if (!response.ok) {
+    throw new Error('API 健康检查失败：' + response.status);
+  }
+
+  return response.json();
+}
+
 function analyzeProductSelection(input) {
   const missing = [];
 

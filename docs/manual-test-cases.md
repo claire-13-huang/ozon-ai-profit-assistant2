@@ -275,3 +275,11 @@
 6. Existing workflows should remain usable
    - Input: after using the Ozon AI product section, change price, exchange rate, preset, and export CSV.
    - Expected: original calculator, exchange rate helper, preset, localStorage, diagnosis, and CSV export still work.
+
+7. Worker health status should be visible on page load
+   - Input: open the page with `window.PRODUCT_SELECTION_API_BASE_URL = ''` in `js/config.js`.
+   - Expected: Ozon API status explains that the frontend is not connected to Cloudflare Worker.
+
+8. Worker URL config should not require code changes outside config
+   - Input: after deploying Worker, set only `js/config.js` to the Worker base URL.
+   - Expected: the page uses `/api/health` and `/api/analyze-product` through that base URL.
