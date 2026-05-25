@@ -17,6 +17,29 @@ The review focuses only on Phase 3 behavior:
 
 No formulas, logistics rules, API behavior, or deployment settings are changed by this review.
 
+## Scope Boundary
+
+Phase 3 was a productization roadmap with several candidate milestones. The current implemented Phase 3 slice does not mean every roadmap idea has been built.
+
+Implemented in the current app:
+
+- seller scenario documentation
+- one safe preset: Healthy Profit Baseline
+- conservative decision wording for moderate margins
+- daily reference exchange-rate helper
+- visual polish and compact exchange-rate UX
+- product selection pre-decision placeholder, later superseded by Phase 4A/4B work
+
+Not implemented as Phase 3 product features:
+
+- multiple saved calculation schemes
+- channel comparison UI
+- advanced CSV/report export changes
+- account-level history
+- backend/API/AI automation
+
+These remain future candidates and should not be treated as completed behavior.
+
 ## Phase 3 Flow
 
 ### 1. Seller Scenario Examples
@@ -125,7 +148,7 @@ Current UI behavior:
 
 Fixed in this audit:
 
-- `docs/business-rules.md` and `docs/manual-test-cases.md` still referenced the old button label `获取当日参考汇率`.
+- `docs/business-rules.md` and `docs/manual-test-cases.md` previously referenced the old button label `获取当日参考汇率`.
 - Those references now match the current UI label `今日参考`.
 
 Risk check:

@@ -223,6 +223,6 @@
 
 - 修改目标：重新梳理 Phase 3 产品化流程，检查文档、预设、汇率助手、诊断阈值和页面字段引用是否一致。
 - 涉及文件：docs/PHASE_3_FLOW_AUDIT.md、docs/business-rules.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
-- 修改内容：新增 Phase 3 全流程复核文档；确认 Healthy Profit Baseline 在当前规则下利润率约 15.88%，应显示保守小量测试语义；修正汇率助手文档中的旧按钮文案，将 `获取当日参考汇率` 改为当前 UI 的 `今日参考`。
+- 修改内容：新增 Phase 3 全流程复核文档；确认 Healthy Profit Baseline 在当前规则下利润率约 15.88%，应显示保守小量测试语义；修正汇率助手文档中的旧按钮文案，将 `获取当日参考汇率` 改为当前 UI 的 `今日参考`；补充 Phase 3 复核范围边界，明确多方案保存、渠道比较、账号历史、后端/API/AI 自动化仍不是当前已完成的 Phase 3 功能。
 - 验收方式：检查 Phase 3 文档与实现文件；运行 HTML ID 引用检查；运行 `node --check` 检查 Phase 3 JS；运行 `git diff --check`。
 - 已知风险：本次未修改公式、物流规则或页面交互代码；当前环境的浏览器工具阻止访问 `127.0.0.1`，因此未重新做浏览器截图验证。
