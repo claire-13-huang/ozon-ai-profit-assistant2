@@ -4,79 +4,34 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>多平台智能物流计算器</title>
-  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/style.css?v=20260527-ozon-temp-test">
 </head>
 <body class="theme-ozon">
-  <div class="container">
-    <header class="page-header">
-      <div>
+  <div class="container app-shell">
+    <header class="page-header app-topbar">
+      <div class="brand-block">
         <p class="eyebrow">Ozon / Wildberries / Yandex</p>
         <h1>利润决策助手</h1>
         <p class="page-subtitle">用售价、物流和成本结构快速判断商品是否值得小量测试。</p>
       </div>
+      <div class="topbar-actions">
+        <div class="app-navigation" aria-label="主功能导航">
+          <button class="app-nav-button is-active" type="button" data-view-target="profit">利润计算器</button>
+          <button class="app-nav-button" type="button" data-view-target="ai">AI 分析</button>
+          <button class="app-nav-button" type="button" data-view-target="api">API 设置</button>
+        </div>
+      </div>
     </header>
 
-    <div class="tabs">
-      <button class="tab active" data-platform="Ozon">Ozon</button>
-      <button class="tab" data-platform="Wildberries">Wildberries</button>
-      <button class="tab" data-platform="Yandex">Yandex</button>
-    </div>
-
-    <div class="section store-api-panel">
-      <div class="title">店铺 API 管理</div>
-      <p class="panel-intro">为 Ozon / Wildberries / Yandex 分别添加店铺 API 档案。这里不会保存真实 API Key，只保存店铺名称和后端密钥编号；真实密钥必须放在 Cloudflare Worker 或后端环境变量里。</p>
-
-      <div class="store-plan-row">
-        <div>
-          <label>会员档位</label>
-          <select id="storeApiPlan">
-            <option value="free">未开通会员：最多 1 个店铺</option>
-            <option value="monthly">月卡：最多 5 个店铺</option>
-            <option value="yearly">年卡：最多 10 个店铺</option>
-          </select>
-        </div>
-        <div class="store-capacity" id="storeApiCapacity">已添加 0 / 1 个店铺</div>
+    <main class="app-main">
+    <section class="app-view is-active" id="profitCalculatorView" data-view="profit">
+      <div class="tabs">
+        <button class="tab active" data-platform="Ozon">Ozon</button>
+        <button class="tab" data-platform="Wildberries">Wildberries</button>
+        <button class="tab" data-platform="Yandex">Yandex</button>
       </div>
 
-      <div class="store-platform-summary" id="storePlatformSummary">
-        <span>Ozon 0</span>
-        <span>Wildberries 0</span>
-        <span>Yandex 0</span>
-      </div>
-      <div class="store-backend-row">
-        <div>
-          <label>Cloudflare Worker 地址</label>
-          <input id="backendWorkerUrl" type="url" placeholder="例如 https://ozon-ai-profit-assistant.xxx.workers.dev">
-        </div>
-        <button class="store-api-save-button" id="saveBackendWorkerUrlButton" type="button">保存地址</button>
-      </div>
-      <button class="store-api-sync-button" id="syncBackendStoresButton" type="button">同步后端真实店铺</button>
-
-      <div class="store-api-form">
-        <div>
-          <label>平台</label>
-          <select id="storeApiPlatform">
-            <option value="Ozon">Ozon</option>
-            <option value="Wildberries">Wildberries</option>
-            <option value="Yandex">Yandex</option>
-          </select>
-        </div>
-        <div>
-          <label>店铺名称</label>
-          <input id="storeApiName" placeholder="例如 Ozon 主店 / WB 服饰店">
-        </div>
-        <div>
-          <label>后端密钥编号</label>
-          <input id="storeApiCredentialRef" placeholder="例如 OZON_MAIN，不要填写真实 API Key">
-        </div>
-        <button class="store-api-add-button" id="addStoreApiButton" type="button">添加店铺</button>
-      </div>
-
-      <div class="store-api-status" id="storeApiStatus">未添加店铺。真实 API Key 后续请配置到 Worker/后端，不要放在前端。</div>
-      <div class="store-api-list" id="storeApiList"></div>
-    </div>
-
-    <div class="top">
+      <div class="top">
       <div class="summary">
         <div class="big">
           <label>预设售价（人民币）</label>
@@ -313,7 +268,26 @@
 
         <div class="section future-panel">
           <div class="title">Ozon AI 选品识别报告</div>
-          <p class="panel-intro">第一版先跑通 Ozon：粘贴任意来源商品链接后，系统读取公开商品信息，识别图片、标题、类目候选、关键词和主题标签，再结合当前利润测算与 Ozon API 连接状态生成选品报告。Ozon API 密钥只放在后端环境变量里，不会写进前端或 GitHub。</p>
+          <p class="panel-intro">Phase 2 保守占位：粘贴来源商品链接后，当前页面只生成本地规则提示和结构化报告框架，不连接真实 API、不抓取平台数据、不保存密钥。</p>
+
+          <div class="analysis-connection-grid">
+            <div>
+              <span>Data source</span>
+              <strong id="aiDataSourceStatus">Manual input</strong>
+            </div>
+            <div>
+              <span>Product link</span>
+              <strong id="aiProductLinkStatus">Empty</strong>
+            </div>
+            <div>
+              <span>Store API</span>
+              <strong id="aiStoreApiStatus">Not connected</strong>
+            </div>
+            <div>
+              <span>Analysis mode</span>
+              <strong id="aiAnalysisModeStatus">Preview / manual</strong>
+            </div>
+          </div>
 
           <div class="auto-selection-entry">
             <div>
@@ -330,13 +304,13 @@
               </select>
             </div>
           </div>
-          <div class="auto-selection-note">当前 Phase 4A 优先接 Ozon。若后端或 Ozon API 凭证未配置，页面会直接显示连接状态和示例报告，不会停留在空白等待。</div>
+          <div class="auto-selection-note">当前视图用于整理选品判断资料。真实平台 API、自动采集和 AI 分析必须在明确批准后再接入。</div>
 
           <div class="analysis-status" id="autoAnalysisStatus">等待粘贴链接并开始分析。</div>
           <div class="analysis-progress" id="autoAnalysisProgress">
-            <span data-step="link">读取链接</span>
-            <span data-step="identify">识别商品</span>
-            <span data-step="ozon">连接 Ozon</span>
+            <span data-step="link">接收链接</span>
+            <span data-step="identify">预览分析</span>
+            <span data-step="ozon">后端授权</span>
             <span data-step="report">生成报告</span>
           </div>
 
@@ -350,8 +324,8 @@
               <p id="sourceKeywordInsight">等待提取关键词和主题标签。</p>
             </div>
             <div>
-              <span>Ozon API 状态</span>
-              <p id="ozonApiInsight">等待后端健康检查。</p>
+              <span>API 状态</span>
+              <p id="ozonApiInsight">Phase 2 占位：未连接真实 API。</p>
             </div>
             <div>
               <span>数据限制</span>
@@ -491,17 +465,279 @@
       </div>
     </div>
 
-    <button class="export" onclick="exportToCSV()">导出为 CSV</button>
+      <button class="export" onclick="exportToCSV()">导出为 CSV</button>
+    </section>
+
+    <section class="app-view" id="aiAnalysisView" data-view="ai">
+      <div class="section workspace-card">
+        <div class="view-title-row">
+          <div>
+            <div class="title">AI Analysis</div>
+            <p class="panel-intro">这里用于集中查看选品分析、当前利润摘要和人工观察记录。当前 Phase 2 不执行真实 AI/API 请求。</p>
+          </div>
+        </div>
+
+        <div class="ai-summary-grid" id="aiCompactSummary">
+          <div>
+            <span>平台</span>
+            <strong id="aiSummaryPlatform">Ozon</strong>
+          </div>
+          <div>
+            <span>售价</span>
+            <strong id="aiSummarySale">等待输入</strong>
+          </div>
+          <div>
+            <span>总成本</span>
+            <strong id="aiSummaryTotalCost">等待输入</strong>
+          </div>
+          <div>
+            <span>利润</span>
+            <strong id="aiSummaryProfit">等待输入</strong>
+          </div>
+          <div>
+            <span>利润率</span>
+            <strong id="aiSummaryProfitRate">等待输入</strong>
+          </div>
+          <div>
+            <span>当前判断</span>
+            <strong id="aiSummaryDecision">等待输入</strong>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="aiAnalysisMount"></div>
+
+      <div class="section workspace-card">
+        <div class="analysis-notes-grid">
+          <div>
+            <label>店铺流量 / 曝光数据</label>
+            <textarea placeholder="例如：近 7 天曝光、自然流量、广告曝光、店铺基础流量变化。"></textarea>
+          </div>
+          <div>
+            <label>点击率 / 转化备注</label>
+            <textarea placeholder="例如：点击率偏低、加购正常、转化依赖评价或价格。"></textarea>
+          </div>
+          <div>
+            <label>产品 / 类目趋势备注</label>
+            <textarea placeholder="例如：季节性、搜索热度、类目竞争、价格带变化。"></textarea>
+          </div>
+          <div>
+            <label>平台观察备注</label>
+            <textarea placeholder="例如：Ozon/WB/Yandex 前台头部商品、主图质量、评论痛点、关键词。"></textarea>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-view" id="apiConnectionView" data-view="api">
+      <div class="section settings-card integration-center">
+        <div class="integration-hero">
+          <div>
+            <p class="eyebrow">平台 API</p>
+            <div class="title">店铺接入中心</div>
+            <p class="panel-intro">通过 Cloudflare Worker 安全连接平台数据。</p>
+          </div>
+          <div class="connection-pill" id="backendConnectionBadge">后端未配置</div>
+        </div>
+
+        <div class="settings-dashboard integration-layout">
+          <section class="integration-card backend-connection-card">
+            <div class="integration-card-head">
+              <div>
+                <div class="settings-subtitle">后端连接</div>
+                <p>这是你的安全后端代理。卖家 API Key 不会从浏览器直接发送到 Ozon。</p>
+              </div>
+              <span class="status-badge status-neutral">Cloudflare Worker</span>
+            </div>
+            <div class="backend-endpoint-row">
+              <div>
+                <label>Cloudflare Worker 地址</label>
+                <input id="backendWorkerUrl" type="url" placeholder="https://ozon-ai-profit-assistant.xxx.workers.dev">
+                <div class="field-helper">这是后端代理地址，不是 Ozon API Key。</div>
+              </div>
+              <div class="backend-action-stack">
+                <button class="store-api-save-button" id="saveBackendWorkerUrlButton" type="button">保存地址</button>
+                <button class="store-api-test-button" id="testBackendHealthButton" type="button">测试后端</button>
+              </div>
+            </div>
+            <input id="ozonWorkerUrl" type="hidden" autocomplete="off">
+            <div class="store-api-status" id="backendHealthStatus">后端未配置。请先填写 Worker 地址，再测试后端状态。</div>
+          </section>
+
+          <section class="marketplace-section">
+            <div class="integration-section-head">
+              <div>
+                <div class="settings-subtitle">平台接入</div>
+                <p>当前阶段按平台逐步接入。Ozon 是唯一开放测试的连接流程。</p>
+              </div>
+              <div class="store-platform-summary" id="storePlatformSummary">
+                <span>Ozon 0</span>
+                <span>Wildberries 0</span>
+                <span>Yandex 0</span>
+              </div>
+            </div>
+
+            <div class="marketplace-card-row">
+              <article class="marketplace-card is-active-marketplace">
+                <div class="marketplace-card-top">
+                  <div class="marketplace-logo-badge">OZ</div>
+                  <span class="status-badge status-active" id="ozonConnectionPill">未连接</span>
+                </div>
+                <h3>Ozon</h3>
+                <p>已开放通过 Cloudflare Worker 的临时凭证测试流程。</p>
+                <button class="store-api-test-button marketplace-action" id="focusOzonPanelButton" type="button">打开设置</button>
+              </article>
+
+              <article class="marketplace-card">
+                <div class="marketplace-card-top">
+                  <div class="marketplace-logo-badge marketplace-wb">WB</div>
+                  <span class="status-badge status-muted">即将支持</span>
+                </div>
+                <h3>Wildberries</h3>
+                <p>当前只预留店铺档案结构，暂不开放真实 Token 测试。</p>
+                <button class="store-api-test-button marketplace-action" type="button" disabled>即将支持</button>
+              </article>
+
+              <article class="marketplace-card">
+                <div class="marketplace-card-top">
+                  <div class="marketplace-logo-badge marketplace-ya">YA</div>
+                  <span class="status-badge status-muted">即将支持</span>
+                </div>
+                <h3>Yandex</h3>
+                <p>未来接入 Yandex Market API 时，凭证也必须保存在后端。</p>
+                <button class="store-api-test-button marketplace-action" type="button" disabled>即将支持</button>
+              </article>
+            </div>
+          </section>
+
+          <section class="integration-card ozon-connection-panel" id="ozonDetailsPanel">
+            <div class="integration-card-head">
+              <div>
+                <div class="settings-subtitle">Ozon 连接流程</div>
+                <p>分为四步：后端代理、本地档案、临时凭证测试、连接结果。</p>
+              </div>
+              <span class="status-badge status-active">可测试</span>
+            </div>
+
+            <div class="integration-steps">
+              <div class="integration-step">
+                <div class="step-marker">1</div>
+                <div>
+                  <h3>后端代理</h3>
+                  <p>先确认上方 Worker 地址已保存且后端可响应，再进行临时凭证测试。</p>
+                  <div class="step-summary" id="backendProxyStepStatus">等待填写 Worker 地址。</div>
+                </div>
+              </div>
+
+              <div class="integration-step">
+                <div class="step-marker">2</div>
+                <div>
+                  <h3>店铺连接档案</h3>
+                  <div class="store-plan-row compact-plan-row">
+                    <div>
+                      <label>档案容量</label>
+                      <select id="storeApiPlan">
+                        <option value="free">未开通会员：最多 1 个店铺</option>
+                        <option value="monthly">月卡：最多 5 个店铺</option>
+                        <option value="yearly">年卡：最多 10 个店铺</option>
+                      </select>
+                    </div>
+                    <div class="store-capacity" id="storeApiCapacity">已添加 0 / 1 个店铺</div>
+                  </div>
+                  <div class="store-api-form integration-profile-form">
+                    <div>
+                      <label>平台</label>
+                      <select id="storeApiPlatform">
+                        <option value="Ozon">Ozon</option>
+                        <option value="Wildberries">Wildberries</option>
+                        <option value="Yandex">Yandex</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label>店铺名称</label>
+                      <input id="storeApiName" placeholder="例如 Ozon 主店 / WB 服饰店">
+                    </div>
+                    <div>
+                      <label>后端连接档案 ID</label>
+                      <input id="storeApiCredentialRef" placeholder="例如 OZON_MAIN，不要填写真实 API Key">
+                      <div class="field-helper">这不是 Ozon API Key。真实 API Key 只在测试连接时临时输入，不会保存在浏览器。</div>
+                    </div>
+                    <button class="store-api-add-button" id="addStoreApiButton" type="button">添加档案</button>
+                  </div>
+                  <div class="store-profile-toolbar">
+                    <button class="store-api-sync-button" id="syncBackendStoresButton" type="button">同步后端档案</button>
+                    <div class="store-api-status" id="storeApiStatus">未添加店铺。真实 API Key 只允许在临时测试时输入，或后续由后端安全配置。</div>
+                  </div>
+                  <div class="store-api-list" id="storeApiList"></div>
+                </div>
+              </div>
+
+              <div class="integration-step temporary-credential-panel">
+                <div class="step-marker">3</div>
+                <div>
+                  <h3>临时凭证测试</h3>
+                  <p>凭证只用于本次连接测试或选品摘要请求，只发送到 Cloudflare Worker，并会在请求后清空。</p>
+                  <div class="ozon-connection-grid">
+                    <div>
+                      <label>本次测试店铺名称</label>
+                      <input id="ozonTestStoreName" autocomplete="off" placeholder="例如 Ozon 主店">
+                    </div>
+                    <div>
+                      <label>Ozon Client ID</label>
+                      <input id="ozonTestClientId" autocomplete="off" placeholder="Ozon Seller Client ID">
+                    </div>
+                    <div>
+                      <label>Ozon API Key</label>
+                      <input id="ozonTestApiKey" type="password" autocomplete="new-password" placeholder="仅临时输入，不会保存">
+                    </div>
+                    <div class="credential-security-note">
+                      <span>安全规则</span>
+                      <strong>不保存</strong>
+                    </div>
+                  </div>
+                  <div class="ozon-connection-actions">
+                    <button class="store-api-test-button primary-action" id="testOzonConnectionButton" type="button">测试 Ozon 连接</button>
+                    <div class="store-api-status" id="ozonTemporaryConnectionStatus">未测试。请先配置 HTTPS Worker URL；前端不会直接请求 Ozon 官方 API。</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="integration-step">
+                <div class="step-marker">4</div>
+                <div>
+                  <h3>连接结果</h3>
+                  <p>结果会显示已连接、失败、缺少凭证或后端不可用；只允许显示脱敏后的 Client ID。</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section class="integration-card security-notes-card">
+            <div>
+              <div class="settings-subtitle">安全说明</div>
+            <p>浏览器请求只发送到 Worker。完整 API Key 不会展示、记录或保存到浏览器存储；选品摘要最多读取 1-5 条只读商品样本。本阶段不包含任何会修改 Ozon 店铺的 API 操作。</p>
+            </div>
+            <div class="security-note-grid">
+              <span>只读测试</span>
+              <span>前端不存密钥</span>
+              <span>浏览器不直连 Ozon</span>
+            </div>
+          </section>
+        </div>
+      </div>
+    </section>
+    </main>
   </div>
 
   <script src="js/data-rules.js"></script>
   <script src="js/calculations.js"></script>
   <script src="js/storage.js"></script>
-  <script src="js/store-api.js"></script>
+  <script src="js/store-api.js?v=20260527-integration-center"></script>
   <script src="js/exchange-rate.js"></script>
   <script src="js/config.js"></script>
-  <script src="js/product-selection.js"></script>
+  <script src="js/product-selection.js?v=20260528-product-summary-credentials"></script>
   <script src="js/export.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/main.js?v=20260528-product-summary-credentials"></script>
 </body>
 </html>

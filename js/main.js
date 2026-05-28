@@ -4,6 +4,14 @@ let lastSubsidyField = 'subsidySalePrice';
 let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], warningIds: [] };
 let lastProfitSnapshot = null;
 let lastOzonAutoAnalysis = null;
+let ozonTemporaryConnectionState = { status: 'not_connected', message: '未测试' };
+
+const apiPreparationFieldIds = [
+  'ozonTestStoreName',
+  'ozonTestClientId',
+  'ozonTestApiKey',
+  'ozonWorkerUrl'
+];
 
 const savedFieldIds = [
   'salePrice',
@@ -74,6 +82,44 @@ function updateActivePlatformTab() {
   document.querySelectorAll('.tab').forEach(tab => {
     tab.classList.toggle('active', tab.dataset.platform === platform);
   });
+}
+
+function switchAppView(targetView) {
+  const nextView = targetView || 'profit';
+
+  document.querySelectorAll('.app-view').forEach(view => {
+    const isActive = view.dataset.view === nextView;
+    view.classList.toggle('is-active', isActive);
+    view.hidden = !isActive;
+  });
+
+  document.querySelectorAll('[data-view-target]').forEach(button => {
+    button.classList.toggle('is-active', button.dataset.viewTarget === nextView);
+  });
+
+  document.body.dataset.activeView = nextView;
+
+  if (nextView === 'ai') {
+    renderAiCompactSummary();
+    renderAiAnalysisStatusModel();
+  }
+}
+
+function bindAppViewSwitching() {
+  document.querySelectorAll('[data-view-target]').forEach(button => {
+    button.addEventListener('click', () => {
+      switchAppView(button.dataset.viewTarget);
+    });
+  });
+}
+
+function mountAiAnalysisWorkspace() {
+  const panel = document.querySelector('.future-panel');
+  const mount = document.getElementById('aiAnalysisMount');
+
+  if (panel && mount && panel.parentElement !== mount) {
+    mount.appendChild(panel);
+  }
 }
 
 function collectFormState() {
@@ -570,6 +616,7 @@ function renderInvalidInputState() {
     text: '请先修正输入错误，再查看下一步建议。'
   });
   renderProductSelection(lastProfitSnapshot);
+  renderAiCompactSummary();
 
   const notice = document.getElementById('matchNotice');
   if (notice) {
@@ -642,6 +689,60 @@ function setText(id, value) {
 function setInput(id, value) {
   const el = document.getElementById(id);
   if (el) el.value = value;
+}
+
+function getText(id, fallback = '等待输入') {
+  const el = document.getElementById(id);
+  const value = el ? el.textContent.trim() : '';
+  return value || fallback;
+}
+
+function renderAiCompactSummary() {
+  setText('aiSummaryPlatform', platform);
+
+  if (!lastProfitSnapshot || !lastProfitSnapshot.mainInputValid) {
+    setText('aiSummarySale', lastProfitSnapshot && lastProfitSnapshot.blockingMessage ? '待校验' : '等待输入');
+    setText('aiSummaryTotalCost', '等待输入');
+    setText('aiSummaryProfit', '等待输入');
+    setText('aiSummaryProfitRate', '等待输入');
+    setText('aiSummaryDecision', lastProfitSnapshot && lastProfitSnapshot.blockingMessage ? '请先修正输入' : '等待输入');
+    return;
+  }
+
+  setText('aiSummarySale', m(lastProfitSnapshot.sale));
+  setText('aiSummaryTotalCost', getText('totalCost'));
+  setText('aiSummaryProfit', m(lastProfitSnapshot.profit));
+  setText('aiSummaryProfitRate', lastProfitSnapshot.profitRate.toFixed(2) + '%');
+  setText('aiSummaryDecision', getText('profitDecisionStatus'));
+}
+
+function hasConfiguredWorkerUrl() {
+  const fromOzonField = fieldValue('ozonWorkerUrl');
+  const fromSavedConfig = window.PRODUCT_SELECTION_API_BASE_URL || '';
+  return Boolean(fromOzonField || fromSavedConfig);
+}
+
+function getProductLinkStatusText() {
+  const sourceUrl = fieldValue('sourceProductUrl');
+  if (!sourceUrl) return 'Empty';
+
+  try {
+    const parsed = new URL(sourceUrl);
+    return ['http:', 'https:'].includes(parsed.protocol) ? 'Received' : 'Invalid URL';
+  } catch (error) {
+    return 'Invalid URL';
+  }
+}
+
+function renderAiAnalysisStatusModel() {
+  const productLinkStatus = getProductLinkStatusText();
+  const workerConfigured = hasConfiguredWorkerUrl();
+  const apiConnected = ozonTemporaryConnectionState.status === 'connected';
+
+  setText('aiProductLinkStatus', productLinkStatus);
+  setText('aiStoreApiStatus', apiConnected ? 'API connected' : 'Not connected');
+  setText('aiAnalysisModeStatus', apiConnected && workerConfigured ? 'Authorized preview' : 'Preview / manual');
+  setText('aiDataSourceStatus', apiConnected ? 'API connected' : workerConfigured ? 'Manual + Worker ready' : 'Manual input');
 }
 
 function setReferenceRateStatus(message, type = '') {
@@ -720,6 +821,26 @@ function setAutoAnalysisStatus(message, type = '') {
   el.textContent = message;
 }
 
+function setProductLinkPreviewStatus() {
+  const sourceUrl = fieldValue('sourceProductUrl');
+
+  if (!sourceUrl) {
+    setAutoAnalysisStatus('等待粘贴来源商品链接。当前为手动/预览分析模式。');
+    renderAiAnalysisStatusModel();
+    return;
+  }
+
+  try {
+    const parsed = new URL(sourceUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
+    setAutoAnalysisStatus('Product link received. 当前模式：手动/预览分析。自动读取商品或店铺数据需要先通过 Cloudflare Worker 完成卖家 API 授权。你可以继续手动填写流量、曝光、转化或类目趋势备注。');
+  } catch (error) {
+    setAutoAnalysisStatus('商品链接格式不正确，请填写 http 或 https URL。', 'is-error');
+  }
+
+  renderAiAnalysisStatusModel();
+}
+
 function setAutoAnalysisProgress(activeStep, doneSteps = []) {
   document.querySelectorAll('#autoAnalysisProgress [data-step]').forEach(step => {
     const name = step.dataset.step;
@@ -746,6 +867,7 @@ function renderOzonAnalysisDetails(analysis) {
     ? analysis.limitations.join('；')
     : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
   renderProductImagePreview(source.image || fieldValue('imageUrl'));
+  renderAiAnalysisStatusModel();
 }
 
 function renderOzonAutoAnalysis(analysis) {
@@ -776,14 +898,26 @@ async function checkOzonWorkerHealth() {
   }
 }
 
+function getOzonProductSummaryCredentials() {
+  return {
+    clientId: fieldValue('ozonTestClientId'),
+    apiKey: fieldValue('ozonTestApiKey'),
+    limit: 3
+  };
+}
+
 function getAnalysisPayload() {
   const selectedStoreId = fieldValue('analysisStoreProfile');
   const storeState = typeof loadStoreApiState === 'function' ? loadStoreApiState() : { stores: [] };
   const selectedStore = storeState.stores.find(store => store.id === selectedStoreId) || null;
+  const productSummaryCredentials = getOzonProductSummaryCredentials();
 
   return {
     sourceUrl: fieldValue('sourceProductUrl'),
     activePlatform: platform,
+    clientId: productSummaryCredentials.clientId,
+    apiKey: productSummaryCredentials.apiKey,
+    limit: productSummaryCredentials.limit,
     selectedStore: selectedStore ? {
       platform: selectedStore.platform,
       credentialRef: selectedStore.credentialRef,
@@ -800,6 +934,16 @@ function getAnalysisPayload() {
   };
 }
 
+function syncOzonTemporaryConnectionStateFromAnalysis(analysis) {
+  const ozon = analysis && analysis.ozon ? analysis.ozon : null;
+  if (!ozon || !ozon.status) return;
+
+  ozonTemporaryConnectionState = {
+    status: ozon.status,
+    message: ozon.message || ''
+  };
+}
+
 async function runOzonAutoAnalysis() {
   const sourceUrl = fieldValue('sourceProductUrl');
   const button = document.getElementById('autoAnalysisButton');
@@ -807,6 +951,7 @@ async function runOzonAutoAnalysis() {
   if (!sourceUrl) {
     setAutoAnalysisStatus('请先粘贴来源商品链接。', 'is-error');
     setAutoAnalysisProgress('', []);
+    setInput('ozonTestApiKey', '');
     return;
   }
 
@@ -818,6 +963,7 @@ async function runOzonAutoAnalysis() {
   } catch (error) {
     setAutoAnalysisStatus('商品链接格式不正确，请检查后再分析。', 'is-error');
     setAutoAnalysisProgress('', []);
+    setInput('ozonTestApiKey', '');
     return;
   }
 
@@ -826,7 +972,7 @@ async function runOzonAutoAnalysis() {
     button.textContent = '分析中...';
   }
 
-  setAutoAnalysisStatus('正在读取链接并生成 Ozon 选品报告...', 'is-loading');
+  setAutoAnalysisStatus('Product link received. 正在生成手动/预览分析；如已配置 Worker，将尝试请求授权后的产品摘要端点。', 'is-loading');
   setAutoAnalysisProgress('link', []);
 
   try {
@@ -834,18 +980,27 @@ async function runOzonAutoAnalysis() {
     setAutoAnalysisProgress('identify', ['link']);
 
     const analysis = await requestOzonProductAnalysis(getAnalysisPayload());
+    syncOzonTemporaryConnectionStateFromAnalysis(analysis);
     setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
     renderOzonAutoAnalysis(analysis);
-    setAutoAnalysisStatus(analysis.ok ? '分析完成。请根据报告复核利润、广告和 Ozon 数据状态。' : analysis.report.summary, analysis.ok ? '' : 'is-error');
+    const previewOnly = analysis.ozon && ['api_not_connected', 'endpoint_not_ready'].includes(analysis.ozon.status);
+    setAutoAnalysisStatus(
+      analysis.ok
+        ? '分析完成。请根据报告复核利润、广告和 Ozon 数据状态。'
+        : previewOnly
+          ? 'Product link received. 当前仍为手动/预览分析；自动数据读取需要先完成 Worker 后端和卖家 API 授权。'
+          : analysis.report.summary,
+      analysis.ok || previewOnly ? '' : 'is-error'
+    );
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
     persistFormState();
   } catch (error) {
     const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot);
-    fallback.report.summary = error.message || fallback.report.summary;
     renderOzonAutoAnalysis(fallback);
-    setAutoAnalysisStatus(error.message || 'API 服务异常，请稍后重试。', 'is-error');
+    setAutoAnalysisStatus(error.message || 'Worker 产品摘要暂不可用，当前保持手动/预览分析。', 'is-error');
     setAutoAnalysisProgress('', ['link']);
   } finally {
+    setInput('ozonTestApiKey', '');
     if (button) {
       button.disabled = false;
       button.textContent = '开始智能分析';
@@ -961,28 +1116,245 @@ function setStoreApiStatus(message, type = '') {
   el.textContent = message;
 }
 
+function setBackendConnectionStatus(status, message) {
+  const badge = document.getElementById('backendConnectionBadge');
+  const healthStatus = document.getElementById('backendHealthStatus');
+  const stepStatus = document.getElementById('backendProxyStepStatus');
+  const statusText = {
+    connected: '后端已连接',
+    testing: '测试中',
+    failed: '连接失败',
+    not_configured: '后端未配置'
+  }[status] || '后端未配置';
+  const statusClass = status === 'connected' ? 'is-ok' : status === 'testing' ? 'is-testing' : status === 'failed' ? 'is-error' : '';
+
+  if (badge) {
+    badge.classList.remove('is-ok', 'is-error', 'is-testing');
+    if (statusClass) badge.classList.add(statusClass);
+    badge.textContent = statusText;
+  }
+
+  if (healthStatus) {
+    healthStatus.classList.remove('is-ok', 'is-error');
+    if (status === 'connected') healthStatus.classList.add('is-ok');
+    if (status === 'failed') healthStatus.classList.add('is-error');
+    healthStatus.textContent = message || statusText;
+  }
+
+  if (stepStatus) {
+    stepStatus.textContent = message || statusText;
+  }
+}
+
 function renderBackendWorkerUrl() {
   const input = document.getElementById('backendWorkerUrl');
-  if (!input) return;
+  const ozonInput = document.getElementById('ozonWorkerUrl');
+  const value = window.PRODUCT_SELECTION_API_BASE_URL || '';
 
-  input.value = window.PRODUCT_SELECTION_API_BASE_URL || '';
+  if (input) input.value = value;
+  if (ozonInput) ozonInput.value = value;
+  setBackendConnectionStatus(
+    value ? 'not_configured' : 'not_configured',
+    value
+      ? 'Worker 地址已保存。点击“测试后端”确认后端是否响应。'
+      : '后端未配置。请先填写 Worker 地址，再测试后端状态。'
+  );
+  renderAiAnalysisStatusModel();
+}
+
+function getVisibleWorkerUrlInputValue(preferred = 'backend') {
+  const backendUrl = fieldValue('backendWorkerUrl');
+  const ozonUrl = fieldValue('ozonWorkerUrl');
+
+  if (preferred === 'ozon') {
+    return ozonUrl || backendUrl || window.PRODUCT_SELECTION_API_BASE_URL || '';
+  }
+
+  return backendUrl || ozonUrl || window.PRODUCT_SELECTION_API_BASE_URL || '';
 }
 
 function bindBackendWorkerUrlControls() {
   const saveButton = document.getElementById('saveBackendWorkerUrlButton');
+  const testButton = document.getElementById('testBackendHealthButton');
   const input = document.getElementById('backendWorkerUrl');
 
   if (!input || !saveButton || typeof setSavedWorkerBaseUrl !== 'function') return;
 
   renderBackendWorkerUrl();
+  input.addEventListener('input', () => {
+    setInput('ozonWorkerUrl', input.value.trim());
+    setBackendConnectionStatus(
+      input.value.trim() ? 'not_configured' : 'not_configured',
+      input.value.trim()
+        ? 'Worker 地址已填写。连接测试前，请保存地址或测试后端状态。'
+        : '后端未配置。请先填写 Worker 地址，再测试后端状态。'
+    );
+    renderAiAnalysisStatusModel();
+  });
+
   saveButton.addEventListener('click', async () => {
     try {
       const savedUrl = setSavedWorkerBaseUrl(input.value);
       input.value = savedUrl;
-      setStoreApiStatus('Worker 地址已保存，正在检查后端连接...', 'is-ok');
-      await checkOzonWorkerHealth();
+      setInput('ozonWorkerUrl', savedUrl);
+      renderAiAnalysisStatusModel();
+      setBackendConnectionStatus('not_configured', 'Worker 地址已保存。点击“测试后端”确认后端是否响应。');
+      setStoreApiStatus('Worker 地址已保存。只有在点击同步、测试连接或开始分析时，前端才会请求 Worker。', 'is-ok');
     } catch (error) {
+      setBackendConnectionStatus('failed', error.message || 'Worker URL 保存失败。');
       setStoreApiStatus(error.message || 'Worker 地址保存失败。', 'is-error');
+    }
+  });
+
+  if (testButton) {
+    testButton.addEventListener('click', async () => {
+      const workerUrl = getVisibleWorkerUrlInputValue('backend');
+      const normalized = typeof normalizeWorkerBaseUrl === 'function'
+        ? normalizeWorkerBaseUrl(workerUrl)
+        : String(workerUrl || '').trim().replace(/\/+$/, '');
+
+      if (!normalized) {
+        setBackendConnectionStatus('not_configured', '缺少 Worker 地址：请先填写 Cloudflare Worker 地址。');
+        return;
+      }
+
+      testButton.disabled = true;
+      setInput('backendWorkerUrl', normalized);
+      setInput('ozonWorkerUrl', normalized);
+      setBackendConnectionStatus('testing', '测试中：正在检查 Cloudflare Worker /api/health。');
+
+      try {
+        const response = await fetch(normalized + '/api/health');
+        if (!response.ok) throw new Error('API 健康检查失败：' + response.status);
+        const health = await response.json().catch(() => ({}));
+        const ozon = health.ozon || {};
+        const ozonText = ozon.status === 'connected'
+          ? '后端已配置 Ozon 长期凭证。'
+          : '后端健康；临时测试不要求配置 Ozon 长期凭证。';
+
+        setBackendConnectionStatus('connected', `后端已连接：${health.service || 'Worker'} 已响应。${ozonText}`);
+      } catch (error) {
+        setBackendConnectionStatus('failed', '后端不可用：' + (error.message || 'Worker 健康检查失败。'));
+      } finally {
+        testButton.disabled = false;
+      }
+    });
+  }
+}
+
+function revealOzonTemporaryCredentialTest(store, backendMessage) {
+  switchAppView('api');
+
+  const panel = document.getElementById('ozonDetailsPanel') || document.querySelector('.ozon-connection-panel');
+  const clientIdInput = document.getElementById('ozonTestClientId');
+  const apiKeyInput = document.getElementById('ozonTestApiKey');
+  const visibleWorkerUrl = getVisibleWorkerUrlInputValue();
+
+  if (store && store.name) setInput('ozonTestStoreName', store.name);
+  if (visibleWorkerUrl) setInput('ozonWorkerUrl', visibleWorkerUrl);
+  setInput('ozonTestApiKey', '');
+  setOzonTemporaryConnectionStatus(
+    `${backendMessage || '后端未配置该店铺的长期凭证。'} 请在这里临时输入 Ozon Client ID 和 API Key 进行一次只读连接测试；凭证不会保存到浏览器。`
+  );
+
+  if (panel && typeof panel.scrollIntoView === 'function') {
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  if (clientIdInput && !clientIdInput.value) {
+    clientIdInput.focus();
+  } else if (apiKeyInput) {
+    apiKeyInput.focus();
+  }
+}
+
+function setOzonTemporaryConnectionStatus(message, type = '') {
+  const status = document.getElementById('ozonTemporaryConnectionStatus');
+  const pill = document.getElementById('ozonConnectionPill');
+
+  if (status) {
+    status.classList.remove('is-ok', 'is-error');
+    if (type) status.classList.add(type);
+    status.textContent = message;
+  }
+
+  if (pill) {
+    pill.classList.remove('is-ok', 'is-error');
+    if (type) pill.classList.add(type);
+    pill.textContent = type === 'is-ok' ? '已连接' : type === 'is-error' ? '失败' : '未连接';
+  }
+}
+
+function displayStoreApiStatusLabel(status) {
+  return String(status || '等待后端连接档案配置').replace('后端密钥', '后端连接档案');
+}
+
+function bindOzonTemporaryConnectionControls() {
+  const button = document.getElementById('testOzonConnectionButton');
+  const workerInput = document.getElementById('ozonWorkerUrl');
+  const backendWorkerInput = document.getElementById('backendWorkerUrl');
+  const focusButton = document.getElementById('focusOzonPanelButton');
+
+  if (workerInput && !workerInput.value) {
+    workerInput.value = window.PRODUCT_SELECTION_API_BASE_URL || '';
+  }
+
+  if (workerInput) {
+    workerInput.addEventListener('input', () => {
+      renderAiAnalysisStatusModel();
+      setOzonTemporaryConnectionStatus('Worker URL 已修改但未测试。Client ID 和 API Key 不会保存到浏览器存储。');
+    });
+  }
+
+  if (!button) return;
+
+  if (focusButton) {
+    focusButton.addEventListener('click', () => {
+      const panel = document.getElementById('ozonDetailsPanel');
+      if (panel && typeof panel.scrollIntoView === 'function') {
+        panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
+
+  button.addEventListener('click', async () => {
+    if (typeof requestOzonTemporaryConnectionTest !== 'function') return;
+
+    button.disabled = true;
+    setOzonTemporaryConnectionStatus('测试中：正在请求配置的 Worker 端点测试连接；前端不会直接请求 Ozon 官方 API。');
+
+    try {
+      const result = await requestOzonTemporaryConnectionTest({
+        storeName: fieldValue('ozonTestStoreName'),
+        clientId: fieldValue('ozonTestClientId'),
+        apiKey: fieldValue('ozonTestApiKey'),
+        workerUrl: getVisibleWorkerUrlInputValue('backend') || (backendWorkerInput ? backendWorkerInput.value.trim() : '')
+      });
+
+      ozonTemporaryConnectionState = {
+        status: result.status,
+        message: result.message
+      };
+      const identityText = result.maskedClientId ? `（Client ID: ${result.maskedClientId}）` : '';
+      const statusLabel = result.status === 'connected'
+        ? '已连接'
+        : result.status === 'missing_credentials'
+          ? '缺少 Client ID 或 API Key'
+          : result.status === 'backend_not_configured'
+            ? '缺少 Worker 地址'
+            : '失败';
+      setOzonTemporaryConnectionStatus(`${statusLabel}：${result.message}${identityText}`, result.ok && result.status === 'connected' ? 'is-ok' : 'is-error');
+      renderAiAnalysisStatusModel();
+    } catch (error) {
+      ozonTemporaryConnectionState = {
+        status: 'worker_error',
+        message: error.message || 'Worker 连接测试失败。'
+      };
+      setOzonTemporaryConnectionStatus('后端不可用：' + (error.message || 'Worker 连接测试失败。'), 'is-error');
+      renderAiAnalysisStatusModel();
+    } finally {
+      setInput('ozonTestApiKey', '');
+      button.disabled = false;
     }
   });
 }
@@ -1045,7 +1417,7 @@ function renderStoreApiManager() {
 
     const meta = document.createElement('div');
     meta.className = 'store-api-card-meta';
-    meta.textContent = `${store.platform} · ${store.status}`;
+    meta.textContent = `${store.platform} · ${displayStoreApiStatusLabel(store.status)}`;
 
     const actions = document.createElement('div');
     actions.className = 'store-api-card-actions';
@@ -1064,7 +1436,7 @@ function renderStoreApiManager() {
 
     const credential = document.createElement('div');
     credential.className = 'store-api-card-meta';
-    credential.textContent = `后端密钥编号：${store.credentialRef}`;
+    credential.textContent = `后端连接档案 ID：${store.credentialRef}`;
 
     textBox.appendChild(title);
     textBox.appendChild(meta);
@@ -1078,7 +1450,7 @@ function renderStoreApiManager() {
   });
 
   if (!state.stores.length) {
-    setStoreApiStatus('未添加店铺。真实 API Key 后续请配置到 Worker/后端，不要放在前端。');
+    setStoreApiStatus('未添加店铺。真实 API Key 只允许在临时测试时输入，或后续由后端安全配置。');
   }
 }
 
@@ -1124,7 +1496,7 @@ function bindStoreApiManager() {
       setInput('storeApiName', '');
       setInput('storeApiCredentialRef', '');
       renderStoreApiManager();
-      setStoreApiStatus('店铺 API 档案已添加。请在后端配置对应密钥编号的真实凭证。', 'is-ok');
+      setStoreApiStatus('店铺 API 档案已添加。这个档案 ID 不是 Ozon API Key；真实 API Key 只在临时测试时输入或后续由后端安全配置。', 'is-ok');
     });
   }
 
@@ -1166,11 +1538,24 @@ function bindStoreApiManager() {
         if (!store) return;
 
         try {
-          setStoreApiStatus(`正在测试 ${store.name} 的真实 API 连接...`);
-          const result = await requestStoreApiHealth(store.platform, store.credentialRef);
-          setStoreApiStatus(result.result ? result.result.message : '测试完成。', result.result && result.result.status === 'connected' ? 'is-ok' : 'is-error');
+          setStoreApiStatus(`测试中：正在通过 Worker 测试 ${store.name} 的后端连接档案...`);
+          const result = await requestStoreApiHealth(store.platform, store.credentialRef, getVisibleWorkerUrlInputValue('backend'));
+          const testResult = result.result || {};
+
+          if (store.platform === 'Ozon' && testResult.status === 'missing_credentials') {
+            setStoreApiStatus('后端未配置该 Ozon 档案的长期凭证，已打开临时凭证测试表单。', 'is-error');
+            revealOzonTemporaryCredentialTest(store, testResult.message);
+            return;
+          }
+
+          if (testResult.status === 'api_not_connected') {
+            setStoreApiStatus('缺少 Worker 地址：请先填写 Cloudflare Worker 地址。', 'is-error');
+            return;
+          }
+
+          setStoreApiStatus(testResult.message || '测试完成。', testResult.status === 'connected' ? 'is-ok' : 'is-error');
         } catch (error) {
-          setStoreApiStatus(error.message || '店铺 API 测试失败。', 'is-error');
+          setStoreApiStatus('后端不可用：' + (error.message || '店铺 API 测试失败。'), 'is-error');
         }
         return;
       }
@@ -1277,6 +1662,7 @@ function calc() {
     adCost: costs.ad,
     commissionCost: costs.com
   };
+  renderAiCompactSummary();
   renderProductSelection(lastProfitSnapshot);
 
   if (r) {
@@ -1331,6 +1717,11 @@ service.onchange = () => {
 
 document.querySelectorAll('input,select').forEach(e => {
   e.addEventListener('input', () => {
+    if (apiPreparationFieldIds.includes(e.id)) {
+      renderAiAnalysisStatusModel();
+      return;
+    }
+
     if (['subsidySalePrice', 'subsidyAmountInput', 'subsidyRateInput'].includes(e.id)) {
       lastSubsidyField = e.id;
     }
@@ -1341,7 +1732,7 @@ document.querySelectorAll('input,select').forEach(e => {
 
     if (e.id === 'sourceProductUrl') {
       lastOzonAutoAnalysis = null;
-      setAutoAnalysisStatus('链接已修改，请重新开始智能分析。');
+      setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
 
@@ -1350,6 +1741,11 @@ document.querySelectorAll('input,select').forEach(e => {
   });
 
   e.addEventListener('change', () => {
+    if (apiPreparationFieldIds.includes(e.id)) {
+      renderAiAnalysisStatusModel();
+      return;
+    }
+
     if (['subsidySalePrice', 'subsidyAmountInput', 'subsidyRateInput'].includes(e.id)) {
       lastSubsidyField = e.id;
     }
@@ -1360,7 +1756,7 @@ document.querySelectorAll('input,select').forEach(e => {
 
     if (e.id === 'sourceProductUrl') {
       lastOzonAutoAnalysis = null;
-      setAutoAnalysisStatus('链接已修改，请重新开始智能分析。');
+      setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
 
@@ -1369,9 +1765,12 @@ document.querySelectorAll('input,select').forEach(e => {
   });
 });
 
+mountAiAnalysisWorkspace();
+bindAppViewSwitching();
 bindExchangeRateHelper();
 bindOzonAnalysisControls();
 bindBackendWorkerUrlControls();
+bindOzonTemporaryConnectionControls();
 bindStoreApiManager();
 applyTheme();
 updateActivePlatformTab();
@@ -1380,4 +1779,5 @@ restoreFormState();
 syncProductSelectionPlatform();
 renderInitialReferenceRateStatus();
 calc();
-checkOzonWorkerHealth();
+renderAiAnalysisStatusModel();
+switchAppView('profit');

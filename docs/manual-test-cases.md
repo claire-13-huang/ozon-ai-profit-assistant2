@@ -72,6 +72,94 @@
    - Input: return to valid input and click export.
    - Expected: CSV still downloads.
 
+## App Workspace View Switching
+
+1. Profit Calculator should be the only default workspace
+   - Input: open `index.html`.
+   - Expected: only the Profit Calculator workspace is visible; AI Analysis and API Settings are not visible below the calculator.
+
+2. AI Analysis should switch the main screen
+   - Input: click `AI Analysis` in the top navigation.
+   - Expected: the screen switches to the AI workspace; it shows a compact profit summary and AI/product-analysis placeholder cards, not the full calculator form.
+
+3. API Settings should switch the main screen
+   - Input: click `API Settings` in the top navigation.
+   - Expected: the screen switches to a clean Store Integration Center with a header, backend connection card, marketplace cards, Ozon setup flow, and security notes.
+
+4. Switching views should not change calculator results
+   - Input: calculate a valid sample product, switch to AI Analysis, then switch back to Profit Calculator.
+   - Expected: sale price, platform, cost inputs, logistics result, profit, profit rate, and diagnosis remain unchanged.
+
+5. Platform tabs should still work inside Profit Calculator
+   - Input: switch between Ozon, Wildberries, and Yandex tabs in the Profit Calculator workspace.
+   - Expected: active platform theme and supplier/service choices update normally; no AI or API workspace appears below the calculator.
+
+6. Opening API Settings should not make a real API request
+   - Input: click `API Settings` without pressing save, sync, or test buttons.
+   - Expected: no backend/API request is triggered by navigation alone; the page shows placeholder connection states.
+
+## Safe Seller API Integration Preparation
+
+1. Product link should enter manual preview mode
+   - Input: open AI Analysis, enter `https://example.com/product`.
+   - Expected: status says the product link was received, current mode is manual/preview, and automatic data reading requires backend store API authorization.
+
+2. AI Analysis should show connection status cards
+   - Input: enter or clear the product link.
+   - Expected: Data source, Product link, Store API, and Analysis mode cards update without claiming real API access.
+
+3. Missing Worker URL should block credential sending
+   - Input: open API Settings, fill Ozon Client ID and API Key, leave Worker URL empty, click `Test Ozon connection`.
+   - Expected: status says backend/Worker is not configured and credentials are not sent anywhere.
+
+4. API key field should be masked
+   - Input: inspect the Ozon API key field.
+   - Expected: field type is `password`; the key is not displayed as plain text after input.
+
+5. API key should not be saved to localStorage
+   - Input: type an Ozon API key, refresh the page.
+   - Expected: the API key field is empty after refresh; localStorage contains no Ozon API key value.
+
+6. Browser should not call Ozon official API directly
+   - Input: use AI Analysis and API Settings without a Worker implementation.
+   - Expected: browser requests do not go to `api-seller.ozon.ru`; only configured Worker URLs may be requested after explicit button clicks.
+
+7. Missing future Worker endpoint should fail gracefully
+   - Input: configure a Worker URL that does not implement `/api/ozon/test-connection`, then click `Test Ozon connection`.
+   - Expected: status says the endpoint is not ready; credentials are not stored in frontend storage.
+
+8. Calculator should remain unchanged
+   - Input: return to Profit Calculator and use sale price 100, exchange rate 12.5, weight 500g, dimensions 10/10/10, purchase cost 50, commission 10%, advertising 5%, label fee 1, other cost 2.
+   - Expected: total cost, profit, profit rate, logistics matching, and diagnosis behave the same as before this API preparation change.
+
+9. Worker test endpoint should return safe status only
+   - Input: send `POST /api/ozon/test-connection` to the Worker with test Client ID and API Key.
+   - Expected: response includes only `connected`, `message`, `maskedClientId`, and `timestamp`; it never returns the API key.
+
+10. Frontend should clear API key after test
+    - Input: enter Client ID and API Key, click `Test Ozon connection`.
+    - Expected: the API key input is cleared after the test finishes, regardless of success or failure.
+
+11. API Settings should separate backend endpoint from seller credentials
+    - Input: open API Settings.
+    - Expected: Cloudflare Worker URL appears in the Backend connection card; Ozon Client ID and Ozon API Key appear only in the Temporary credential test step.
+
+12. Backend health check should use Worker only
+    - Input: enter the deployed Worker URL and click `Test health`.
+    - Expected: backend badge changes through Testing to Backend connected or Failed; request goes to `{Worker URL}/api/health`; no Ozon API key is requested.
+
+13. Marketplace cards should not overclaim future integrations
+    - Input: inspect Ozon, Wildberries, and Yandex cards.
+    - Expected: Ozon is active/testable; Wildberries and Yandex are marked `Coming soon` with disabled actions and no fake connection claim.
+
+14. Ozon store profile test should reveal temporary credential testing when backend credentials are missing
+    - Input: open API Settings, enter the deployed Worker URL, add one Ozon store profile, then click `测试连接` on that store card while the backend has no long-term Ozon credentials configured.
+    - Expected: the status explains that backend credentials are missing, the Ozon temporary Client ID / API Key test form is revealed or focused, the store name is filled, and the API key field remains password type.
+
+15. Temporary profile connection test should only call the Worker
+    - Input: in the revealed temporary test form, leave Client ID / API Key empty once, then enter dummy values and click `Test Ozon connection`.
+    - Expected: empty fields show a missing credential message; dummy credentials are sent only to `{Worker URL}/api/ozon/test-connection`; the browser does not call `api-seller.ozon.ru`; the API key is not saved to localStorage/sessionStorage and is cleared after the test.
+
 ## LocalStorage Save/Load
 
 1. Fill normal valid values, refresh page, values restore
@@ -244,9 +332,9 @@
    - Input: after using the Ozon AI product section, change price, exchange rate, and export CSV.
    - Expected: original calculator, exchange rate helper, localStorage, diagnosis, and CSV export still work.
 
-7. Worker health status should be visible on page load
+7. Worker health status should stay passive on page load
    - Input: open the page with `window.PRODUCT_SELECTION_API_BASE_URL = ''` in `js/config.js`.
-   - Expected: Ozon API status explains that the frontend is not connected to Cloudflare Worker.
+   - Expected: Ozon API status remains a placeholder and page navigation does not make a backend request automatically.
 
 8. Worker URL config should not require code edits during testing
    - Input: after deploying Worker, paste the Worker base URL into `Cloudflare Worker 地址` and click `保存地址`.
@@ -280,7 +368,7 @@
 
 4. Store profile should not ask for real API key
    - Input: inspect the add store form.
-   - Expected: the form asks for backend credential reference, not an API key or token value.
+   - Expected: the form asks for `后端连接档案 ID` / local connection profile information, not an API key or token value.
 
 5. Removing a store updates capacity
    - Input: add several store profiles, remove one.
@@ -298,6 +386,66 @@
    - Input: sync backend stores, then click `测试连接` on one store card.
    - Expected: status shows connected or a clear API/auth error from the backend.
 
+8a. Ozon store connection test should offer temporary credentials when no backend credentials exist
+   - Input: add a frontend-only Ozon store profile with a backend connection profile ID, configure the Worker URL, then click `测试连接`.
+   - Expected: if `/api/store-health` returns `missing_credentials`, the page opens or focuses the Ozon temporary credential test form instead of leaving only a dead-end error.
+
 9. Product analysis should use selected store
    - Input: sync backend stores, choose one store in `选择用于分析的店铺`, paste product URL, and click `开始智能分析`.
    - Expected: backend receives platform and credentialRef for the selected store and uses that store's real API credentials.
+
+10. Ozon product-summary should handle missing temporary credentials safely
+   - Input: send `POST /api/ozon/product-summary` with JSON body `{ "sourceUrl": "https://example.com/product", "clientId": "", "apiKey": "", "limit": 10 }`.
+   - Expected: response is safe JSON with `ok: false`, `ozon.status: "missing_credentials"`, `ozon.products: []`, `ozon.sampleCount: 0`, and `limit: 5`; it does not call Ozon with missing credentials and does not expose any API Key.
+
+11. Ozon product-summary should remain read-only and limited
+   - Input: inspect `worker/index.js`.
+   - Expected: `POST /api/ozon/product-summary` only uses `POST https://api-seller.ozon.ru/v3/product/list` and `POST https://api-seller.ozon.ru/v3/product/info/list`, limits product count to 1-5, and does not add product sync, pagination, storage, price update, stock update, or any write/update/delete/create endpoint.
+
+12. Ozon product-summary missing body should not look connected
+   - Input: send `POST /api/ozon/product-summary` without a JSON body.
+   - Expected: response returns HTTP `400`, `ok: false`, `ozon.status: "invalid_request"`, `ozon.products: []`, and `ozon.sampleCount: 0`.
+
+13. Ozon product-summary limit below one should clamp to one
+   - Input: send `POST /api/ozon/product-summary` with JSON body `{ "sourceUrl": "https://example.com/product", "clientId": "", "apiKey": "", "limit": 0 }`.
+   - Expected: response does not call Ozon, returns missing-credential state, and reports `limit: 1` with `limitClamped: true`.
+
+14. Ozon product-summary unsupported method should return 405
+   - Input: send `GET /api/ozon/product-summary`.
+   - Expected: response returns HTTP `405` and `ok: false`.
+
+15. Unknown Worker route should return 404
+   - Input: send `POST /api/not-found`.
+   - Expected: response returns HTTP `404` and `ok: false`.
+
+16. Product analysis should pass temporary credentials only at request time
+   - Input: configure a valid HTTPS Worker URL, type Ozon Client ID and API Key into the temporary credential fields, paste a source product URL, and click `开始智能分析`.
+   - Expected: browser sends `clientId`, `apiKey`, and `limit: 3` only to `{Worker URL}/api/ozon/product-summary`; the browser does not call `api-seller.ozon.ru` directly, and the API Key input is cleared after the request path completes.
+
+17. Product analysis should clear API Key after mocked success
+   - Input: point Worker URL to a local mock endpoint that returns HTTP `200` with `ok: true` and `ozon.status: "connected"`, type a dummy API Key, then click `开始智能分析`.
+   - Expected: the API Key input is cleared after the request path completes; only the configured local mock Worker receives the dummy request.
+
+18. Product analysis should clear API Key after mocked Worker failure
+   - Input: point Worker URL to a local mock endpoint that returns HTTP `500`, type a dummy API Key, then click `开始智能分析`.
+   - Expected: the page shows a safe Worker error/manual fallback state, and the API Key input is cleared after the request path completes.
+
+19. Product analysis should clear API Key after network error
+   - Input: point Worker URL to an allowed local URL where no server is listening, type a dummy API Key, then click `开始智能分析`.
+   - Expected: the page shows a safe Worker unavailable/manual fallback state, and the API Key input is cleared after the thrown fetch/network error path.
+
+20. Product analysis should clear API Key when source URL validation stops the request
+   - Input: type a dummy Ozon API Key, leave the source product URL empty or enter an invalid URL, then click `开始智能分析`.
+   - Expected: no Worker request is sent, no Ozon request is made, and the API Key input is cleared.
+
+21. Product analysis should not store temporary API Key
+   - Input: type an Ozon API Key in the temporary field, click `开始智能分析`, then inspect localStorage/sessionStorage and refresh the page.
+   - Expected: no localStorage or sessionStorage value contains the Ozon API Key, and the API Key field is empty after refresh.
+
+22. Product analysis should not send credentials to insecure remote Worker URL
+   - Input: enter a non-local `http://` Worker URL, type temporary Ozon credentials, paste a source product URL, and click `开始智能分析`.
+   - Expected: frontend shows a safe Worker URL security message, does not call Ozon directly, does not send temporary credentials to that Worker URL, and does not show connected product data.
+
+23. Product analysis with missing temporary credentials should remain safe
+   - Input: configure a valid Worker URL, leave Client ID or API Key empty, paste a source product URL, and click `开始智能分析`.
+   - Expected: Worker returns missing-credential state; the page does not crash, `ozon.status` is not `connected`, no product sample is shown as real connected data, and `ozon.sampleCount` is `0`.

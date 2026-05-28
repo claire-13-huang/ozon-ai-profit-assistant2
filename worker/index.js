@@ -188,6 +188,13 @@ function hasStoreCredentials(store) {
   return false;
 }
 
+function maskClientId(clientId) {
+  const clean = String(clientId || '').trim();
+  if (!clean) return '';
+  if (clean.length <= 4) return clean[0] + '***';
+  return clean.slice(0, 2) + '***' + clean.slice(-2);
+}
+
 async function ozonRequest(credentials, path, body) {
   const response = await fetch(OZON_API_BASE + path, {
     method: 'POST',
@@ -211,6 +218,63 @@ async function ozonRequest(credentials, path, body) {
   return { response, data };
 }
 
+async function testOzonConnection(request) {
+  // STORE SAFETY GUARD:
+  // This test endpoint is read-only only. It must never call Ozon create,
+  // update, delete, price, stock, order, shipment, logistics, warehouse, or ad
+  // mutation endpoints. It only verifies credentials with a minimal list/read
+  // request and returns sanitized connection status.
+  const timestamp = new Date().toISOString();
+  const body = await request.json().catch(() => ({}));
+  const clientId = String(body.clientId || '').trim();
+  const apiKey = String(body.apiKey || '').trim();
+  const maskedClientId = maskClientId(clientId);
+
+  if (!clientId || !apiKey) {
+    return json({
+      connected: false,
+      message: 'Missing Ozon Client ID or API Key.',
+      maskedClientId,
+      timestamp
+    }, 400);
+  }
+
+  try {
+    // Minimal read-only authentication check. This endpoint is already used by
+    // the Worker health path and requests only one product record.
+    const { response } = await ozonRequest({ clientId, apiKey }, '/v3/product/list', {
+      filter: { visibility: 'ALL' },
+      limit: 1
+    });
+
+    if (!response.ok) {
+      const authError = response.status === 401 || response.status === 403;
+      return json({
+        connected: false,
+        message: authError
+          ? 'Ozon rejected the credentials. Check Client ID, API Key, and seller API permissions.'
+          : `Ozon API test failed with HTTP ${response.status}.`,
+        maskedClientId,
+        timestamp
+      });
+    }
+
+    return json({
+      connected: true,
+      message: 'Ozon API authentication succeeded through the Cloudflare Worker.',
+      maskedClientId,
+      timestamp
+    });
+  } catch (error) {
+    return json({
+      connected: false,
+      message: 'Ozon API test failed through the Worker: ' + cleanText(error.message, 180),
+      maskedClientId,
+      timestamp
+    }, 502);
+  }
+}
+
 function normalizeOzonProductItem(item) {
   return {
     product_id: item.product_id || item.id || null,
@@ -220,6 +284,26 @@ function normalizeOzonProductItem(item) {
     visibility: item.visibility || item.status || '',
     price: item.price || item.marketing_price || item.old_price || '',
     currency_code: item.currency_code || item.currency || ''
+  };
+}
+
+function normalizeOzonProductSummaryItem(item) {
+  const images = Array.isArray(item.images) ? item.images : [];
+  const stocks = item.stocks && typeof item.stocks === 'object' ? item.stocks : {};
+  const statuses = item.statuses && typeof item.statuses === 'object' ? item.statuses : {};
+
+  return {
+    product_id: item.product_id || item.id || null,
+    offer_id: item.offer_id || '',
+    name: item.name || item.title || '',
+    visibility: item.visibility || statuses.visibility || '',
+    status: item.status || statuses.status_name || statuses.moderate_status || 'unknown',
+    price: item.price || item.marketing_price || item.old_price || null,
+    currency_code: item.currency_code || item.currency || null,
+    stock: Number.isFinite(stocks.present) ? stocks.present : null,
+    sellable: typeof item.visible === 'boolean' ? item.visible : null,
+    image: item.primary_image || images[0] || null,
+    product_url: item.product_url || item.link || null
   };
 }
 
@@ -239,6 +323,214 @@ function extractOzonInfoItems(data) {
       : [];
 
   return items.map(normalizeOzonProductItem);
+}
+
+function getOzonProductListItems(data) {
+  if (!data || !data.result || !Array.isArray(data.result.items)) return null;
+  return data.result.items;
+}
+
+function getOzonProductInfoItems(data) {
+  if (!data || !data.result) return null;
+  if (Array.isArray(data.result.items)) return data.result.items;
+  if (Array.isArray(data.result)) return data.result;
+  return null;
+}
+
+function parseProductSummaryLimit(value) {
+  const number = Number(value);
+  const requested = Number.isFinite(number) ? Math.floor(number) : null;
+  const fallback = 3;
+  const limit = requested === null ? fallback : Math.min(Math.max(requested, 1), 5);
+
+  return {
+    requestedLimit: requested,
+    limit,
+    limitClamped: requested !== null && requested !== limit
+  };
+}
+
+function readProductSummaryLimit(body) {
+  if (Object.prototype.hasOwnProperty.call(body, 'limit')) return body.limit;
+  if (Object.prototype.hasOwnProperty.call(body, 'productLimit')) return body.productLimit;
+  if (Object.prototype.hasOwnProperty.call(body, 'sampleLimit')) return body.sampleLimit;
+  return undefined;
+}
+
+function buildSourcePlaceholder(sourceUrl) {
+  const url = String(sourceUrl || '').trim();
+  let host = '';
+
+  if (isValidHttpUrl(url)) {
+    host = new URL(url).hostname.replace(/^www\./, '');
+  }
+
+  return {
+    url,
+    host,
+    title: '',
+    image: ''
+  };
+}
+
+function buildProductSummaryInsights() {
+  return {
+    category: '待人工复核',
+    keywords: [],
+    tags: [],
+    sellingPoints: [],
+    painPoints: []
+  };
+}
+
+function productSummaryPayload(body, ozon, ok = false, status = 200) {
+  return json({
+    ok,
+    source: buildSourcePlaceholder(body && body.sourceUrl),
+    insights: buildProductSummaryInsights(),
+    ozon,
+    limitations: [
+      'Phase 2.5 只读取 1-5 条授权店铺商品样本。',
+      '不执行商品同步、分页、订单、财务、广告、库存或价格写入。'
+    ]
+  }, status);
+}
+
+async function handleOzonProductSummary(request) {
+  // STORE SAFETY GUARD:
+  // This endpoint is read-only only. It accepts temporary credentials for the
+  // current request, never stores them, and only calls the existing product
+  // list/detail read endpoints for a 1-5 product sample.
+  const timestamp = new Date().toISOString();
+  const body = await request.json().catch(() => null);
+
+  if (!body || typeof body !== 'object' || Array.isArray(body)) {
+    return json({
+      ok: false,
+      error: 'Missing or invalid JSON request body.',
+      ozon: {
+        status: 'invalid_request',
+        message: '请发送 JSON 请求体；Worker 不会保存任何 Ozon 凭证。',
+        products: [],
+        sampleCount: 0,
+        timestamp
+      }
+    }, 400);
+  }
+
+  const clientId = String(body.clientId || body.ozonClientId || '').trim();
+  const apiKey = String(body.apiKey || body.ozonApiKey || '').trim();
+  const hasCredentialFields = Object.prototype.hasOwnProperty.call(body, 'clientId')
+    || Object.prototype.hasOwnProperty.call(body, 'ozonClientId')
+    || Object.prototype.hasOwnProperty.call(body, 'apiKey')
+    || Object.prototype.hasOwnProperty.call(body, 'ozonApiKey');
+  const maskedClientId = maskClientId(clientId);
+  const limitInfo = parseProductSummaryLimit(readProductSummaryLimit(body));
+
+  if (!clientId || !apiKey) {
+    return productSummaryPayload(body, {
+      status: hasCredentialFields ? 'missing_credentials' : 'api_not_connected',
+      message: '缺少临时 Ozon Client ID 或 API Key。本端点不会从前端存储读取凭证，也不会保存凭证。',
+      products: [],
+      sampleCount: 0,
+      requestedLimit: limitInfo.requestedLimit,
+      limit: limitInfo.limit,
+      limitClamped: limitInfo.limitClamped,
+      maskedClientId,
+      timestamp
+    });
+  }
+
+  try {
+    const list = await ozonRequest({ clientId, apiKey }, '/v3/product/list', {
+      filter: { visibility: 'ALL' },
+      limit: limitInfo.limit
+    });
+
+    if (!list.response.ok) {
+      const authError = list.response.status === 401 || list.response.status === 403;
+      return productSummaryPayload(body, {
+        status: authError ? 'permission_error' : 'api_error',
+        message: authError
+          ? 'Ozon 拒绝了本次临时凭证。请检查 Client ID、API Key 和只读权限。'
+          : `Ozon product/list 读取失败：HTTP ${list.response.status}。`,
+        products: [],
+        sampleCount: 0,
+        requestedLimit: limitInfo.requestedLimit,
+        limit: limitInfo.limit,
+        limitClamped: limitInfo.limitClamped,
+        maskedClientId,
+        timestamp
+      });
+    }
+
+    const listItems = getOzonProductListItems(list.data);
+
+    if (!listItems) {
+      return productSummaryPayload(body, {
+        status: 'malformed_response',
+        message: 'Ozon product/list 返回结构不符合预期，未读取商品样本。',
+        products: [],
+        sampleCount: 0,
+        requestedLimit: limitInfo.requestedLimit,
+        limit: limitInfo.limit,
+        limitClamped: limitInfo.limitClamped,
+        maskedClientId,
+        timestamp
+      }, false, 502);
+    }
+
+    const listProducts = listItems.map(normalizeOzonProductSummaryItem).slice(0, limitInfo.limit);
+    const productIds = listProducts.map(item => item.product_id).filter(Boolean).slice(0, limitInfo.limit);
+    const offerIds = listProducts.map(item => item.offer_id).filter(Boolean).slice(0, limitInfo.limit);
+    let products = listProducts;
+    let detailStatus = productIds.length || offerIds.length ? 'not_requested' : 'empty_catalog';
+
+    if (productIds.length || offerIds.length) {
+      const infoBody = productIds.length
+        ? { product_id: productIds }
+        : { offer_id: offerIds };
+      const info = await ozonRequest({ clientId, apiKey }, '/v3/product/info/list', infoBody);
+
+      if (info.response.ok) {
+        const infoItems = getOzonProductInfoItems(info.data);
+        if (infoItems) {
+          const detailProducts = infoItems.map(normalizeOzonProductSummaryItem).slice(0, limitInfo.limit);
+          if (detailProducts.length) products = detailProducts;
+          detailStatus = 'connected';
+        } else {
+          detailStatus = 'malformed_response';
+        }
+      } else {
+        detailStatus = `product_info_error_${info.response.status}`;
+      }
+    }
+
+    return productSummaryPayload(body, {
+      status: 'connected',
+      message: `Ozon API 已通过 Worker 读取 ${products.length} 条只读商品样本。`,
+      products,
+      sampleCount: products.length,
+      requestedLimit: limitInfo.requestedLimit,
+      limit: limitInfo.limit,
+      limitClamped: limitInfo.limitClamped,
+      detailStatus,
+      maskedClientId,
+      timestamp
+    }, true);
+  } catch (error) {
+    return productSummaryPayload(body, {
+      status: 'api_error',
+      message: 'Ozon 商品摘要读取异常：' + cleanText(error.message, 180),
+      products: [],
+      sampleCount: 0,
+      requestedLimit: limitInfo.requestedLimit,
+      limit: limitInfo.limit,
+      limitClamped: limitInfo.limitClamped,
+      maskedClientId,
+      timestamp
+    }, false, 502);
+  }
 }
 
 async function checkOzonApi(env, store) {
@@ -512,6 +804,21 @@ export default {
       const body = await request.json().catch(() => ({}));
       const result = await checkStoreApi(env, body.platform, body.credentialRef);
       return json({ ok: true, store: body, result });
+    }
+
+    if (url.pathname === '/api/ozon/test-connection' && request.method === 'POST') {
+      return testOzonConnection(request);
+    }
+
+    if (url.pathname === '/api/ozon/product-summary' && request.method !== 'POST') {
+      return json({
+        ok: false,
+        error: 'Method not allowed. Use POST /api/ozon/product-summary.'
+      }, 405);
+    }
+
+    if (url.pathname === '/api/ozon/product-summary' && request.method === 'POST') {
+      return handleOzonProductSummary(request);
     }
 
     if (url.pathname === '/api/analyze-product' && request.method === 'POST') {

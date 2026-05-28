@@ -7,11 +7,17 @@ const STORE_TYPE_TEXT = {
 };
 
 function getProductSelectionApiBaseUrl() {
+  const inputUrl = ['backendWorkerUrl', 'ozonWorkerUrl']
+    .map(id => document.getElementById(id))
+    .map(el => el ? el.value : '')
+    .find(value => String(value || '').trim());
+  const configuredUrl = inputUrl || window.PRODUCT_SELECTION_API_BASE_URL || '';
+
   if (typeof normalizeWorkerBaseUrl === 'function') {
-    return normalizeWorkerBaseUrl(window.PRODUCT_SELECTION_API_BASE_URL || '');
+    return normalizeWorkerBaseUrl(configuredUrl);
   }
 
-  return String(window.PRODUCT_SELECTION_API_BASE_URL || '').trim().replace(/\/+$/, '');
+  return String(configuredUrl || '').trim().replace(/\/+$/, '');
 }
 
 function isBlank(value) {
@@ -157,11 +163,13 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
 }
 
 function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
+  const host = normalizeHost(sourceUrl);
+
   return {
     ok: false,
     source: {
       url: sourceUrl,
-      host: normalizeHost(sourceUrl),
+      host,
       title: '',
       image: ''
     },
@@ -174,20 +182,29 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
     },
     ozon: {
       status: 'api_not_connected',
-      message: 'API 服务未连接。请先部署 Cloudflare Worker，并在前端配置 PRODUCT_SELECTION_API_BASE_URL。'
+      message: 'Store API 未连接。自动读取授权店铺数据需要先配置 Cloudflare Worker 后端。'
     },
     report: {
       type: getProfitReportType(profitSnapshot),
-      status: '数据不足',
-      summary: '已收到商品链接，但当前前端还没有连接 Cloudflare Worker 后端，所以不能自动读取商品页面或 Ozon API。',
-      priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。等待后端连接后再补充 Ozon 数据。`,
+      status: 'Preview / manual',
+      summary: `Product link received（${host}）。当前模式为手动/预览分析：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。自动数据读取需要卖家通过 Cloudflare Worker 后端完成官方 API 授权；你可以先手动填写流量、曝光、转化或类目趋势备注。`,
+      priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。价格带和竞品数据需要授权后端或人工补充，当前不生成实时平台结论。`,
       profitText: buildProfitReportText(profitSnapshot),
-      competitionText: 'Ozon API 未连接，不能生成真实竞品数量、均价、评分或评论判断。',
-      adText: '广告判断暂时只基于当前利润测算。真实投放前需要后端和 Ozon 数据联调。',
-      storeText: '商品类目、关键词和主题标签等待后端识别。',
-      actions: ['先部署 Cloudflare Worker 后端。', '在 Worker 环境变量配置 Ozon Client ID 和 API Key。', '部署后再用同一链接重新分析。']
+      competitionText: 'Store API 尚未连接，当前不会自动读取 Ozon 竞品数量、均价、评分或评论。请先以人工观察和后续授权数据作为输入。',
+      adText: '广告判断暂时只基于当前利润测算和人工备注。未来 API 连接可同步授权店铺的广告、曝光、点击或转化数据。',
+      storeText: '商品类目、关键词和主题标签当前处于人工预览状态；后续 Worker 端点可返回经过授权的数据摘要。',
+      actions: ['继续手动补充流量、曝光、转化和类目趋势备注。', '需要自动数据时，先在 API Settings 中配置 HTTPS Worker URL。', '正式测试只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
     }
   };
+}
+
+function buildWorkerEndpointNotReadyAnalysis(sourceUrl, profitSnapshot) {
+  const analysis = buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot);
+  analysis.ozon.status = 'endpoint_not_ready';
+  analysis.ozon.message = 'Worker 已配置，但未来的 /api/ozon/product-summary 端点尚未可用。';
+  analysis.report.summary = 'Product link received。Worker URL 已配置，但产品摘要端点尚未实现；当前仍保持手动/预览分析，不抓取页面、不读取未授权数据。';
+  analysis.report.actions = ['确认 Worker 后端需要新增 /api/ozon/product-summary。', '端点完成前继续使用人工备注和利润测算做预判。', '不要从浏览器直接调用 Ozon 官方 API 或保存真实 API Key。'];
+  return analysis;
 }
 
 function buildDemoOzonAnalysis(profitSnapshot) {
@@ -228,14 +245,31 @@ async function requestOzonProductAnalysis(payload) {
     return buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
   }
 
-  const response = await fetch(apiBaseUrl + '/api/analyze-product', {
+  if ((payload.clientId || payload.apiKey) && typeof validateWorkerUrlForCredentials === 'function') {
+    const worker = validateWorkerUrlForCredentials(apiBaseUrl);
+
+    if (worker.error) {
+      const analysis = buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
+      analysis.ozon.status = worker.error;
+      analysis.ozon.message = worker.message;
+      analysis.report.summary = 'Product link received。' + worker.message + ' 当前不会发送 Ozon 临时凭证，也不会直接请求 Ozon 官方 API。';
+      analysis.report.competitionText = worker.message;
+      return analysis;
+    }
+  }
+
+  const response = await fetch(apiBaseUrl + '/api/ozon/product-summary', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
   });
 
+  if (response.status === 404) {
+    return buildWorkerEndpointNotReadyAnalysis(payload.sourceUrl, payload.profitSnapshot);
+  }
+
   if (!response.ok) {
-    throw new Error('API 服务返回异常：' + response.status);
+    throw new Error('Worker 产品摘要端点返回异常：' + response.status);
   }
 
   const analysis = await response.json();

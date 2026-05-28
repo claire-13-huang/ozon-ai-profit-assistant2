@@ -3,6 +3,78 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-05-28 Documentation / Ozon read-only milestone timeline clarification
+
+- 修改目标：复核“Ozon 临时凭证只读连接成功 + product-summary 未来设计”文档任务与当前工作区状态，避免把已经实现的 `/api/ozon/product-summary` 重新描述成尚未实现。
+- 涉及文件：docs/PHASE_2_5_OZON_READ_ONLY_CONNECTION_AUDIT.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：在 Phase 2.5 Ozon 只读连接审计文档顶部补充状态说明：最初的连接里程碑是 documentation-only，`POST /api/ozon/product-summary` 当时是未来设计候选；当前工作区已在后续任务中实现最小只读 product-summary 路由，因此不能再把当前状态写成 design-only 或未实现。
+- 验收方式：只修改文档；不修改 Worker 或前端 API 行为；不部署、不调用真实 Ozon API、不使用真实凭证；保留当前 product-summary 只读边界说明。
+- 已知风险：历史日志中仍保留当时的“未实现”记录作为时间线记录；读当前状态时应以本条和后续 product-summary 实现/审计记录为准。
+
+## 2026-05-28 Phase 2.5 / product-summary 临时凭证生命周期审计
+
+- 修改目标：复核 `/api/ozon/product-summary` 前端临时凭证生命周期，确认 API Key 在成功、失败、缺少配置、缺少凭证、阻断不安全 Worker URL、fetch/network error 和来源链接前置校验失败后都不会留在输入框或浏览器存储中。
+- 涉及文件：js/main.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：代码审计确认 `runOzonAutoAnalysis()` 的有效链接分析路径通过 `finally` 清空 `ozonTestApiKey`；补充来源商品链接为空或格式错误的前置返回清空逻辑；`requestOzonProductAnalysis()` 在 credential-bearing 请求前复用 Worker URL 安全校验，非本地 `http://` Worker URL 会在 `fetch` 前被阻断；`#ozonTestApiKey` 保持 `type="password"`、`autocomplete="new-password"` 且无硬编码 `value`；手动测试用例补充 mocked success、mocked Worker failure、network error 和来源链接前置校验失败后清空 API Key 的检查。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`node --check worker/index.js`、`git diff --check`；使用本地 JavaScript harness 验证 HTTPS Worker、`http://localhost`、`http://127.0.0.1` 允许，非本地 `http://` 阻断且 `fetchCalls: []`；确认浏览器端不直接调用 `https://api-seller.ozon.ru`，未使用真实凭证，未部署。
+- 已知风险：本次不使用真实凭证、不部署、不调用真实 Ozon API；来源链接前置校验失败时不会进入 product-summary 请求路径，也不会发送临时凭证。
+
+## 2026-05-28 Phase 2.5 / product-summary 临时凭证前端传递
+
+- 修改目标：将现有 `POST /api/ozon/product-summary` 前端请求与 API Settings 中的 Ozon 临时 Client ID / API Key 输入框连接起来，只在用户点击选品分析时把临时凭证发送给 Worker。
+- 涉及文件：index.html、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：`getAnalysisPayload()` 现在从当前页面输入框读取 `ozonTestClientId`、`ozonTestApiKey` 并附带 `limit: 3`；`requestOzonProductAnalysis()` 会优先使用当前 Worker URL 输入框，并在发送凭证前复用 HTTPS/localhost Worker URL 校验；分析请求路径结束后清空 API Key 输入框；更新页面安全说明、API 集成计划和手动测试用例。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/store-api.js`、`node --check js/main.js`、`node --check worker/index.js`、`git diff --check`；确认浏览器端仍不直接调用 `https://api-seller.ozon.ru`；确认 localStorage/sessionStorage 不包含 Ozon API Key；确认缺少凭证不会显示 connected 商品数据；确认未新增任何 Ozon 写入、同步、分页、数据库或长期凭证存储。
+- 已知风险：本次不使用真实凭证、不部署、不调用真实 Ozon API；由于 API Key 仍会在测试或分析请求结束后清空，用户如果先测试连接再做选品摘要，需要再次临时输入 API Key。
+
+## 2026-05-28 Phase 2.5 / product-summary 响应契约审计
+
+- 修改目标：审计 `POST /api/ozon/product-summary` 的响应契约和错误状态，确保缺少临时凭证、Ozon 失败或响应异常时不会被前端或用户误认为已读取真实商品数据。
+- 涉及文件：worker/index.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：为 missing credentials、invalid request、Ozon auth/api error、malformed response 和异常路径明确返回 `ozon.sampleCount: 0`；文档补充 product-summary 状态契约、HTTP 状态、`ok`、`ozon.status`、`products`、`sampleCount` 和 limit clamp 规则；手动测试用例补充 missing body、limit 0、limit 10、405 和 404 场景。
+- 验收方式：使用本地 Worker import 测试缺少请求体、空 `clientId`、空 `apiKey`、`limit: 0`、`limit: 10`、unsupported method、unknown route；使用 mocked `fetch` 测试 Ozon auth failure、non-200、malformed response 和成功响应；运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`；确认未使用真实凭证、未部署、未新增 Ozon 写入端点。
+- 已知风险：本次不调用真实 Ozon API；真实字段仍取决于 Ozon read-only endpoint 实际返回，缺失字段保持 `null`、`unknown` 或空值。
+
+## 2026-05-28 Phase 2.5 / Ozon product-summary 只读 Worker 路由
+
+- 修改目标：实现最小 `POST /api/ozon/product-summary` Worker 路由，让后端可以在临时凭证存在时读取 1-5 条 Ozon 店铺商品摘要，同时保持前端代码、利润公式、物流规则和平台预设不变。
+- 涉及文件：worker/index.js、docs/API_INTEGRATION_PLAN.md、docs/PHASE_2_5_OZON_READ_ONLY_CONNECTION_AUDIT.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 product-summary Worker handler；请求体中只接受本次请求临时 `clientId` / `apiKey`，不保存、不记录、不返回原始凭证；商品数量默认 3，最终限制在 1-5；只调用已使用过的 Ozon 只读端点 `/v3/product/list` 和 `/v3/product/info/list`；返回 `source`、`insights`、`ozon.products` 和限制说明，缺少凭证、认证失败、Ozon API 错误和响应结构异常都会返回安全 JSON；更新 API 集成计划和 Phase 2.5 审计文档。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`；确认 `worker/index.js` 包含 `POST /api/ozon/product-summary`；确认最大限制为 5；确认浏览器端仍不直接调用 `https://api-seller.ozon.ru`；确认未添加任何 Ozon 写入、同步、分页、数据库或长期凭证存储。
+- 已知风险：未使用真实凭证执行 Ozon API 调用；商品详情字段取决于 Ozon 实际只读响应，缺失字段会保持 `null`、`unknown` 或空值；当前前端不会自动把临时凭证传给 product-summary，因此无凭证时仍是安全的未连接/缺少凭证状态。
+
+## 2026-05-28 Documentation / Ozon 只读连接成功与 product-summary 占位审计
+
+- 修改目标：记录 Ozon 临时凭证只读连接测试已成功，并审计现有 `/api/ozon/product-summary` 前端占位引用，避免把未来端点误认为已经实现。
+- 涉及文件：docs/PHASE_2_5_OZON_READ_ONLY_CONNECTION_AUDIT.md、docs/API_INTEGRATION_PLAN.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Phase 2.5 Ozon 只读连接里程碑文档；记录 Worker URL、前端 `POST /api/ozon/test-connection`、Worker 调用 Ozon `POST https://api-seller.ozon.ru/v3/product/list` 且 `limit: 1`；说明测试仅验证认证和最小只读商品列表访问；记录 API Key 未保存、未打印、未提交、未进入浏览器存储；审计 `js/product-selection.js` 中 `/api/ozon/product-summary` 仍是前端占位，当前 Worker 未实现该路由，今天不会触发真实 Ozon API 调用；补充未来 product-summary 端点的设计边界和候选字段。
+- 验收方式：文档明确写明 Ozon 只读连接测试成功；明确 `/api/ozon/product-summary` 未实现；运行 `git diff --check`；确认没有修改 Worker、前端 API 行为、利润公式、物流规则或平台预设。
+- 已知风险：文档记录基于用户已完成的临时凭证测试结果；本次不重复真实凭证测试，不调用真实 Ozon API，不实现 product-summary 端点。
+
+## 2026-05-27 UI / API 设置界面中文化
+
+- 修改目标：将 Store Integration Center / API Settings 的可见界面文案切换为中文，降低初学者和卖家使用时的理解成本。
+- 涉及文件：index.html、js/main.js、docs/DEVELOPMENT_LOG.md。
+- 修改内容：中文化 API 设置页标题、后端连接卡、平台接入卡、Ozon 四步连接流程、按钮、状态 badge、安全说明和后端健康检查动态提示；保留 Cloudflare Worker、Client ID、API Key 等必要技术名词。
+- 验收方式：API Settings 中不再显示主要英文操作文案；Ozon API Key 仍为 password 类型；临时凭证测试仍只通过 Worker；运行 `node --check js/main.js js/store-api.js worker/index.js` 和 `git diff --check`。
+- 已知风险：本次仅修改界面文案，不改变 API 安全模型、Worker endpoint、利润计算、物流规则或店铺数据。
+
+## 2026-05-27 UI / Store Integration Center 重构
+
+- 修改目标：将 API Settings / Store Integration 从表单堆叠界面重构为更清晰的专业集成设置页，减少 Worker URL、店铺档案和临时 Ozon 凭证之间的混淆。
+- 涉及文件：index.html、css/style.css、js/main.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Store Integration Center 页头、后端连接卡、Backend connected / Backend not configured / Testing / Failed 状态 badge、Worker `/api/health` 手动检查按钮、Ozon/Wildberries/Yandex 三平台集成卡片、Ozon 四步连接流程和安全说明卡；将 Wildberries/Yandex 明确标为 coming soon；保留 Ozon 临时凭证测试，API Key 仍为 password 类型并在测试后清空。
+- 验收方式：API Settings 应显示清晰分区，不再像长表单；Worker URL 与 Ozon Client ID/API Key 明确分离；Ozon 临时测试仍只请求 Worker `/api/ozon/test-connection`；Wildberries/Yandex 不显示为可用连接；运行 `node --check js/main.js js/store-api.js worker/index.js` 和 `git diff --check`。
+- 已知风险：本次只做 API Settings UI/UX 重构，不部署 Worker，不新增真实 API 能力，不改变利润计算、物流规则或任何 Ozon 店铺写操作。
+
+## 2026-05-27 Phase 4A / Ozon 临时凭证测试 UX 修复
+
+- 修改目标：修复 Ozon 店铺档案点击“测试连接”后只显示后端未配置凭证的死胡同体验，让当前阶段可以走更安全的临时凭证只读测试流程。
+- 涉及文件：index.html、css/style.css、js/store-api.js、js/main.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：将“后端密钥编号”文案改为“后端连接档案 ID”，并说明这不是 Ozon API Key；店铺卡片测试连接会使用页面可见 Worker URL 调用 `/api/store-health`；当 Ozon 档案返回 `missing_credentials` 时，页面会打开/聚焦 Ozon 临时 Client ID / password 类型 API Key 测试表单，并预填店铺名；临时测试仍只请求 `{Worker URL}/api/ozon/test-connection`，测试结束清空 API Key；同步更新静态资源版本号，避免浏览器继续使用旧脚本缓存。
+- 验收方式：点击缺少后端凭证的 Ozon 店铺档案“测试连接”应提示临时测试入口；空 Client ID/API Key 显示缺少凭证；临时测试请求只发往 Worker `/api/ozon/test-connection`；API Key 不进入 localStorage/sessionStorage；运行 `node --check js/store-api.js js/main.js worker/index.js`。
+- 已知风险：真实 Ozon 凭证测试仍依赖用户在浏览器中手动输入有效 Client ID/API Key；当前改动不部署 Worker，也不新增任何写入店铺的 Ozon API。
+
 ## 2026-05-24 Phase 4A / Ozon 官方 API + 商品识别报告竖切片
 
 - 修改目标：将选品预判助手从手动占位升级为 Ozon 优先的智能分析入口，并为 Cloudflare Worker 后端和 Ozon API 凭证安全接入做第一版实现。
@@ -234,3 +306,35 @@
 - 修改内容：移除预设面板 HTML 和 `js/presets.js` 页面加载；移除 `main.js` 中预设绑定/应用逻辑；清理 `.preset-*` 样式；文档改为说明预设是历史设计参考，当前页面以手动输入为主。
 - 验收方式：页面不再显示 `常用预设`、`预设模板` 或 `应用预设`；手动输入、汇率助手、利润计算、诊断、选品报告入口和 CSV 导出不受影响；运行 `node --check` 和 `git diff --check`。
 - 已知风险：`js/presets.js` 文件作为历史参考暂时保留但不再由页面加载；后续如果确定不再需要预设，可单独删除该文件并同步清理历史文档。
+
+## 2026-05-26 Documentation / AGENTS.md 项目级 Codex 指引
+
+- 修改目标：Add root-level Codex guidance so future tasks preserve the static frontend product direction.
+- 涉及文件：AGENTS.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：在根级 AGENTS.md 顶部补充项目概览、当前阶段、技术约束、受保护业务逻辑、UI 开发规则、安全规则和文档规则；强调 Phase 2 默认稳定性优先、禁止默认引入后端/真实 API/新依赖/部署。
+- 验收方式：确认项目根目录包含 index.html、js/、css/、docs/；仅修改 AGENTS.md 和本开发日志，不修改 index.html、js/、css/ 或业务逻辑。
+- 已知风险：AGENTS.md 下方仍保留历史阶段说明；未来任务应优先遵守顶部项目级指引，除非用户明确要求进入后续阶段。
+
+## 2026-05-26 UI / App 工作台视图切换
+
+- 修改目标：把页面从长滚动表单改为 app-like 单屏工作台，按 Profit Calculator、AI Analysis、API Settings 三个主视图切换。
+- 涉及文件：index.html、css/style.css、js/main.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增稳定顶部导航和 `app-view` 视图切换逻辑；默认只显示利润计算工作台；将现有 AI 选品识别面板挂载到 AI Analysis 工作区；将店铺 API 档案管理恢复到 API Settings 工作区；重写主要布局样式为更接近 SaaS dashboard 的工作台界面。
+- 验收方式：打开页面默认只看到 Profit Calculator；点击 AI Analysis / API Settings 会切换主屏而不是滚动到下方；平台切换、利润计算、诊断、AI 占位报告、店铺档案本地管理继续可用；运行 `node --check` 和 `git diff --check`。
+- 已知风险：当前仍是静态前端工作台；除用户主动点击已存在的保存、同步、测试或分析按钮外，导航切换本身不应触发真实 API 请求。
+
+## 2026-05-26 API / 安全卖家 API 接入准备
+
+- 修改目标：改善 AI Analysis 中商品链接后的反馈体验，并为未来 Ozon 卖家 API 连接提供安全、合法、后端代理优先的前端准备路径。
+- 涉及文件：index.html、css/style.css、js/main.js、js/store-api.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：AI Analysis 新增 Data source / Product link / Store API / Analysis mode 状态卡；商品链接输入后改为手动/预览模式提示，不再显示死胡同式后端未连接文案；API Settings 新增 Ozon 临时连接测试面板，包含 Store name、Client ID、password 类型 API Key、Worker URL、连接状态和测试按钮；新增前端 Worker 调用包装，缺少 Worker URL 时直接返回 backend-not-configured，配置 Worker 后只请求未来 `/api/ozon/test-connection` 或 `/api/ozon/product-summary` 端点。
+- 验收方式：输入商品链接时显示专业预览提示；API Key 字段为 password；刷新后 API Key 不恢复；无 Worker URL 时不发送凭证；浏览器不直接请求 Ozon 官方 API；运行 `node --check` 和 `git diff --check`。
+- 已知风险：本次未修改 Worker 代码，`/api/ozon/test-connection` 和 `/api/ozon/product-summary` 仍是未来安全端点；除用户主动点击测试或分析按钮并配置 Worker URL 外，不新增真实 API 调用；利润计算和物流规则保持不变。
+
+## 2026-05-26 API / Ozon Worker 测试连接端点
+
+- 修改目标：实现最小安全 Ozon API 连接测试，通过 Cloudflare Worker 验证卖家 Client ID / API Key 是否能认证，不做完整店铺数据同步。
+- 涉及文件：worker/index.js、index.html、js/store-api.js、js/main.js、docs/API_INTEGRATION_PLAN.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Worker 端点 `POST /api/ozon/test-connection`；Worker 校验 Client ID 和 API Key 后使用 Ozon 官方请求头通过后端发送最小只读认证请求；响应只返回 `connected`、`message`、`maskedClientId`、`timestamp`；前端测试按钮调用 Worker URL，不直接请求 Ozon；测试结束后清空 API Key 输入框。
+- 验收方式：缺少 Worker URL 时前端不发送凭证；缺少凭证时 Worker 返回失败状态；配置 Worker 后前端只请求 Worker 的 `/api/ozon/test-connection`；浏览器不请求 `api-seller.ozon.ru`；运行 `node --check`、Worker 语法检查和 `git diff --check`。
+- 已知风险：连接成功只代表凭证和 Worker 代理可用，不代表已实现产品、订单、广告、流量或财务同步；利润公式、物流规则和计算器 UI 保持不变。
