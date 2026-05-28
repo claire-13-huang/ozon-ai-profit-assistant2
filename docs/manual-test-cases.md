@@ -410,42 +410,46 @@
    - Input: send `POST /api/ozon/product-summary` with JSON body `{ "sourceUrl": "https://example.com/product", "clientId": "", "apiKey": "", "limit": 0 }`.
    - Expected: response does not call Ozon, returns missing-credential state, and reports `limit: 1` with `limitClamped: true`.
 
-14. Ozon product-summary unsupported method should return 405
+14. Ozon product-summary product/list HTTP 400 should return safe diagnostics
+   - Input: mock Ozon `POST /v3/product/list` to return HTTP `400` with a non-secret error body, then send non-empty dummy temporary credential fields to `POST /api/ozon/product-summary`.
+   - Expected: response returns safe JSON with `ok: false`, `ozon.status: "product_list_error"`, `ozon.failureStep: "product_list"`, `ozon.products: []`, `ozon.sampleCount: 0`, and diagnostic metadata containing only endpoint name, HTTP status, effective limit, visibility, and a sanitized Ozon error message. It must not expose Client ID, API Key, token, or raw secret-bearing objects.
+
+15. Ozon product-summary unsupported method should return 405
    - Input: send `GET /api/ozon/product-summary`.
    - Expected: response returns HTTP `405` and `ok: false`.
 
-15. Unknown Worker route should return 404
+16. Unknown Worker route should return 404
    - Input: send `POST /api/not-found`.
    - Expected: response returns HTTP `404` and `ok: false`.
 
-16. Product analysis should pass temporary credentials only at request time
+17. Product analysis should pass temporary credentials only at request time
    - Input: configure a valid HTTPS Worker URL, type Ozon Client ID and API Key into the temporary credential fields, paste a source product URL, and click `开始智能分析`.
    - Expected: browser sends `clientId`, `apiKey`, and `limit: 3` only to `{Worker URL}/api/ozon/product-summary`; the browser does not call `api-seller.ozon.ru` directly, and the API Key input is cleared after the request path completes.
 
-17. Product analysis should clear API Key after mocked success
+18. Product analysis should clear API Key after mocked success
    - Input: point Worker URL to a local mock endpoint that returns HTTP `200` with `ok: true` and `ozon.status: "connected"`, type a dummy API Key, then click `开始智能分析`.
    - Expected: the API Key input is cleared after the request path completes; only the configured local mock Worker receives the dummy request.
 
-18. Product analysis should clear API Key after mocked Worker failure
+19. Product analysis should clear API Key after mocked Worker failure
    - Input: point Worker URL to a local mock endpoint that returns HTTP `500`, type a dummy API Key, then click `开始智能分析`.
    - Expected: the page shows a safe Worker error/manual fallback state, and the API Key input is cleared after the request path completes.
 
-19. Product analysis should clear API Key after network error
+20. Product analysis should clear API Key after network error
    - Input: point Worker URL to an allowed local URL where no server is listening, type a dummy API Key, then click `开始智能分析`.
    - Expected: the page shows a safe Worker unavailable/manual fallback state, and the API Key input is cleared after the thrown fetch/network error path.
 
-20. Product analysis should clear API Key when source URL validation stops the request
+21. Product analysis should clear API Key when source URL validation stops the request
    - Input: type a dummy Ozon API Key, leave the source product URL empty or enter an invalid URL, then click `开始智能分析`.
    - Expected: no Worker request is sent, no Ozon request is made, and the API Key input is cleared.
 
-21. Product analysis should not store temporary API Key
+22. Product analysis should not store temporary API Key
    - Input: type an Ozon API Key in the temporary field, click `开始智能分析`, then inspect localStorage/sessionStorage and refresh the page.
    - Expected: no localStorage or sessionStorage value contains the Ozon API Key, and the API Key field is empty after refresh.
 
-22. Product analysis should not send credentials to insecure remote Worker URL
+23. Product analysis should not send credentials to insecure remote Worker URL
    - Input: enter a non-local `http://` Worker URL, type temporary Ozon credentials, paste a source product URL, and click `开始智能分析`.
    - Expected: frontend shows a safe Worker URL security message, does not call Ozon directly, does not send temporary credentials to that Worker URL, and does not show connected product data.
 
-23. Product analysis with missing temporary credentials should remain safe
+24. Product analysis with missing temporary credentials should remain safe
    - Input: configure a valid Worker URL, leave Client ID or API Key empty, paste a source product URL, and click `开始智能分析`.
    - Expected: Worker returns missing-credential state; the page does not crash, `ozon.status` is not `connected`, no product sample is shown as real connected data, and `ozon.sampleCount` is `0`.

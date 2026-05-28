@@ -93,6 +93,17 @@ Read-only Ozon endpoints used:
 - `POST https://api-seller.ozon.ru/v3/product/list`
 - `POST https://api-seller.ozon.ru/v3/product/info/list`
 
+Internal `product/list` request body:
+
+```json
+{
+  "filter": { "visibility": "ALL" },
+  "limit": 3
+}
+```
+
+The Worker builds this body from a safe numeric limit only. It does not forward extra frontend fields to Ozon `product/list`.
+
 Frontend request body:
 
 ```json
@@ -172,6 +183,7 @@ Unavailable fields remain `null`, `unknown`, empty, or omitted. The endpoint doe
 - Missing `clientId` or missing `apiKey`: HTTP `200`, `ok: false`, `ozon.status: "missing_credentials"` when credential fields are present but empty, or `"api_not_connected"` when no credential fields are sent; `ozon.products: []`, `ozon.sampleCount: 0`.
 - Invalid or empty credentials that are not sent to Ozon because a field is missing: same as missing credentials.
 - Invalid non-empty credentials rejected by Ozon: HTTP `200`, `ok: false`, `ozon.status: "permission_error"` for `401` / `403`, `ozon.products: []`, `ozon.sampleCount: 0`.
+- Ozon `product/list` non-200 response: HTTP `200`, `ok: false`, `ozon.status: "product_list_error"` for non-auth failures, `ozon.failureStep: "product_list"`, safe diagnostic metadata with endpoint name and effective limit only, `ozon.products: []`, `ozon.sampleCount: 0`.
 - Other Ozon non-200 response: HTTP `200`, `ok: false`, `ozon.status: "api_error"`, `ozon.products: []`, `ozon.sampleCount: 0`.
 - Malformed Ozon product-list response: HTTP `502`, `ok: false`, `ozon.status: "malformed_response"`, `ozon.products: []`, `ozon.sampleCount: 0`.
 - Unsupported method on this route: HTTP `405`, `ok: false`.

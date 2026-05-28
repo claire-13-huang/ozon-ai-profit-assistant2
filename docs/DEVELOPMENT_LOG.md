@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-05-29 Phase 2.5 / product-summary product-list 400 diagnostic
+
+- 修改目标：排查线上 `/api/ozon/product-summary` 在 Ozon `/v3/product/list` 返回 HTTP 400 的问题，确保 product-summary 使用与已成功 `/api/ozon/test-connection` 相同的最小只读 product/list 请求形态，并返回安全诊断信息。
+- 涉及文件：worker/index.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Worker 内部 `buildOzonProductListRequest()`，test-connection 和 product-summary 都通过它生成 `{ filter: { visibility: "ALL" }, limit: <number> }`，避免向 Ozon `product/list` 转发任何额外前端字段；product-summary 的 product/list 非认证类失败现在返回 `ozon.status: "product_list_error"`、`failureStep: "product_list"` 和只包含 endpoint、HTTP 状态、visibility、effective limit、sanitized Ozon error 的诊断信息；文档和手动测试补充 400 诊断场景。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/main.js`、`git diff --check`；使用 mocked Ozon product/list HTTP 400 验证响应不暴露 Client ID/API Key/token；确认浏览器端仍不直接调用 `https://api-seller.ozon.ru`，未新增 Ozon 写入端点。
+- 已知风险：本次不使用真实 Ozon 凭证，不复测真实 Ozon API；如果 Ozon 仍返回 400，新的诊断字段用于确认是 product/list 合约、权限或响应体问题，而不是凭证泄露或前端直连问题。
+
 ## 2026-05-28 Documentation / Ozon read-only milestone timeline clarification
 
 - 修改目标：复核“Ozon 临时凭证只读连接成功 + product-summary 未来设计”文档任务与当前工作区状态，避免把已经实现的 `/api/ozon/product-summary` 重新描述成尚未实现。

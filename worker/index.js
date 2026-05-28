@@ -26,6 +26,39 @@ function cleanText(value, max = 240) {
     .slice(0, max);
 }
 
+function removeSensitiveFields(value) {
+  if (Array.isArray(value)) return value.map(removeSensitiveFields);
+  if (!value || typeof value !== 'object') return value;
+
+  return Object.entries(value).reduce((safe, [key, item]) => {
+    const lowerKey = key.toLowerCase();
+    if (lowerKey.includes('key') || lowerKey.includes('token') || lowerKey.includes('secret') || lowerKey.includes('client')) {
+      safe[key] = '[redacted]';
+    } else {
+      safe[key] = removeSensitiveFields(item);
+    }
+    return safe;
+  }, {});
+}
+
+function redactKnownSecrets(value, secrets = []) {
+  return secrets
+    .filter(secret => secret && String(secret).length >= 4)
+    .reduce((text, secret) => text.split(String(secret)).join('[redacted]'), String(value || ''));
+}
+
+function safeOzonError(data, secrets = []) {
+  if (!data) return null;
+
+  const safeData = removeSensitiveFields(data);
+  const message = typeof safeData === 'object'
+    ? safeData.message || safeData.error || safeData.raw || JSON.stringify(safeData)
+    : safeData;
+  const text = cleanText(redactKnownSecrets(message, secrets), 500);
+
+  return text ? text : null;
+}
+
 function isValidHttpUrl(value) {
   try {
     const url = new URL(value);
@@ -218,6 +251,16 @@ async function ozonRequest(credentials, path, body) {
   return { response, data };
 }
 
+function buildOzonProductListRequest(limit) {
+  const numericLimit = Number(limit);
+  const safeLimit = Number.isFinite(numericLimit) ? Math.min(Math.max(Math.floor(numericLimit), 1), 5) : 1;
+
+  return {
+    filter: { visibility: 'ALL' },
+    limit: safeLimit
+  };
+}
+
 async function testOzonConnection(request) {
   // STORE SAFETY GUARD:
   // This test endpoint is read-only only. It must never call Ozon create,
@@ -242,10 +285,7 @@ async function testOzonConnection(request) {
   try {
     // Minimal read-only authentication check. This endpoint is already used by
     // the Worker health path and requests only one product record.
-    const { response } = await ozonRequest({ clientId, apiKey }, '/v3/product/list', {
-      filter: { visibility: 'ALL' },
-      limit: 1
-    });
+    const { response } = await ozonRequest({ clientId, apiKey }, '/v3/product/list', buildOzonProductListRequest(1));
 
     if (!response.ok) {
       const authError = response.status === 401 || response.status === 403;
@@ -442,23 +482,32 @@ async function handleOzonProductSummary(request) {
   }
 
   try {
-    const list = await ozonRequest({ clientId, apiKey }, '/v3/product/list', {
-      filter: { visibility: 'ALL' },
-      limit: limitInfo.limit
-    });
+    const productListRequest = buildOzonProductListRequest(limitInfo.limit);
+    const list = await ozonRequest({ clientId, apiKey }, '/v3/product/list', productListRequest);
 
     if (!list.response.ok) {
       const authError = list.response.status === 401 || list.response.status === 403;
       return productSummaryPayload(body, {
-        status: authError ? 'permission_error' : 'api_error',
+        status: authError ? 'permission_error' : 'product_list_error',
         message: authError
           ? 'Ozon 拒绝了本次临时凭证。请检查 Client ID、API Key 和只读权限。'
-          : `Ozon product/list 读取失败：HTTP ${list.response.status}。`,
+          : `Ozon product/list 读取失败：HTTP ${list.response.status}。请求体已限制为 filter.visibility=ALL 和 limit=${productListRequest.limit}，请检查 Ozon product/list 合约或店铺 API 权限。`,
         products: [],
         sampleCount: 0,
         requestedLimit: limitInfo.requestedLimit,
         limit: limitInfo.limit,
         limitClamped: limitInfo.limitClamped,
+        failureStep: 'product_list',
+        diagnostic: {
+          step: 'product_list',
+          endpoint: 'POST /v3/product/list',
+          httpStatus: list.response.status,
+          request: {
+            visibility: productListRequest.filter.visibility,
+            limit: productListRequest.limit
+          },
+          ozonError: safeOzonError(list.data, [clientId, apiKey])
+        },
         maskedClientId,
         timestamp
       });
