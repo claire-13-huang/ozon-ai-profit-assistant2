@@ -2,6 +2,94 @@
 
 ## Project Overview
 
+This project is a static front-end seller decision assistant for Ozon / Wildberries / Yandex cross-border ecommerce sellers.
+
+The product focuses on:
+
+- profit calculation
+- cost visibility
+- logistics and fee awareness
+- seller-facing decision support
+- future AI-assisted product and market analysis, only when explicitly approved
+
+This project is a decision assistant, not a full ERP system.
+
+## Current Phase
+
+The default working phase for future Codex tasks is Phase 2: product stability, UI clarity, and user experience improvement.
+
+Phase 2 priorities:
+
+- preserve calculation correctness
+- improve layout clarity
+- improve seller-facing user flow
+- keep AI/API features as conservative placeholders unless explicitly instructed
+- record changes in `docs/DEVELOPMENT_LOG.md`
+
+## Technology Constraints
+
+Use only:
+
+- HTML
+- CSS
+- vanilla JavaScript
+
+Do not introduce:
+
+- React
+- Vue
+- TypeScript
+- backend services
+- database
+- login system
+- payment system
+- real API integration unless explicitly approved
+- new npm dependencies unless explicitly approved
+
+## Protected Business Logic
+
+Do not change the following unless explicitly instructed:
+
+- core profit formulas
+- logistics fee logic
+- platform preset values or platform defaults
+- existing JavaScript-bound element IDs
+- Ozon / Wildberries / Yandex platform switching
+
+If an existing ID must be renamed, update every binding safely in the same change and verify the page behavior.
+
+## UI Development Rules
+
+- Reduce visual clutter.
+- Use clear section hierarchy.
+- Keep one main user task visible at a time when possible.
+- Preserve all existing features unless explicitly told to remove them.
+- Prefer relocating and restructuring sections over deleting them.
+- Keep AI Analysis and API Connection conservative placeholders during Phase 2.
+- Do not claim real AI analysis, real-time market data, or real API integration unless it is actually implemented and verified.
+
+## Safety Rules
+
+- Do not run `git push`.
+- Do not run deployment commands.
+- Do not delete files without explicit instruction.
+- Do not modify `.env` or secret-related files.
+- Do not store real API keys.
+- Do not make real external API requests.
+- Do not introduce paid or production behavior without explicit approval.
+
+## Documentation Rules
+
+- Update `docs/DEVELOPMENT_LOG.md` after every meaningful change.
+- If adding future planning, place it under `docs/`.
+- Clearly distinguish implemented features from future placeholders.
+- Use conservative wording.
+- Avoid claiming real AI analysis, real-time market data, or real API integration unless actually implemented.
+
+---
+
+## Project Overview
+
 This project is an AI-driven cross-border ecommerce decision system for Ozon/Wildberries sellers.
 
 Current stage:
