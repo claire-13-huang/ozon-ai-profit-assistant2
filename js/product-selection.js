@@ -5,6 +5,8 @@ const STORE_TYPE_TEXT = {
   new: '新店',
   mature: '成熟店'
 };
+const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。';
+const OZON_MARKETPLACE_LINK_NOTICE = '当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。';
 
 function getProductSelectionApiBaseUrl() {
   const inputUrl = ['backendWorkerUrl', 'ozonWorkerUrl']
@@ -71,6 +73,27 @@ function normalizeHost(url) {
   }
 }
 
+function isOzonMarketplaceUrl(url) {
+  try {
+    return /(^|\.)ozon\./i.test(new URL(url).hostname.replace(/^www\./, ''));
+  } catch (error) {
+    return false;
+  }
+}
+
+function getOzonMarketplaceLinkNotice(url) {
+  return isOzonMarketplaceUrl(url) ? OZON_MARKETPLACE_LINK_NOTICE : '';
+}
+
+function buildOptionalOzonContextText(ozon) {
+  if (ozon && ozon.status === 'connected') {
+    return ozon.message || 'Ozon 店铺商品摘要已连接。';
+  }
+
+  const detail = ozon && ozon.message ? ` 状态：${ozon.message}` : '';
+  return OZON_STORE_CONTEXT_WARNING + detail;
+}
+
 function getProfitReportType(profitSnapshot) {
   if (!profitSnapshot || !profitSnapshot.mainInputValid) return 'waiting';
   if (!Number.isFinite(profitSnapshot.profitRate)) return 'waiting';
@@ -126,9 +149,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     actions.push('类目识别不完整，上架前需要人工确认 Ozon 目标类目。');
   }
 
-  if (!hasOzonData) {
-    actions.push('先完成 Ozon API 凭证配置，再查看后台数据状态。');
-  }
+  if (!hasOzonData) actions.push(OZON_STORE_CONTEXT_WARNING);
 
   if (profitSnapshot && profitSnapshot.profitRate < 10) {
     actions.push('当前利润率低于 10%，不建议直接开广告测试。');
@@ -145,7 +166,8 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '数据不足' : '建议小量测试';
   const sourceTitle = hasTitle ? source.title : '未识别标题';
   const sourceHost = source.host || normalizeHost(source.url);
-  const summary = `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + sourceTitle + '”。' : '商品标题暂未完整识别。'} ${ozon.message || '等待 Ozon API 状态。'}`;
+  const marketplaceNotice = getOzonMarketplaceLinkNotice(source.url);
+  const summary = `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + sourceTitle + '”。' : '商品标题暂未完整识别。'} ${marketplaceNotice}`.trim();
 
   return {
     type,
@@ -155,7 +177,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     profitText: buildProfitReportText(profitSnapshot),
     competitionText: hasOzonData
       ? 'Ozon API 已通过后端连接检查，已能读取你店铺的商品样本。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。' + ozonSampleText
-      : (ozon.message || 'Ozon API 尚未配置，不能读取后台数据。'),
+      : buildOptionalOzonContextText(ozon),
     adText: '广告判断沿用当前利润测算中的广告率；搜索与推荐广告应先小预算验证点击、加购和订单，不以低价作为唯一策略。',
     storeText: `识别类目候选：${insights.category || '待人工复核'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
     actions: uniqueList(actions, 5)
@@ -164,6 +186,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
 
 function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
   const host = normalizeHost(sourceUrl);
+  const marketplaceNotice = getOzonMarketplaceLinkNotice(sourceUrl);
 
   return {
     ok: false,
@@ -187,7 +210,7 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
     report: {
       type: getProfitReportType(profitSnapshot),
       status: 'Preview / manual',
-      summary: `Product link received（${host}）。当前模式为手动/预览分析：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。自动数据读取需要卖家通过 Cloudflare Worker 后端完成官方 API 授权；你可以先手动填写流量、曝光、转化或类目趋势备注。`,
+      summary: `Product link received（${host}）。${marketplaceNotice} 当前模式为手动/预览分析：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。自动数据读取需要卖家通过 Cloudflare Worker 后端完成官方 API 授权；你可以先手动填写流量、曝光、转化或类目趋势备注。`,
       priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。价格带和竞品数据需要授权后端或人工补充，当前不生成实时平台结论。`,
       profitText: buildProfitReportText(profitSnapshot),
       competitionText: 'Store API 尚未连接，当前不会自动读取 Ozon 竞品数量、均价、评分或评论。请先以人工观察和后续授权数据作为输入。',
@@ -202,7 +225,7 @@ function buildWorkerEndpointNotReadyAnalysis(sourceUrl, profitSnapshot) {
   const analysis = buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot);
   analysis.ozon.status = 'endpoint_not_ready';
   analysis.ozon.message = 'Worker 已配置，但未来的 /api/ozon/product-summary 端点尚未可用。';
-  analysis.report.summary = 'Product link received。Worker URL 已配置，但产品摘要端点尚未实现；当前仍保持手动/预览分析，不抓取页面、不读取未授权数据。';
+  analysis.report.summary = `Product link received。${getOzonMarketplaceLinkNotice(sourceUrl)} Worker URL 已配置，但产品摘要端点尚未实现；当前仍保持手动/预览分析，不抓取页面、不读取未授权数据。`;
   analysis.report.actions = ['确认 Worker 后端需要新增 /api/ozon/product-summary。', '端点完成前继续使用人工备注和利润测算做预判。', '不要从浏览器直接调用 Ozon 官方 API 或保存真实 API Key。'];
   return analysis;
 }
@@ -252,8 +275,8 @@ async function requestOzonProductAnalysis(payload) {
       const analysis = buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
       analysis.ozon.status = worker.error;
       analysis.ozon.message = worker.message;
-      analysis.report.summary = 'Product link received。' + worker.message + ' 当前不会发送 Ozon 临时凭证，也不会直接请求 Ozon 官方 API。';
-      analysis.report.competitionText = worker.message;
+      analysis.report.summary = `Product link received。${getOzonMarketplaceLinkNotice(payload.sourceUrl)} 当前不会发送 Ozon 临时凭证，也不会直接请求 Ozon 官方 API。`;
+      analysis.report.competitionText = buildOptionalOzonContextText(analysis.ozon);
       return analysis;
     }
   }

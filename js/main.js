@@ -983,21 +983,22 @@ async function runOzonAutoAnalysis() {
     syncOzonTemporaryConnectionStateFromAnalysis(analysis);
     setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
     renderOzonAutoAnalysis(analysis);
-    const previewOnly = analysis.ozon && ['api_not_connected', 'endpoint_not_ready'].includes(analysis.ozon.status);
+    const ozonConnected = analysis.ozon && analysis.ozon.status === 'connected';
     setAutoAnalysisStatus(
-      analysis.ok
+      ozonConnected
         ? '分析完成。请根据报告复核利润、广告和 Ozon 数据状态。'
-        : previewOnly
-          ? 'Product link received. 当前仍为手动/预览分析；自动数据读取需要先完成 Worker 后端和卖家 API 授权。'
-          : analysis.report.summary,
-      analysis.ok || previewOnly ? '' : 'is-error'
+        : 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。',
+      ''
     );
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
     persistFormState();
   } catch (error) {
     const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot);
+    fallback.ozon.status = 'api_error';
+    fallback.ozon.message = error.message || 'Worker 产品摘要暂不可用。';
+    fallback.report.competitionText = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。';
     renderOzonAutoAnalysis(fallback);
-    setAutoAnalysisStatus(error.message || 'Worker 产品摘要暂不可用，当前保持手动/预览分析。', 'is-error');
+    setAutoAnalysisStatus('Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。');
     setAutoAnalysisProgress('', ['link']);
   } finally {
     setInput('ozonTestApiKey', '');

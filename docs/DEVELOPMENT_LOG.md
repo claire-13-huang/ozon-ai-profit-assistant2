@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-01 Phase 2.5 / AI Analysis source-link and Ozon store-context separation
+
+- 修改目标：修复来源商品链接分析被 Ozon Seller API product-summary 失败阻断的问题，明确来源链接识别是主流程，Ozon 店铺商品摘要只是可选授权店铺上下文。
+- 涉及文件：js/product-selection.js、js/main.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：前端报告不再把 `ozon.message` 合并进主分析摘要；当 `ozon.status !== "connected"` 时，来源链接预览继续显示，Ozon 店铺摘要失败仅显示为可选 warning；Ozon 商品页面链接会提示 Seller API 不能直接读取任意 Ozon 页面或其他卖家商品数据；文档和手动测试补充 1688、Ozon 页面、product-summary HTTP 400 的解耦验证。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check worker/index.js`、`git diff --check`；确认浏览器端仍不直接调用 `https://api-seller.ozon.ru`，未新增 Ozon API 端点或写入操作。
+- 已知风险：本次不使用真实 Ozon 凭证，不部署，不推送；真实线上效果需在本地检查通过后再按部署流程发布。
+
 ## 2026-05-29 Phase 2.5 / product-summary product-list 400 diagnostic
 
 - 修改目标：排查线上 `/api/ozon/product-summary` 在 Ozon `/v3/product/list` 返回 HTTP 400 的问题，确保 product-summary 使用与已成功 `/api/ozon/test-connection` 相同的最小只读 product/list 请求形态，并返回安全诊断信息。

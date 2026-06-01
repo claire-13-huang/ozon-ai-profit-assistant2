@@ -198,6 +198,14 @@ Limit handling:
 
 The frontend treats real Ozon product data as connected only when `ozon.status === "connected"`. Missing credentials and failed Ozon responses do not use the connected status and return an empty product list with `sampleCount: 0`.
 
+Frontend interpretation:
+
+- Source product link recognition is the main AI Analysis flow.
+- Ozon Seller API `product-summary` is optional authorized store context only.
+- A failed or missing `product-summary` response must not fail the source-link analysis preview.
+- Ozon marketplace product page links are treated as pasted source links; Seller API cannot directly read arbitrary Ozon pages or other sellers' product data.
+- When `ozon.status !== "connected"`, the frontend should show the source preview and display this warning as optional store-context status: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+
 ## Future Worker Endpoints
 
 Planned safe Worker endpoints:

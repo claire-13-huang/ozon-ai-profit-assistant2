@@ -453,3 +453,19 @@
 24. Product analysis with missing temporary credentials should remain safe
    - Input: configure a valid Worker URL, leave Client ID or API Key empty, paste a source product URL, and click `开始智能分析`.
    - Expected: Worker returns missing-credential state; the page does not crash, `ozon.status` is not `connected`, no product sample is shown as real connected data, and `ozon.sampleCount` is `0`.
+
+25. 1688 source link should not fail when Ozon credentials are missing
+    - Input: paste a valid `1688.com` product/source URL, leave Ozon Client ID or API Key empty, and click `开始智能分析`.
+    - Expected: source link is recognized, the analysis preview appears, and Ozon missing credentials are shown only as optional store-context warning: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+
+26. 1688 source link should not fail when product-summary returns HTTP 400
+    - Input: paste a valid `1688.com` product/source URL, use a mocked Worker response where `/api/ozon/product-summary` returns `ozon.status: "product_list_error"`.
+    - Expected: source link is recognized, the analysis preview remains visible, and the Ozon product-list failure appears only in optional store-context status. It must not replace the source analysis summary.
+
+27. Ozon marketplace source link should clarify Seller API limits
+    - Input: paste an Ozon product page URL and use a mocked product-summary HTTP 400 response.
+    - Expected: the page recognizes the pasted link as an Ozon marketplace/product page and shows: `当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。` The source analysis preview still appears.
+
+28. Other seller Ozon link should not be treated as Seller API-readable store data
+    - Input: paste another seller's Ozon product URL and use a mocked product-summary HTTP 400 response.
+    - Expected: the source link preview remains visible, the Ozon Seller API limitation text appears, and the product-summary error is shown only as optional warning.
