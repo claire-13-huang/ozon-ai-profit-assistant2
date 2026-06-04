@@ -7,6 +7,7 @@ const STORE_TYPE_TEXT = {
 };
 const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。';
 const OZON_MARKETPLACE_LINK_NOTICE = '当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。';
+const MANUAL_PRODUCT_GUIDANCE = '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
 
 function getProductSelectionApiBaseUrl() {
   const inputUrl = ['backendWorkerUrl', 'ozonWorkerUrl']
@@ -90,8 +91,57 @@ function buildOptionalOzonContextText(ozon) {
     return ozon.message || 'Ozon 店铺商品摘要已连接。';
   }
 
-  const detail = ozon && ozon.message ? ` 状态：${ozon.message}` : '';
-  return OZON_STORE_CONTEXT_WARNING + detail;
+  return OZON_STORE_CONTEXT_WARNING;
+}
+
+function normalizeManualProduct(manualProduct) {
+  const product = manualProduct || {};
+  const hasCost = product.sourceCost !== null && product.sourceCost !== undefined && String(product.sourceCost).trim() !== '';
+  const cost = hasCost ? Number(product.sourceCost) : null;
+
+  return {
+    title: String(product.title || '').trim(),
+    sourceCost: Number.isFinite(cost) && cost >= 0 ? cost : null,
+    category: String(product.category || '').trim(),
+    notes: String(product.notes || '').trim()
+  };
+}
+
+function hasManualProductData(manualProduct) {
+  const product = normalizeManualProduct(manualProduct);
+  return Boolean(product.title || product.sourceCost !== null || product.category || product.notes);
+}
+
+function formatManualCost(value) {
+  return Number.isFinite(value) ? `¥${value.toFixed(2)}` : '未填写';
+}
+
+function formatManualNotes(notes) {
+  return String(notes || '').trim().replace(/[。.!！]+$/, '');
+}
+
+function applyManualProductContext(analysis, manualProduct, sourceUrl) {
+  if (!analysis) return analysis;
+
+  const product = normalizeManualProduct(manualProduct);
+  analysis.manualProduct = product;
+  analysis.source = analysis.source || {};
+  analysis.source.url = analysis.source.url || sourceUrl;
+  analysis.source.host = analysis.source.host || normalizeHost(analysis.source.url);
+  analysis.insights = analysis.insights || {};
+  analysis.manualBaseContext = analysis.manualBaseContext || {
+    sourceTitle: analysis.source.title || '',
+    category: analysis.insights.category || '',
+    sellingPoints: Array.isArray(analysis.insights.sellingPoints) ? analysis.insights.sellingPoints.slice() : []
+  };
+
+  analysis.source.title = product.title || analysis.manualBaseContext.sourceTitle;
+  analysis.insights.category = product.category || analysis.manualBaseContext.category;
+  analysis.insights.sellingPoints = product.notes
+    ? uniqueList([product.notes].concat(analysis.manualBaseContext.sellingPoints), 5)
+    : analysis.manualBaseContext.sellingPoints.slice();
+
+  return analysis;
 }
 
 function getProfitReportType(profitSnapshot) {
@@ -128,11 +178,16 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const source = analysis.source || {};
   const ozon = analysis.ozon || {};
   const insights = analysis.insights || {};
+  const manualProduct = normalizeManualProduct(analysis.manualProduct);
   const type = getProfitReportType(profitSnapshot);
-  const hasTitle = !isBlank(source.title);
+  const displayTitle = manualProduct.title || source.title || '';
+  const displayCategory = manualProduct.category || insights.category || '';
+  const displayNotes = formatManualNotes(manualProduct.notes);
+  const hasTitle = !isBlank(displayTitle);
   const hasImage = !isBlank(source.image);
-  const hasCategory = !isBlank(insights.category);
+  const hasCategory = !isBlank(displayCategory);
   const hasOzonData = ozon.status === 'connected';
+  const hasManualData = hasManualProductData(manualProduct);
   const ozonProducts = Array.isArray(ozon.products) ? ozon.products : [];
   const ozonSampleText = ozonProducts.length
     ? ' 店铺样本商品：' + ozonProducts
@@ -141,12 +196,14 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     : '';
   const actions = [];
 
-  if (!hasTitle || !hasImage) {
-    actions.push('来源链接读取不完整，先人工复核商品主图、标题和规格。');
+  if (!hasTitle) {
+    actions.push('先手动填写商品标题、采购价和类目信息，再判断是否进入小量测试。');
+  } else if (!hasImage) {
+    actions.push('来源链接不会自动抓取主图，请人工复核商品主图、规格和页面卖点。');
   }
 
   if (!hasCategory) {
-    actions.push('类目识别不完整，上架前需要人工确认 Ozon 目标类目。');
+    actions.push('请手动补充类目或产品类型，上架前仍需要人工确认 Ozon 目标类目。');
   }
 
   if (!hasOzonData) actions.push(OZON_STORE_CONTEXT_WARNING);
@@ -164,31 +221,41 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   }
 
   const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '数据不足' : '建议小量测试';
-  const sourceTitle = hasTitle ? source.title : '未识别标题';
   const sourceHost = source.host || normalizeHost(source.url);
   const marketplaceNotice = getOzonMarketplaceLinkNotice(source.url);
-  const summary = `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + sourceTitle + '”。' : '商品标题暂未完整识别。'} ${marketplaceNotice}`.trim();
+  const manualSummaryParts = [
+    hasTitle ? `手动商品：${displayTitle}` : MANUAL_PRODUCT_GUIDANCE,
+    `采购价：${formatManualCost(manualProduct.sourceCost)}`,
+    `类目/类型：${displayCategory || '未填写'}`,
+    displayNotes ? `卖点/备注：${displayNotes}` : ''
+  ].filter(Boolean);
+  const summary = hasManualData
+    ? `已识别来源：${sourceHost}。${manualSummaryParts.join('。')}。${marketplaceNotice}`.trim()
+    : `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + displayTitle + '”。' : MANUAL_PRODUCT_GUIDANCE} ${marketplaceNotice}`.trim();
+  const manualCostText = manualProduct.sourceCost !== null
+    ? `手动采购价为 ${formatManualCost(manualProduct.sourceCost)}。`
+    : '手动采购价未填写。';
 
   return {
     type,
     status,
     summary,
-    priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。Phase 4A 暂不生成 Ozon 全平台竞品均价；若官方 API 或合规数据源可用，后续再补价格带。`,
+    priceText: `${manualCostText}当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。当前不抓取来源站价格或 Ozon 全平台竞品均价；需要人工录入或后续接入合规数据源。`,
     profitText: buildProfitReportText(profitSnapshot),
     competitionText: hasOzonData
       ? 'Ozon API 已通过后端连接检查，已能读取你店铺的商品样本。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。' + ozonSampleText
       : buildOptionalOzonContextText(ozon),
     adText: '广告判断沿用当前利润测算中的广告率；搜索与推荐广告应先小预算验证点击、加购和订单，不以低价作为唯一策略。',
-    storeText: `识别类目候选：${insights.category || '待人工复核'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
+    storeText: `手动类目/产品类型：${displayCategory || '待人工补充'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。${displayNotes ? '卖点/备注：' + displayNotes + '。' : ''}`,
     actions: uniqueList(actions, 5)
   };
 }
 
-function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
+function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct) {
   const host = normalizeHost(sourceUrl);
   const marketplaceNotice = getOzonMarketplaceLinkNotice(sourceUrl);
 
-  return {
+  const analysis = {
     ok: false,
     source: {
       url: sourceUrl,
@@ -219,13 +286,17 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot) {
       actions: ['继续手动补充流量、曝光、转化和类目趋势备注。', '需要自动数据时，先在 API Settings 中配置 HTTPS Worker URL。', '正式测试只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
     }
   };
+
+  applyManualProductContext(analysis, manualProduct, sourceUrl);
+  analysis.report = buildOzonAutoReport(analysis, profitSnapshot);
+  return analysis;
 }
 
-function buildWorkerEndpointNotReadyAnalysis(sourceUrl, profitSnapshot) {
-  const analysis = buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot);
+function buildWorkerEndpointNotReadyAnalysis(sourceUrl, profitSnapshot, manualProduct) {
+  const analysis = buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct);
   analysis.ozon.status = 'endpoint_not_ready';
   analysis.ozon.message = 'Worker 已配置，但未来的 /api/ozon/product-summary 端点尚未可用。';
-  analysis.report.summary = `Product link received。${getOzonMarketplaceLinkNotice(sourceUrl)} Worker URL 已配置，但产品摘要端点尚未实现；当前仍保持手动/预览分析，不抓取页面、不读取未授权数据。`;
+  analysis.report = buildOzonAutoReport(analysis, profitSnapshot);
   analysis.report.actions = ['确认 Worker 后端需要新增 /api/ozon/product-summary。', '端点完成前继续使用人工备注和利润测算做预判。', '不要从浏览器直接调用 Ozon 官方 API 或保存真实 API Key。'];
   return analysis;
 }
@@ -265,18 +336,17 @@ async function requestOzonProductAnalysis(payload) {
   const apiBaseUrl = getProductSelectionApiBaseUrl();
 
   if (!apiBaseUrl) {
-    return buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
+    return buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot, payload.manualProduct);
   }
 
   if ((payload.clientId || payload.apiKey) && typeof validateWorkerUrlForCredentials === 'function') {
     const worker = validateWorkerUrlForCredentials(apiBaseUrl);
 
     if (worker.error) {
-      const analysis = buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot);
+      const analysis = buildApiDisconnectedAnalysis(payload.sourceUrl, payload.profitSnapshot, payload.manualProduct);
       analysis.ozon.status = worker.error;
       analysis.ozon.message = worker.message;
-      analysis.report.summary = `Product link received。${getOzonMarketplaceLinkNotice(payload.sourceUrl)} 当前不会发送 Ozon 临时凭证，也不会直接请求 Ozon 官方 API。`;
-      analysis.report.competitionText = buildOptionalOzonContextText(analysis.ozon);
+      analysis.report = buildOzonAutoReport(analysis, payload.profitSnapshot);
       return analysis;
     }
   }
@@ -288,7 +358,7 @@ async function requestOzonProductAnalysis(payload) {
   });
 
   if (response.status === 404) {
-    return buildWorkerEndpointNotReadyAnalysis(payload.sourceUrl, payload.profitSnapshot);
+    return buildWorkerEndpointNotReadyAnalysis(payload.sourceUrl, payload.profitSnapshot, payload.manualProduct);
   }
 
   if (!response.ok) {
@@ -296,9 +366,8 @@ async function requestOzonProductAnalysis(payload) {
   }
 
   const analysis = await response.json();
-  if (!analysis.report) {
-    analysis.report = buildOzonAutoReport(analysis, payload.profitSnapshot);
-  }
+  applyManualProductContext(analysis, payload.manualProduct, payload.sourceUrl);
+  analysis.report = buildOzonAutoReport(analysis, payload.profitSnapshot);
   return analysis;
 }
 

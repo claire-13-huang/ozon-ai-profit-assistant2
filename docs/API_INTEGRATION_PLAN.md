@@ -206,6 +206,33 @@ Frontend interpretation:
 - Ozon marketplace product page links are treated as pasted source links; Seller API cannot directly read arbitrary Ozon pages or other sellers' product data.
 - When `ozon.status !== "connected"`, the frontend should show the source preview and display this warning as optional store-context status: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
 
+## Current AI Analysis Manual Preview Workflow
+
+The AI Analysis page is a manual-preview workflow, not a scraper:
+
+- The source URL identifies the product source domain, such as `detail.1688.com`, `amazon.com`, a brand site, or an Ozon marketplace page.
+- The frontend does not scrape source pages and does not call 1688, Taobao, Amazon, Ozon marketplace pages, or any external product parsing API.
+- The seller manually fills product title, source cost, category/product type, and optional selling-point notes.
+- The preview report uses those manual fields together with the current profit calculator snapshot.
+- Ozon `product-summary` remains optional authorized store context only and cannot block the manual preview.
+
+Manual product fields used by the frontend:
+
+```json
+{
+  "manualProduct": {
+    "title": "Manual product title",
+    "sourceCost": 38.5,
+    "category": "Home storage",
+    "notes": "Manual selling points or checks"
+  }
+}
+```
+
+If a source URL is recognized but no manual title is entered, the UI should guide the seller instead of showing a failure:
+
+`已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`
+
 ## Future Worker Endpoints
 
 Planned safe Worker endpoints:

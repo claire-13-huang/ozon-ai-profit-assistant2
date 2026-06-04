@@ -98,6 +98,32 @@
    - Input: click `API Settings` without pressing save, sync, or test buttons.
    - Expected: no backend/API request is triggered by navigation alone; the page shows placeholder connection states.
 
+## AI Analysis Manual Preview Workflow
+
+1. 1688 link with empty manual fields
+   - Input: open AI Analysis, paste a valid `https://detail.1688.com/...` product URL, leave 商品标题 / 采购价 / 类目 empty, then click `开始智能分析`.
+   - Expected: source domain is recognized; the UI shows `已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`; no hard failure state appears.
+
+2. 1688 link with manual product information
+   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `开始智能分析`.
+   - Expected: analysis preview shows the source domain, manual product title, source cost, category/product type, notes, and current profit snapshot if available; editing the manual fields after analysis refreshes the preview; Ozon context unavailable appears only as optional warning.
+
+3. Ozon product page link with manual fields
+   - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
+   - Expected: the page is recognized as an Ozon marketplace/product page; the Seller API limitation notice appears; manual analysis preview still continues and does not claim Seller API can read arbitrary Ozon pages or competitor products.
+
+4. Amazon or external source link with manual fields
+   - Input: paste an Amazon or brand-site product URL and fill manual title, source cost, category, and notes.
+   - Expected: source domain is recognized and the manual fields drive the analysis preview; no scraping, crawler, or external product API request is required.
+
+5. Ozon store context unavailable remains optional
+   - Input: run AI Analysis without Ozon credentials or with Ozon context unavailable.
+   - Expected: report still renders from source link + manual fields; the only Ozon unavailable warning is `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+
+6. No direct source-page scraping
+   - Input: inspect browser network during the above tests.
+   - Expected: browser-side code does not call `https://api-seller.ozon.ru`, 1688/Taobao/Amazon product parsing APIs, or scraper/crawler endpoints.
+
 ## Safe Seller API Integration Preparation
 
 1. Product link should enter manual preview mode

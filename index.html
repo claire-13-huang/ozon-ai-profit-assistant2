@@ -268,7 +268,7 @@
 
         <div class="section future-panel">
           <div class="title">Ozon AI 选品识别报告</div>
-          <p class="panel-intro">Phase 2 保守占位：粘贴来源商品链接后，当前页面只生成本地规则提示和结构化报告框架，不连接真实 API、不抓取平台数据、不保存密钥。</p>
+          <p class="panel-intro">当前为手动预览流程：粘贴来源商品链接识别来源域名，再手动填写商品标题、采购价、类目和备注生成结构化报告；不抓取平台页面，不保存密钥。</p>
 
           <div class="analysis-connection-grid">
             <div>
@@ -296,6 +296,24 @@
             </div>
             <button class="auto-analysis-button" id="autoAnalysisButton" type="button">开始智能分析</button>
           </div>
+          <div class="manual-product-panel" aria-label="手动商品信息">
+            <div>
+              <label>商品标题</label>
+              <input id="manualProductTitle" autocomplete="off" placeholder="手动填写来源商品标题">
+            </div>
+            <div>
+              <label>采购价</label>
+              <input id="manualSourceCost" type="number" step="0.01" min="0" placeholder="例如 38.5">
+            </div>
+            <div>
+              <label>类目或产品类型</label>
+              <input id="manualProductCategory" autocomplete="off" placeholder="例如 家居收纳 / 车品 / 女装配件">
+            </div>
+            <div class="manual-product-notes">
+              <label>卖点或备注</label>
+              <textarea id="manualProductNotes" rows="3" placeholder="例如 材质、规格、适用场景、差异化卖点、需要复核的问题。"></textarea>
+            </div>
+          </div>
           <div class="analysis-store-row">
             <div>
               <label>选择用于分析的店铺</label>
@@ -304,7 +322,7 @@
               </select>
             </div>
           </div>
-          <div class="auto-selection-note">当前视图用于整理选品判断资料。真实平台 API、自动采集和 AI 分析必须在明确批准后再接入。</div>
+          <div class="auto-selection-note">当前视图用于整理选品判断资料。来源页面不会被自动抓取；Ozon 店铺商品摘要只是可选授权店铺上下文。</div>
 
           <div class="analysis-status" id="autoAnalysisStatus">等待粘贴链接并开始分析。</div>
           <div class="analysis-progress" id="autoAnalysisProgress">
@@ -427,13 +445,13 @@
           <div class="product-image-preview is-empty" id="productImagePreview">
             <img id="productImagePreviewImg" alt="商品图片预览">
           </div>
-          <div class="notice" id="aiResultBox">粘贴来源商品链接后，未来自动版会自动采集类目、相似竞品、均价、评分评价、痛点、关键词和主题标签。当前静态版需要后端/API 接入后才能真正自动生成。</div>
+          <div class="notice" id="aiResultBox">粘贴来源商品链接并填写手动商品信息后，页面会基于来源域名、手动字段和当前利润测算生成预览报告。</div>
           <div class="selection-report selection-waiting" id="productSelectionReport">
             <div class="decision-head">
               <span class="decision-label">选品预判报告</span>
               <span class="decision-status" id="productSelectionStatus">等待数据</span>
             </div>
-            <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接。当前静态版不会自动抓取任意网站或平台竞品数据，后续需要后端采集服务接入。</div>
+            <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接，并手动填写商品标题、采购价和类目信息。当前页面不会自动抓取任意网站或平台竞品数据。</div>
             <div class="selection-report-grid">
               <div>
                 <span>价格判断</span>

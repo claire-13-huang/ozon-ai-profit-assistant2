@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 2.5 / AI Analysis manual product preview workflow
+
+- 修改目标：把 AI Analysis 从“链接识别后像失败”调整为可用的手动预览流程：识别来源域名，用户手动补充商品标题、采购价、类目和卖点备注，再生成结构化选品预览。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：AI Analysis 新增商品标题、采购价、类目或产品类型、卖点或备注输入；前端报告生成优先使用这些手动字段，已生成报告后继续编辑手动字段会刷新预览；识别到来源链接但未填写标题时显示“已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。”；Ozon 店铺商品摘要继续作为可选上下文，不会阻断来源链接和手动利润数据预览，缺少上下文时只显示可选提示。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`git diff --check`；手动测试 1688 空字段、1688 手动字段、Ozon 商品页手动字段、Amazon/外部链接手动字段；确认浏览器端不直接请求 `https://api-seller.ozon.ru`，未新增抓取、爬虫、外部商品解析 API、Worker 行为或 Ozon 写入端点。
+- 已知风险：当前仍不会自动读取 1688/Taobao/Amazon/Ozon 页面标题、价格、图片或规格；真实商品页解析需要未来明确批准的合规数据源或后端方案。
+
 ## 2026-06-01 Phase 2.5 / AI Analysis source-link and Ozon store-context separation
 
 - 修改目标：修复来源商品链接分析被 Ozon Seller API product-summary 失败阻断的问题，明确来源链接识别是主流程，Ozon 店铺商品摘要只是可选授权店铺上下文。

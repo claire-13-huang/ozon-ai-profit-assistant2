@@ -349,6 +349,26 @@ textarea:focus {
   cursor: wait;
 }
 
+.manual-product-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(140px, .55fr) minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 10px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.manual-product-notes {
+  grid-column: 1 / -1;
+}
+
+.manual-product-panel textarea {
+  min-height: 82px;
+  resize: vertical;
+}
+
 .auto-selection-note {
   margin-bottom: 12px;
   color: var(--muted);
@@ -1640,6 +1660,7 @@ input.input-warning:focus {
 
   .top,
   .auto-selection-entry,
+  .manual-product-panel,
   .analysis-progress,
   .analysis-connection-grid,
   .analysis-insight-grid,

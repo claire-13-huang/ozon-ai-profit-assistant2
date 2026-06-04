@@ -13,6 +13,13 @@ const apiPreparationFieldIds = [
   'ozonWorkerUrl'
 ];
 
+const manualProductFieldIds = [
+  'manualProductTitle',
+  'manualSourceCost',
+  'manualProductCategory',
+  'manualProductNotes'
+];
+
 const savedFieldIds = [
   'salePrice',
   'rubRate',
@@ -32,6 +39,10 @@ const savedFieldIds = [
   'subsidyAmountInput',
   'subsidyRateInput',
   'sourceProductUrl',
+  'manualProductTitle',
+  'manualSourceCost',
+  'manualProductCategory',
+  'manualProductNotes',
   'productUrl',
   'imageUrl',
   'productSelectionPlatform',
@@ -823,6 +834,7 @@ function setAutoAnalysisStatus(message, type = '') {
 
 function setProductLinkPreviewStatus() {
   const sourceUrl = fieldValue('sourceProductUrl');
+  const manualTitle = fieldValue('manualProductTitle');
 
   if (!sourceUrl) {
     setAutoAnalysisStatus('等待粘贴来源商品链接。当前为手动/预览分析模式。');
@@ -833,7 +845,9 @@ function setProductLinkPreviewStatus() {
   try {
     const parsed = new URL(sourceUrl);
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
-    setAutoAnalysisStatus('Product link received. 当前模式：手动/预览分析。自动读取商品或店铺数据需要先通过 Cloudflare Worker 完成卖家 API 授权。你可以继续手动填写流量、曝光、转化或类目趋势备注。');
+    setAutoAnalysisStatus(manualTitle
+      ? '已识别来源链接。当前会基于手动商品信息和利润测算生成预览，不抓取来源页面。'
+      : '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。');
   } catch (error) {
     setAutoAnalysisStatus('商品链接格式不正确，请填写 http 或 https URL。', 'is-error');
   }
@@ -859,10 +873,16 @@ function renderOzonAnalysisDetails(analysis) {
   const productText = ozonProducts.length
     ? ` 样本：${ozonProducts.map(item => item.offer_id || item.product_id || '未命名商品').join('、')}`
     : '';
+  const manualGuidance = typeof MANUAL_PRODUCT_GUIDANCE === 'string'
+    ? MANUAL_PRODUCT_GUIDANCE
+    : '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
+  const titleText = source.title || (source.url ? manualGuidance : '未识别标题');
 
-  setText('sourceProductInsight', `${source.title || '未识别标题'} · ${source.host || '未知来源'} · ${insights.category || '类目待复核'}`);
+  setText('sourceProductInsight', `${titleText} · ${source.host || '未知来源'} · ${insights.category || '类目待复核'}`);
   setText('sourceKeywordInsight', `关键词：${keywords}。标签：${tags}。`);
-  setText('ozonApiInsight', (ozon.message || '等待 Ozon API 状态。') + productText);
+  setText('ozonApiInsight', ozon.status === 'connected'
+    ? (ozon.message || 'Ozon 店铺商品摘要已连接。') + productText
+    : 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。');
   setText('analysisLimitInsight', (analysis && analysis.limitations && analysis.limitations.length)
     ? analysis.limitations.join('；')
     : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
@@ -906,6 +926,15 @@ function getOzonProductSummaryCredentials() {
   };
 }
 
+function getManualProductInput() {
+  return {
+    title: fieldValue('manualProductTitle'),
+    sourceCost: readOptionalNumber('manualSourceCost'),
+    category: fieldValue('manualProductCategory'),
+    notes: fieldValue('manualProductNotes')
+  };
+}
+
 function getAnalysisPayload() {
   const selectedStoreId = fieldValue('analysisStoreProfile');
   const storeState = typeof loadStoreApiState === 'function' ? loadStoreApiState() : { stores: [] };
@@ -918,6 +947,7 @@ function getAnalysisPayload() {
     clientId: productSummaryCredentials.clientId,
     apiKey: productSummaryCredentials.apiKey,
     limit: productSummaryCredentials.limit,
+    manualProduct: getManualProductInput(),
     selectedStore: selectedStore ? {
       platform: selectedStore.platform,
       credentialRef: selectedStore.credentialRef,
@@ -993,7 +1023,7 @@ async function runOzonAutoAnalysis() {
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
     persistFormState();
   } catch (error) {
-    const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot);
+    const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot, getManualProductInput());
     fallback.ozon.status = 'api_error';
     fallback.ozon.message = error.message || 'Worker 产品摘要暂不可用。';
     fallback.report.competitionText = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。';
@@ -1018,6 +1048,12 @@ function loadDemoOzonAnalysis() {
 
 function renderProductSelection(profitSnapshot) {
   if (lastOzonAutoAnalysis && fieldValue('sourceProductUrl') === (lastOzonAutoAnalysis.source && lastOzonAutoAnalysis.source.url)) {
+    if (typeof applyManualProductContext === 'function') {
+      applyManualProductContext(lastOzonAutoAnalysis, getManualProductInput(), fieldValue('sourceProductUrl'));
+    }
+    if (typeof buildOzonAutoReport === 'function') {
+      lastOzonAutoAnalysis.report = buildOzonAutoReport(lastOzonAutoAnalysis, profitSnapshot);
+    }
     renderOzonAnalysisDetails(lastOzonAutoAnalysis);
     renderProductSelectionReport(lastOzonAutoAnalysis.report);
     return;
@@ -1716,7 +1752,7 @@ service.onchange = () => {
   calc();
 };
 
-document.querySelectorAll('input,select').forEach(e => {
+document.querySelectorAll('input,select,textarea').forEach(e => {
   e.addEventListener('input', () => {
     if (apiPreparationFieldIds.includes(e.id)) {
       renderAiAnalysisStatusModel();
@@ -1733,6 +1769,9 @@ document.querySelectorAll('input,select').forEach(e => {
 
     if (e.id === 'sourceProductUrl') {
       lastOzonAutoAnalysis = null;
+      setProductLinkPreviewStatus();
+      setAutoAnalysisProgress('', []);
+    } else if (manualProductFieldIds.includes(e.id)) {
       setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
@@ -1757,6 +1796,9 @@ document.querySelectorAll('input,select').forEach(e => {
 
     if (e.id === 'sourceProductUrl') {
       lastOzonAutoAnalysis = null;
+      setProductLinkPreviewStatus();
+      setAutoAnalysisProgress('', []);
+    } else if (manualProductFieldIds.includes(e.id)) {
       setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
