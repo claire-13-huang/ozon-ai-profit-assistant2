@@ -5,7 +5,7 @@ const STORE_TYPE_TEXT = {
   new: '新店',
   mature: '成熟店'
 };
-const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。';
+const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。';
 const OZON_MARKETPLACE_LINK_NOTICE = '当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。';
 const MANUAL_PRODUCT_GUIDANCE = '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
 
@@ -40,18 +40,18 @@ function percent(n) {
 }
 
 function buildWaitingSelectionReport(missing, blockingMessage) {
-  const reason = blockingMessage || `等待自动采集数据：${missing.join('、')}。`;
+  const reason = blockingMessage || `等待基础输入：${missing.join('、')}。`;
 
   return {
     type: 'waiting',
-    status: '等待数据',
-    summary: reason + ' 当前静态版不会自动抓取任意网站或平台竞品数据，后续需要后端采集服务接入。',
-    priceText: '等待来源链接解析、相似竞品均价和当前折合售价。',
+    status: '等待基础输入',
+    summary: reason + ' 当前页面不会自动抓取任意网站、平台竞品或店铺经营数据。',
+    priceText: '等待来源链接和当前折合售价；竞品价格为可选人工观察，不是必填项。',
     profitText: '等待有效售价、成本和利润测算。',
-    competitionText: '等待相似竞品数量、评分、评价、痛点、关键词和主题标签。',
-    adText: '等待广告占比假设。',
-    storeText: '等待店铺类型和订单区间。',
-    actions: ['后续需要新增后端采集服务，前端不能直接完成跨网站抓取。', '正式自动版应优先使用官方 API 或合规数据源，必要时再评估爬虫方案。']
+    competitionText: '人工曝光、点击、转化和竞品观察是可选估算，留空不会阻止测品报告。',
+    adText: '等待利润计算器基础数据；广告占比是可选人工假设。',
+    storeText: '等待手动商品类目、卖点和利润快照。',
+    actions: ['先补齐来源链接和利润计算器基础输入。', '人工曝光、点击、转化参数可以留空，不代表 API 未同步失败。']
   };
 }
 
@@ -120,6 +120,144 @@ function formatManualNotes(notes) {
   return String(notes || '').trim().replace(/[。.!！]+$/, '');
 }
 
+function yuan(n) {
+  return Number.isFinite(n) ? `¥${n.toFixed(2)}` : '未填写';
+}
+
+function normalizeManualTestingAssumptions(assumptions) {
+  const input = assumptions || {};
+  const normalizeNonNegative = value => {
+    if (value === null || value === undefined || String(value).trim() === '') return null;
+
+    const numericValue = Number(value);
+    return Number.isFinite(numericValue) && numericValue >= 0 ? numericValue : null;
+  };
+
+  return {
+    estimatedExposure: normalizeNonNegative(input.estimatedExposure),
+    estimatedClickRate: normalizeNonNegative(input.estimatedClickRate),
+    estimatedConversionRate: normalizeNonNegative(input.estimatedConversionRate),
+    exposureNotes: String(input.exposureNotes || '').trim(),
+    clickRateNotes: String(input.clickRateNotes || '').trim(),
+    conversionRateNotes: String(input.conversionRateNotes || '').trim(),
+    marketObservationNotes: String(input.marketObservationNotes || '').trim(),
+    competitorCount: normalizeNonNegative(input.competitorCount),
+    competitorAvgPrice: normalizeNonNegative(input.competitorAvgPrice),
+    competitorMinPrice: normalizeNonNegative(input.competitorMinPrice),
+    competitorMaxPrice: normalizeNonNegative(input.competitorMaxPrice),
+    topCompetitorRating: normalizeNonNegative(input.topCompetitorRating),
+    topCompetitorReviews: normalizeNonNegative(input.topCompetitorReviews),
+    adShare: normalizeNonNegative(input.adShare),
+    adType: String(input.adType || '').trim(),
+    storeType: String(input.storeType || '').trim(),
+    storeOrderRange: String(input.storeOrderRange || '').trim(),
+    localPreference: String(input.localPreference || '').trim()
+  };
+}
+
+function hasManualTestingAssumptions(assumptions) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  return Boolean(
+    input.estimatedExposure !== null ||
+    input.estimatedClickRate !== null ||
+    input.estimatedConversionRate !== null ||
+    input.exposureNotes ||
+    input.clickRateNotes ||
+    input.conversionRateNotes ||
+    input.marketObservationNotes ||
+    input.competitorCount !== null ||
+    input.competitorAvgPrice !== null ||
+    input.competitorMinPrice !== null ||
+    input.competitorMaxPrice !== null ||
+    input.topCompetitorRating !== null ||
+    input.topCompetitorReviews !== null ||
+    input.adShare !== null ||
+    input.localPreference
+  );
+}
+
+function applyManualTestingAssumptions(analysis, assumptions) {
+  if (!analysis) return analysis;
+
+  analysis.manualAssumptions = normalizeManualTestingAssumptions(assumptions);
+  return analysis;
+}
+
+function buildProfitCostSnapshotText(profitSnapshot, manualProduct) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    return '请先在利润计算器中补齐售价、重量和成本，报告不会因为人工曝光/点击/转化为空而失败。';
+  }
+
+  const totalCost = Number.isFinite(profitSnapshot.sale) && Number.isFinite(profitSnapshot.profit)
+    ? profitSnapshot.sale - profitSnapshot.profit
+    : null;
+  const purchaseText = Number.isFinite(manualProduct.sourceCost)
+    ? `手动采购价 ${formatManualCost(manualProduct.sourceCost)}`
+    : `采购成本 ${yuan(profitSnapshot.purchaseCost)}`;
+  const totalCostText = Number.isFinite(totalCost) ? yuan(totalCost) : '未填写';
+
+  return `${purchaseText}；利润计算器总成本约 ${totalCostText}，其中物流 ${yuan(profitSnapshot.logisticsCost)}、广告 ${yuan(profitSnapshot.adCost)}、佣金 ${yuan(profitSnapshot.commissionCost)}。当前售价折合约 ${rub(profitSnapshot.saleRub)}。`;
+}
+
+function buildLogisticsRiskText(profitSnapshot) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) return '物流风险：等待利润计算器中的重量、尺寸和物流匹配结果。';
+  if (!Number.isFinite(profitSnapshot.logisticsCost) || !Number.isFinite(profitSnapshot.sale) || profitSnapshot.sale <= 0) {
+    return '物流风险：等待有效物流成本和售价。';
+  }
+
+  const ratio = (profitSnapshot.logisticsCost / profitSnapshot.sale) * 100;
+
+  if (ratio >= 25) return `物流风险：物流成本约占售价 ${percent(ratio)}，测品前优先复核重量、尺寸和计抛。`;
+  if (ratio >= 15) return `物流风险：物流成本约占售价 ${percent(ratio)}，可以测试但要关注重量和包装波动。`;
+  return `物流风险：物流成本约占售价 ${percent(ratio)}，当前不是最主要压力项。`;
+}
+
+function buildManualAssumptionText(assumptions) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  const parts = [];
+
+  if (input.estimatedExposure !== null) parts.push(`预计曝光量 ${input.estimatedExposure}`);
+  if (input.estimatedClickRate !== null) parts.push(`预计点击率 ${percent(input.estimatedClickRate)}`);
+  if (input.estimatedConversionRate !== null) parts.push(`预计转化率 ${percent(input.estimatedConversionRate)}`);
+  if (input.competitorCount !== null) parts.push(`手动观察竞品 ${input.competitorCount} 个`);
+  if (input.competitorAvgPrice !== null) parts.push(`竞品均价约 ${rub(input.competitorAvgPrice)}`);
+  if (input.topCompetitorRating !== null || input.topCompetitorReviews !== null) {
+    parts.push(`Top 竞品评分 ${input.topCompetitorRating !== null ? input.topCompetitorRating : '未填'}，评论 ${input.topCompetitorReviews !== null ? input.topCompetitorReviews : '未填'}`);
+  }
+  if (input.exposureNotes) parts.push(`曝光备注：${formatManualNotes(input.exposureNotes)}`);
+  if (input.clickRateNotes) parts.push(`点击备注：${formatManualNotes(input.clickRateNotes)}`);
+  if (input.conversionRateNotes) parts.push(`转化备注：${formatManualNotes(input.conversionRateNotes)}`);
+  if (input.marketObservationNotes) parts.push(`市场观察：${formatManualNotes(input.marketObservationNotes)}`);
+
+  if (!parts.length) {
+    return '未填写人工曝光、点击、转化或竞品参数；本次报告不会因此显示失败，先基于商品信息和利润测算判断是否值得小量测试。';
+  }
+
+  return `以下为人工预估，不代表平台 API 自动同步数据：${parts.join('；')}。`;
+}
+
+function buildTestingSuggestionText(type, profitSnapshot, assumptions) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  const adText = input.adShare !== null
+    ? `手动预估广告占比 ${percent(input.adShare)}`
+    : '广告占比未做人工预估';
+  const preference = input.localPreference ? ` 本地偏好：${input.localPreference}。` : '';
+
+  if (type === 'risk') {
+    return `${adText}。当前利润或成本压力偏高，暂不建议直接开广告或放大库存，先调整采购、物流、售价或规格。${preference}`;
+  }
+
+  if (type === 'warning') {
+    return `${adText}。当前只适合谨慎测品：小预算、小库存，重点记录点击、加购、订单和退货，但这些记录需要人工复盘。${preference}`;
+  }
+
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    return '请先补齐利润计算器基础数据；人工曝光、点击、转化为空不会阻止报告，但利润快照是测品判断的核心。';
+  }
+
+  return `${adText}。当前可进入小量测试，但仍要人工记录广告消耗、点击、加购、订单和退货，不视为平台 API 已同步。${preference}`;
+}
+
 function applyManualProductContext(analysis, manualProduct, sourceUrl) {
   if (!analysis) return analysis;
 
@@ -171,7 +309,7 @@ function buildProfitReportText(profitSnapshot) {
     return base + ' 只能作为小预算谨慎测试，重点复核采购、物流和广告假设。';
   }
 
-  return base + ' 利润具备测试空间，但还需要结合 Ozon 流量、转化和评价门槛复盘。';
+  return base + ' 利润具备测试空间，但还需要人工复核点击、转化、评价门槛和退货风险。';
 }
 
 function buildOzonAutoReport(analysis, profitSnapshot) {
@@ -179,6 +317,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const ozon = analysis.ozon || {};
   const insights = analysis.insights || {};
   const manualProduct = normalizeManualProduct(analysis.manualProduct);
+  const manualAssumptions = normalizeManualTestingAssumptions(analysis.manualAssumptions);
   const type = getProfitReportType(profitSnapshot);
   const displayTitle = manualProduct.title || source.title || '';
   const displayCategory = manualProduct.category || insights.category || '';
@@ -209,18 +348,18 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   if (!hasOzonData) actions.push(OZON_STORE_CONTEXT_WARNING);
 
   if (profitSnapshot && profitSnapshot.profitRate < 10) {
-    actions.push('当前利润率低于 10%，不建议直接开广告测试。');
+    actions.push('当前利润率低于 10%，暂不建议进入测品。');
   } else if (profitSnapshot && profitSnapshot.profitRate < 20) {
-    actions.push('只用小预算测试关键词，不要直接放量。');
+    actions.push('只做小预算谨慎测试，不要直接放量。');
   } else {
-    actions.push('可以进入小量测试，但要记录广告消耗、点击、加购、订单和退货。');
+    actions.push('可以进入小量测试，但曝光、点击、加购、订单和退货需要人工记录复盘。');
   }
 
   if (uniqueList(insights.keywords).length) {
     actions.push('用识别出的关键词先检查 Ozon 搜索结果和头部商品卡片质量。');
   }
 
-  const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '数据不足' : '建议小量测试';
+  const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '等待利润测算' : '建议小量测试';
   const sourceHost = source.host || normalizeHost(source.url);
   const marketplaceNotice = getOzonMarketplaceLinkNotice(source.url);
   const manualSummaryParts = [
@@ -232,21 +371,19 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const summary = hasManualData
     ? `已识别来源：${sourceHost}。${manualSummaryParts.join('。')}。${marketplaceNotice}`.trim()
     : `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + displayTitle + '”。' : MANUAL_PRODUCT_GUIDANCE} ${marketplaceNotice}`.trim();
-  const manualCostText = manualProduct.sourceCost !== null
-    ? `手动采购价为 ${formatManualCost(manualProduct.sourceCost)}。`
-    : '手动采购价未填写。';
+  const logisticsRiskText = buildLogisticsRiskText(profitSnapshot);
 
   return {
     type,
     status,
     summary,
-    priceText: `${manualCostText}当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。当前不抓取来源站价格或 Ozon 全平台竞品均价；需要人工录入或后续接入合规数据源。`,
+    priceText: `${buildProfitCostSnapshotText(profitSnapshot, manualProduct)} 当前不抓取来源站价格或 Ozon 全平台竞品均价；需要人工录入或后续接入合规数据源。`,
     profitText: buildProfitReportText(profitSnapshot),
     competitionText: hasOzonData
       ? 'Ozon API 已通过后端连接检查，已能读取你店铺的商品样本。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。' + ozonSampleText
-      : buildOptionalOzonContextText(ozon),
-    adText: '广告判断沿用当前利润测算中的广告率；搜索与推荐广告应先小预算验证点击、加购和订单，不以低价作为唯一策略。',
-    storeText: `手动类目/产品类型：${displayCategory || '待人工补充'}。关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。${displayNotes ? '卖点/备注：' + displayNotes + '。' : ''}`,
+      : `${buildOptionalOzonContextText(ozon)} ${buildManualAssumptionText(manualAssumptions)}`,
+    adText: buildTestingSuggestionText(type, profitSnapshot, manualAssumptions),
+    storeText: `手动类目/产品类型：${displayCategory || '待人工补充'}。${displayNotes ? '卖点/备注：' + displayNotes + '。' : ''}${logisticsRiskText} 关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
     actions: uniqueList(actions, 5)
   };
 }
@@ -277,13 +414,13 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct) 
     report: {
       type: getProfitReportType(profitSnapshot),
       status: 'Preview / manual',
-      summary: `Product link received（${host}）。${marketplaceNotice} 当前模式为手动/预览分析：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。自动数据读取需要卖家通过 Cloudflare Worker 后端完成官方 API 授权；你可以先手动填写流量、曝光、转化或类目趋势备注。`,
+      summary: `Product link received（${host}）。${marketplaceNotice} 当前模式为手动测品预览：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。人工曝光、点击、转化参数只用于模拟测品，不代表平台 API 同步。`,
       priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。价格带和竞品数据需要授权后端或人工补充，当前不生成实时平台结论。`,
       profitText: buildProfitReportText(profitSnapshot),
       competitionText: 'Store API 尚未连接，当前不会自动读取 Ozon 竞品数量、均价、评分或评论。请先以人工观察和后续授权数据作为输入。',
-      adText: '广告判断暂时只基于当前利润测算和人工备注。未来 API 连接可同步授权店铺的广告、曝光、点击或转化数据。',
+      adText: '广告判断暂时只基于当前利润测算和人工预估，不代表已同步真实广告、曝光、点击或转化数据。',
       storeText: '商品类目、关键词和主题标签当前处于人工预览状态；后续 Worker 端点可返回经过授权的数据摘要。',
-      actions: ['继续手动补充流量、曝光、转化和类目趋势备注。', '需要自动数据时，先在 API Settings 中配置 HTTPS Worker URL。', '正式测试只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
+      actions: ['先补齐商品信息和利润测算，再决定是否小量测试。', '人工曝光、点击、转化参数是可选估算，不能当作平台同步数据。', '正式测试只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
     }
   };
 
@@ -403,11 +540,6 @@ function analyzeProductSelection(input) {
 
   if (isBlank(input.sourceProductUrl)) missing.push('来源商品链接');
   if (!hasPositiveNumber(input.saleRub)) missing.push('有效售价和汇率');
-  if (isBlank(input.targetCategory)) missing.push('自动识别类目');
-  if (!hasPositiveNumber(input.competitorCount)) missing.push('三平台相似竞品数量');
-  if (!hasPositiveNumber(input.competitorAvgPrice)) missing.push('三平台相似竞品均价');
-  if (!Number.isFinite(input.adShare) || input.adShare < 0) missing.push('预估广告占比');
-  if (isBlank(input.storeType)) missing.push('店铺类型');
 
   if (missing.length) {
     return buildWaitingSelectionReport(missing);
@@ -415,16 +547,22 @@ function analyzeProductSelection(input) {
 
   const actions = [];
   const storeLabel = STORE_TYPE_TEXT[input.storeType] || '未填写';
-  const priceRatio = input.saleRub / input.competitorAvgPrice;
-  const priceHighRisk = priceRatio >= 1.3 && ['new', 'mixed'].includes(input.storeType);
-  const priceLow = priceRatio <= 0.85;
+  const hasCompetitorAvg = hasPositiveNumber(input.competitorAvgPrice);
+  const priceRatio = hasCompetitorAvg ? input.saleRub / input.competitorAvgPrice : null;
+  const priceHighRisk = priceRatio !== null && priceRatio >= 1.3 && ['new', 'mixed'].includes(input.storeType);
+  const priceLow = priceRatio !== null && priceRatio <= 0.85;
   const competitionHigh = input.competitorCount >= 80 || input.topCompetitorReviews >= 1000;
   const strongTopCompetitor = input.topCompetitorRating >= 4.7 && input.topCompetitorReviews >= 500;
-  const highAdPressure = input.adShare >= 30;
+  const highAdPressure = Number.isFinite(input.adShare) && input.adShare >= 30;
   const platformMismatch = input.targetPlatform && input.activePlatform && input.targetPlatform !== input.activePlatform;
   let type = 'test';
 
-  let priceText = `当前售价折合约 ${rub(input.saleRub)}，竞品均价约 ${rub(input.competitorAvgPrice)}。`;
+  let priceText = `当前售价折合约 ${rub(input.saleRub)}。`;
+  if (hasCompetitorAvg) {
+    priceText += ` 人工观察竞品均价约 ${rub(input.competitorAvgPrice)}。`;
+  } else {
+    priceText += ' 未填写人工竞品均价，不会因此阻止测品判断。';
+  }
   if (priceHighRisk) {
     type = 'warning';
     priceText += ' 当前价明显高于竞品均价，新店或杂货店需要更强图片、评价、广告或差异化卖点支撑。';
@@ -455,7 +593,9 @@ function analyzeProductSelection(input) {
     profitText += ' 利润空间较强，但不代表流量、转化和广告成本已经稳定。';
   }
 
-  let competitionText = `当前相似竞品约 ${input.competitorCount} 个。`;
+  let competitionText = hasPositiveNumber(input.competitorCount)
+    ? `人工观察相似竞品约 ${input.competitorCount} 个。`
+    : '未填写人工竞品数量；本次先按商品信息和利润测算判断。';
   if (competitionHigh || strongTopCompetitor) {
     if (type !== 'risk') type = 'warning';
     competitionText += ' 竞争门槛偏高，建议寻找细分类目、差异化卖点或更精准关键词。';
@@ -468,7 +608,7 @@ function analyzeProductSelection(input) {
     competitionText += ` Top 竞品评分约 ${input.topCompetitorRating || 0}，评论数约 ${input.topCompetitorReviews || 0}。`;
   }
 
-  let adText = `${input.adType || '手动广告假设'}，预估广告占比 ${percent(input.adShare)}。`;
+  let adText = `${input.adType || '手动广告假设'}，${Number.isFinite(input.adShare) ? '预估广告占比 ' + percent(input.adShare) : '广告占比未填写'}。`;
   if (highAdPressure && input.profitRate < 20) {
     if (type !== 'risk') type = 'warning';
     adText += ' 广告占比偏高且利润空间不够，容易把毛利润吃掉。';
@@ -491,7 +631,9 @@ function analyzeProductSelection(input) {
   }
   storeText += '。';
 
-  if (input.storeType === 'vertical') {
+  if (!input.storeType) {
+    storeText += ' 店铺类型未填写，不会阻止测品报告生成。';
+  } else if (input.storeType === 'vertical') {
     storeText += ' 垂直店更适合围绕类目沉淀关键词、评价和复购。';
   } else if (input.storeType === 'mixed') {
     if (type !== 'risk') type = 'warning';
@@ -514,7 +656,7 @@ function analyzeProductSelection(input) {
     ? '当前组合风险较高，暂不建议直接开广告或放大库存。'
     : type === 'warning'
       ? '当前产品可以继续观察，但只适合谨慎、小预算验证。'
-      : '当前数据支持小量测试，但仍需用真实流量、广告和退货表现复盘。';
+      : '当前数据支持小量测试，但仍需人工记录曝光、点击、广告和退货表现。';
 
   return {
     type,

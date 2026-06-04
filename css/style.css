@@ -369,6 +369,21 @@ textarea:focus {
   resize: vertical;
 }
 
+.profit-snapshot-note,
+.manual-assumption-copy {
+  margin: 0 0 12px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.profit-snapshot-note {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
 .auto-selection-note {
   margin-bottom: 12px;
   color: var(--muted);
@@ -518,6 +533,18 @@ textarea:focus {
 
 .manual-fallback-panel .product-selection-grid {
   padding: 0 14px 14px;
+}
+
+.manual-assumption-panel {
+  margin-bottom: 14px;
+}
+
+.manual-assumption-panel .manual-assumption-copy {
+  padding: 0 14px;
+}
+
+.optional-testing-card {
+  border-style: dashed;
 }
 
 .store-plan-row,

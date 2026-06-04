@@ -267,8 +267,8 @@
         </div>
 
         <div class="section future-panel">
-          <div class="title">Ozon AI 选品识别报告</div>
-          <p class="panel-intro">当前为手动预览流程：粘贴来源商品链接识别来源域名，再手动填写商品标题、采购价、类目和备注生成结构化报告；不抓取平台页面，不保存密钥。</p>
+          <div class="title">AI 测品决策报告</div>
+          <p class="panel-intro">当前流程用于判断一个商品是否值得小量测试：先识别来源链接，再补充手动商品信息，并结合上方利润测算生成测品建议；不抓取平台页面，不同步店铺经营数据，不保存密钥。</p>
 
           <div class="analysis-connection-grid">
             <div>
@@ -291,29 +291,30 @@
 
           <div class="auto-selection-entry">
             <div>
-              <label>来源商品链接（全球任意网站）</label>
+              <label>1. 来源商品链接（全球任意网站）</label>
               <input id="sourceProductUrl" type="url" placeholder="粘贴 1688、淘宝、Amazon、品牌站或其他任意商品链接">
             </div>
-            <button class="auto-analysis-button" id="autoAnalysisButton" type="button">开始智能分析</button>
+            <button class="auto-analysis-button" id="autoAnalysisButton" type="button">生成测品建议</button>
           </div>
           <div class="manual-product-panel" aria-label="手动商品信息">
             <div>
-              <label>商品标题</label>
+              <label>2. 商品标题</label>
               <input id="manualProductTitle" autocomplete="off" placeholder="手动填写来源商品标题">
             </div>
             <div>
-              <label>采购价</label>
+              <label>3. 采购价</label>
               <input id="manualSourceCost" type="number" step="0.01" min="0" placeholder="例如 38.5">
             </div>
             <div>
-              <label>类目或产品类型</label>
+              <label>4. 类目或产品类型</label>
               <input id="manualProductCategory" autocomplete="off" placeholder="例如 家居收纳 / 车品 / 女装配件">
             </div>
             <div class="manual-product-notes">
-              <label>卖点或备注</label>
+              <label>5. 卖点或备注</label>
               <textarea id="manualProductNotes" rows="3" placeholder="例如 材质、规格、适用场景、差异化卖点、需要复核的问题。"></textarea>
             </div>
           </div>
+          <div class="profit-snapshot-note">利润快照来自上方利润计算器：售价、总成本、利润率、采购成本和物流成本会进入测品报告。请先在利润计算器中填好基础成本。</div>
           <div class="analysis-store-row">
             <div>
               <label>选择用于分析的店铺</label>
@@ -353,8 +354,9 @@
 
           <button class="demo-analysis-button" id="loadDemoAnalysisButton" type="button">查看示例报告</button>
 
-          <details class="manual-fallback-panel">
-            <summary>开发调试字段：正常使用不需要手动填写</summary>
+          <details class="manual-fallback-panel manual-assumption-panel">
+            <summary>可选：人工预估测品参数</summary>
+            <p class="manual-assumption-copy">当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。</p>
             <div class="grid product-selection-grid">
               <div>
                 <label>目标平台</label>
@@ -377,11 +379,23 @@
                 <input id="targetCategory" placeholder="例如 家居 / 服饰 / 车品">
               </div>
               <div>
-                <label>竞品数量</label>
+                <label>预计曝光量（手动预估）</label>
+                <input id="estimatedExposure" type="number" step="1" min="0" placeholder="例如 1000">
+              </div>
+              <div>
+                <label>预计点击率（手动预估）</label>
+                <input id="estimatedClickRate" type="number" step="0.01" min="0" placeholder="例如 2.5">
+              </div>
+              <div>
+                <label>预计转化率（手动预估）</label>
+                <input id="estimatedConversionRate" type="number" step="0.01" min="0" placeholder="例如 1.2">
+              </div>
+              <div>
+                <label>竞品数量（手动观察）</label>
                 <input id="competitorCount" type="number" step="1" min="0" placeholder="例如 35">
               </div>
               <div>
-                <label>竞品均价（卢布）</label>
+                <label>竞品均价（手动观察，卢布）</label>
                 <input id="competitorAvgPrice" type="number" step="0.01" min="0" placeholder="例如 1300">
               </div>
               <div>
@@ -401,8 +415,8 @@
                 <input id="topCompetitorReviews" type="number" step="1" min="0" placeholder="例如 800">
               </div>
               <div>
-                <label>预估广告占比（%）</label>
-                <input id="selectionAdShare" type="number" step="0.1" min="0" value="30">
+                <label>预估广告占比（手动预估，%）</label>
+                <input id="selectionAdShare" type="number" step="0.1" min="0" placeholder="例如 20">
               </div>
               <div>
                 <label>广告类型</label>
@@ -445,16 +459,16 @@
           <div class="product-image-preview is-empty" id="productImagePreview">
             <img id="productImagePreviewImg" alt="商品图片预览">
           </div>
-          <div class="notice" id="aiResultBox">粘贴来源商品链接并填写手动商品信息后，页面会基于来源域名、手动字段和当前利润测算生成预览报告。</div>
+          <div class="notice" id="aiResultBox">粘贴来源商品链接并填写手动商品信息后，页面会基于来源域名、手动字段和当前利润测算生成测品建议。</div>
           <div class="selection-report selection-waiting" id="productSelectionReport">
             <div class="decision-head">
-              <span class="decision-label">选品预判报告</span>
-              <span class="decision-status" id="productSelectionStatus">等待数据</span>
+              <span class="decision-label">测品决策报告</span>
+              <span class="decision-status" id="productSelectionStatus">等待输入</span>
             </div>
             <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接，并手动填写商品标题、采购价和类目信息。当前页面不会自动抓取任意网站或平台竞品数据。</div>
             <div class="selection-report-grid">
               <div>
-                <span>价格判断</span>
+                <span>采购与成本</span>
                 <p id="selectionPriceText">等待竞品均价。</p>
               </div>
               <div>
@@ -462,21 +476,21 @@
                 <p id="selectionProfitText">等待利润测算。</p>
               </div>
               <div>
-                <span>竞争判断</span>
+                <span>市场假设</span>
                 <p id="selectionCompetitionText">等待相似竞品数量、评分、评价和痛点。</p>
               </div>
               <div>
-                <span>广告判断</span>
+                <span>测品建议</span>
                 <p id="selectionAdText">等待广告占比假设。</p>
               </div>
               <div>
-                <span>店铺匹配</span>
+                <span>商品定位</span>
                 <p id="selectionStoreText">等待店铺类型。</p>
               </div>
             </div>
             <div class="selection-actions-title">下一步建议</div>
             <ul class="selection-actions" id="selectionNextActions">
-              <li>补齐关键字段后再查看建议，避免生成误导性结论。</li>
+              <li>先补齐商品信息和利润测算，再决定是否小量测试。</li>
             </ul>
           </div>
         </div>
@@ -491,7 +505,7 @@
         <div class="view-title-row">
           <div>
             <div class="title">AI Analysis</div>
-            <p class="panel-intro">这里用于集中查看选品分析、当前利润摘要和人工观察记录。当前 Phase 2 不执行真实 AI/API 请求。</p>
+            <p class="panel-intro">这里集中查看来源商品信息、手动测品假设、利润快照和测品决策。当前不会自动读取 Ozon 曝光、点击、转化、广告、订单或财务数据。</p>
           </div>
         </div>
 
@@ -526,23 +540,29 @@
 
       <div id="aiAnalysisMount"></div>
 
-      <div class="section workspace-card">
+      <div class="section workspace-card optional-testing-card">
+        <div class="view-title-row">
+          <div>
+            <div class="settings-subtitle">可选：人工预估测品参数</div>
+            <p class="panel-intro">当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。</p>
+          </div>
+        </div>
         <div class="analysis-notes-grid">
           <div>
-            <label>店铺流量 / 曝光数据</label>
-            <textarea placeholder="例如：近 7 天曝光、自然流量、广告曝光、店铺基础流量变化。"></textarea>
+            <label>预计曝光量（手动预估）</label>
+            <textarea id="estimatedExposureNotes" placeholder="例如：估计首轮测试曝光范围、自然曝光或广告曝光假设。"></textarea>
           </div>
           <div>
-            <label>点击率 / 转化备注</label>
-            <textarea placeholder="例如：点击率偏低、加购正常、转化依赖评价或价格。"></textarea>
+            <label>预计点击率（手动预估）</label>
+            <textarea id="estimatedClickRateNotes" placeholder="例如：主图可能影响点击，预计点击率偏保守。"></textarea>
           </div>
           <div>
-            <label>产品 / 类目趋势备注</label>
-            <textarea placeholder="例如：季节性、搜索热度、类目竞争、价格带变化。"></textarea>
+            <label>预计转化率（手动预估）</label>
+            <textarea id="estimatedConversionRateNotes" placeholder="例如：评价少、价格敏感或规格复杂时，转化率需要保守估计。"></textarea>
           </div>
           <div>
-            <label>平台观察备注</label>
-            <textarea placeholder="例如：Ozon/WB/Yandex 前台头部商品、主图质量、评论痛点、关键词。"></textarea>
+            <label>平台观察备注（人工）</label>
+            <textarea id="manualMarketObservationNotes" placeholder="例如：前台头部商品、主图质量、评论痛点、关键词或价格带观察。"></textarea>
           </div>
         </div>
       </div>

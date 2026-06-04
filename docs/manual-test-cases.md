@@ -100,27 +100,47 @@
 
 ## AI Analysis Manual Preview Workflow
 
-1. 1688 link with empty manual fields
-   - Input: open AI Analysis, paste a valid `https://detail.1688.com/...` product URL, leave 商品标题 / 采购价 / 类目 empty, then click `开始智能分析`.
+1. Manual product information only should generate a testing decision
+   - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.
+   - Expected: report appears from source domain, manual product information, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`.
+
+2. Optional manual testing assumptions should be labeled as estimates
+   - Input: fill 预计曝光量（手动预估）, 预计点击率（手动预估）, 预计转化率（手动预估）, and optional competitor/ad-share assumptions, then click `生成测品建议`.
+   - Expected: report includes those values as manual estimates only; UI shows `当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`; no text implies API sync.
+
+3. Report should not fail when optional metrics are empty
+   - Input: clear 预计曝光量 / 预计点击率 / 预计转化率 and all optional market assumptions; keep source URL, manual product info, and profit calculator inputs valid; click `生成测品建议`.
+   - Expected: report still shows a testing decision based on profit margin, total cost, source cost, category, selling point, and logistics/profit snapshot.
+
+4. 1688 link with manual product information
+   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
+   - Expected: source domain is recognized; manual product information drives the analysis preview; optional Ozon context unavailable appears only as a warning.
+
+5. Ozon product page link with manual product information
+   - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
+   - Expected: Seller API limitation notice appears; manual product information and profit snapshot still drive the testing decision.
+
+6. 1688 link with empty manual fields
+   - Input: open AI Analysis, paste a valid `https://detail.1688.com/...` product URL, leave 商品标题 / 采购价 / 类目 empty, then click `生成测品建议`.
    - Expected: source domain is recognized; the UI shows `已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`; no hard failure state appears.
 
-2. 1688 link with manual product information
-   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `开始智能分析`.
+7. 1688 link with manual product information
+   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
    - Expected: analysis preview shows the source domain, manual product title, source cost, category/product type, notes, and current profit snapshot if available; editing the manual fields after analysis refreshes the preview; Ozon context unavailable appears only as optional warning.
 
-3. Ozon product page link with manual fields
+8. Ozon product page link with manual fields
    - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
    - Expected: the page is recognized as an Ozon marketplace/product page; the Seller API limitation notice appears; manual analysis preview still continues and does not claim Seller API can read arbitrary Ozon pages or competitor products.
 
-4. Amazon or external source link with manual fields
+9. Amazon or external source link with manual fields
    - Input: paste an Amazon or brand-site product URL and fill manual title, source cost, category, and notes.
    - Expected: source domain is recognized and the manual fields drive the analysis preview; no scraping, crawler, or external product API request is required.
 
-5. Ozon store context unavailable remains optional
+10. Ozon store context unavailable remains optional
    - Input: run AI Analysis without Ozon credentials or with Ozon context unavailable.
-   - Expected: report still renders from source link + manual fields; the only Ozon unavailable warning is `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+   - Expected: report still renders from source link + manual fields; the only Ozon unavailable warning is `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
 
-6. No direct source-page scraping
+11. No direct source-page scraping
    - Input: inspect browser network during the above tests.
    - Expected: browser-side code does not call `https://api-seller.ozon.ru`, 1688/Taobao/Amazon product parsing APIs, or scraper/crawler endpoints.
 
@@ -335,15 +355,15 @@
 ## Phase 4A Ozon AI Product Recognition
 
 1. Empty source URL should not start analysis
-   - Input: leave source product URL empty and click `开始智能分析`.
+   - Input: leave source product URL empty and click `生成测品建议`.
    - Expected: status shows that a source product link is required; existing profit calculation remains unchanged.
 
 2. Invalid source URL should show a clear error
-   - Input: enter `abc` and click `开始智能分析`.
+   - Input: enter `abc` and click `生成测品建议`.
    - Expected: status says the link format is invalid; no confident product report is generated.
 
 3. Worker not configured should still show a result state
-   - Input: enter a valid `https://example.com/product` URL and click `开始智能分析` while `PRODUCT_SELECTION_API_BASE_URL` is not configured.
+   - Input: enter a valid `https://example.com/product` URL and click `生成测品建议` while `PRODUCT_SELECTION_API_BASE_URL` is not configured.
    - Expected: report shows `API 服务未连接`, explains that Cloudflare Worker is required, and displays current profit judgment if calculator inputs are valid.
 
 4. Demo report should render without backend
@@ -417,7 +437,7 @@
    - Expected: if `/api/store-health` returns `missing_credentials`, the page opens or focuses the Ozon temporary credential test form instead of leaving only a dead-end error.
 
 9. Product analysis should use selected store
-   - Input: sync backend stores, choose one store in `选择用于分析的店铺`, paste product URL, and click `开始智能分析`.
+   - Input: sync backend stores, choose one store in `选择用于分析的店铺`, paste product URL, and click `生成测品建议`.
    - Expected: backend receives platform and credentialRef for the selected store and uses that store's real API credentials.
 
 10. Ozon product-summary should handle missing temporary credentials safely
@@ -449,40 +469,40 @@
    - Expected: response returns HTTP `404` and `ok: false`.
 
 17. Product analysis should pass temporary credentials only at request time
-   - Input: configure a valid HTTPS Worker URL, type Ozon Client ID and API Key into the temporary credential fields, paste a source product URL, and click `开始智能分析`.
+   - Input: configure a valid HTTPS Worker URL, type Ozon Client ID and API Key into the temporary credential fields, paste a source product URL, and click `生成测品建议`.
    - Expected: browser sends `clientId`, `apiKey`, and `limit: 3` only to `{Worker URL}/api/ozon/product-summary`; the browser does not call `api-seller.ozon.ru` directly, and the API Key input is cleared after the request path completes.
 
 18. Product analysis should clear API Key after mocked success
-   - Input: point Worker URL to a local mock endpoint that returns HTTP `200` with `ok: true` and `ozon.status: "connected"`, type a dummy API Key, then click `开始智能分析`.
+   - Input: point Worker URL to a local mock endpoint that returns HTTP `200` with `ok: true` and `ozon.status: "connected"`, type a dummy API Key, then click `生成测品建议`.
    - Expected: the API Key input is cleared after the request path completes; only the configured local mock Worker receives the dummy request.
 
 19. Product analysis should clear API Key after mocked Worker failure
-   - Input: point Worker URL to a local mock endpoint that returns HTTP `500`, type a dummy API Key, then click `开始智能分析`.
+   - Input: point Worker URL to a local mock endpoint that returns HTTP `500`, type a dummy API Key, then click `生成测品建议`.
    - Expected: the page shows a safe Worker error/manual fallback state, and the API Key input is cleared after the request path completes.
 
 20. Product analysis should clear API Key after network error
-   - Input: point Worker URL to an allowed local URL where no server is listening, type a dummy API Key, then click `开始智能分析`.
+   - Input: point Worker URL to an allowed local URL where no server is listening, type a dummy API Key, then click `生成测品建议`.
    - Expected: the page shows a safe Worker unavailable/manual fallback state, and the API Key input is cleared after the thrown fetch/network error path.
 
 21. Product analysis should clear API Key when source URL validation stops the request
-   - Input: type a dummy Ozon API Key, leave the source product URL empty or enter an invalid URL, then click `开始智能分析`.
+   - Input: type a dummy Ozon API Key, leave the source product URL empty or enter an invalid URL, then click `生成测品建议`.
    - Expected: no Worker request is sent, no Ozon request is made, and the API Key input is cleared.
 
 22. Product analysis should not store temporary API Key
-   - Input: type an Ozon API Key in the temporary field, click `开始智能分析`, then inspect localStorage/sessionStorage and refresh the page.
+   - Input: type an Ozon API Key in the temporary field, click `生成测品建议`, then inspect localStorage/sessionStorage and refresh the page.
    - Expected: no localStorage or sessionStorage value contains the Ozon API Key, and the API Key field is empty after refresh.
 
 23. Product analysis should not send credentials to insecure remote Worker URL
-   - Input: enter a non-local `http://` Worker URL, type temporary Ozon credentials, paste a source product URL, and click `开始智能分析`.
+   - Input: enter a non-local `http://` Worker URL, type temporary Ozon credentials, paste a source product URL, and click `生成测品建议`.
    - Expected: frontend shows a safe Worker URL security message, does not call Ozon directly, does not send temporary credentials to that Worker URL, and does not show connected product data.
 
 24. Product analysis with missing temporary credentials should remain safe
-   - Input: configure a valid Worker URL, leave Client ID or API Key empty, paste a source product URL, and click `开始智能分析`.
+   - Input: configure a valid Worker URL, leave Client ID or API Key empty, paste a source product URL, and click `生成测品建议`.
    - Expected: Worker returns missing-credential state; the page does not crash, `ozon.status` is not `connected`, no product sample is shown as real connected data, and `ozon.sampleCount` is `0`.
 
 25. 1688 source link should not fail when Ozon credentials are missing
-    - Input: paste a valid `1688.com` product/source URL, leave Ozon Client ID or API Key empty, and click `开始智能分析`.
-    - Expected: source link is recognized, the analysis preview appears, and Ozon missing credentials are shown only as optional store-context warning: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+    - Input: paste a valid `1688.com` product/source URL, leave Ozon Client ID or API Key empty, and click `生成测品建议`.
+    - Expected: source link is recognized, the analysis preview appears, and Ozon missing credentials are shown only as optional store-context warning: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
 
 26. 1688 source link should not fail when product-summary returns HTTP 400
     - Input: paste a valid `1688.com` product/source URL, use a mocked Worker response where `/api/ozon/product-summary` returns `ozon.status: "product_list_error"`.

@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 2.5 / AI Analysis product-testing decision workflow
+
+- 修改目标：把 AI Analysis 从“像是需要真实店铺流量数据”的页面调整为清晰的测品决策流程：来源链接、手动商品信息、利润快照、测品建议，以及可选的人工预估测品参数。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：页面主文案改为测品决策报告；新增利润快照说明；“店铺流量 / 曝光数据”“点击率 / 转化备注”等文案改为“预计曝光量（手动预估）”“预计点击率（手动预估）”“预计转化率（手动预估）”；可选测品参数明确说明不会自动读取店铺曝光、点击、转化、广告或订单数据；报告优先展示利润率、总成本、手动采购价、类目、卖点和物流成本风险；可选曝光/点击/转化为空不会导致报告显示失败。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；确认浏览器端不直接请求 `https://api-seller.ozon.ru`，未新增抓取、爬虫、外部商品解析 API、Worker 行为或 Ozon 流量/广告/订单/财务同步。
+- 已知风险：当前曝光、点击、转化、竞品和广告假设全部是人工估算；页面不会自动同步真实 Ozon 店铺经营数据，真实数据能力需要未来单独批准和实现。
+
 ## 2026-06-05 Phase 2.5 / AI Analysis manual product preview workflow
 
 - 修改目标：把 AI Analysis 从“链接识别后像失败”调整为可用的手动预览流程：识别来源域名，用户手动补充商品标题、采购价、类目和卖点备注，再生成结构化选品预览。

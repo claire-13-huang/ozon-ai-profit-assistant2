@@ -204,7 +204,7 @@ Frontend interpretation:
 - Ozon Seller API `product-summary` is optional authorized store context only.
 - A failed or missing `product-summary` response must not fail the source-link analysis preview.
 - Ozon marketplace product page links are treated as pasted source links; Seller API cannot directly read arbitrary Ozon pages or other sellers' product data.
-- When `ozon.status !== "connected"`, the frontend should show the source preview and display this warning as optional store-context status: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接和手动利润数据进行分析。`
+- When `ozon.status !== "connected"`, the frontend should show the source preview and display this warning as optional store-context status: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
 
 ## Current AI Analysis Manual Preview Workflow
 
@@ -215,6 +215,8 @@ The AI Analysis page is a manual-preview workflow, not a scraper:
 - The seller manually fills product title, source cost, category/product type, and optional selling-point notes.
 - The preview report uses those manual fields together with the current profit calculator snapshot.
 - Ozon `product-summary` remains optional authorized store context only and cannot block the manual preview.
+- Optional exposure, click-rate, conversion-rate, competitor, ad-share, and market-observation fields are manual estimates only. Empty optional estimate fields must not block the product-testing decision report.
+- The frontend does not read real Ozon exposure, click, conversion, advertising, order, finance, stock, or price data in the current workflow.
 
 Manual product fields used by the frontend:
 
@@ -232,6 +234,10 @@ Manual product fields used by the frontend:
 If a source URL is recognized but no manual title is entered, the UI should guide the seller instead of showing a failure:
 
 `已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`
+
+The optional manual testing-assumption section should show this explanation:
+
+`当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`
 
 ## Future Worker Endpoints
 
