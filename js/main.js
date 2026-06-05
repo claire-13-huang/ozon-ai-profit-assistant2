@@ -873,9 +873,12 @@ function setProductLinkPreviewStatus() {
   try {
     const parsed = new URL(sourceUrl);
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
+    const workerConfigured = hasConfiguredWorkerUrl();
     setAutoAnalysisStatus(manualTitle
-      ? '已识别来源链接。当前会基于手动商品信息和利润测算生成预览，不抓取来源页面。'
-      : '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。');
+      ? '已识别来源链接。当前会基于商品信息和利润测算生成预览，手动字段仍可编辑。'
+      : workerConfigured
+        ? '已识别来源链接。点击生成时会尝试读取公开页面元数据；如果读取失败，请手动填写商品标题、采购价和类目信息。'
+        : '已识别来源链接，但当前未配置 Worker 公开元数据预览。请手动填写商品标题、采购价和类目信息后继续分析。');
   } catch (error) {
     setAutoAnalysisStatus('商品链接格式不正确，请填写 http 或 https URL。', 'is-error');
   }
@@ -924,6 +927,60 @@ function renderOzonAutoAnalysis(analysis) {
   lastOzonAutoAnalysis = analysis;
   renderOzonAnalysisDetails(analysis);
   renderProductSelectionReport(analysis.report);
+}
+
+function applySourcePreviewToForm(preview) {
+  if (!preview || !preview.source) return '';
+
+  const source = preview.source;
+  const actions = [];
+
+  if (preview.ok && source.title && !fieldValue('manualProductTitle')) {
+    setInput('manualProductTitle', source.title);
+    actions.push('已从公开页面元数据预填商品标题');
+  }
+
+  if (preview.ok && source.image && !fieldValue('imageUrl')) {
+    setInput('imageUrl', source.image);
+    renderProductImagePreview(source.image);
+    actions.push('已显示公开 Open Graph 图片预览');
+  }
+
+  if (preview.ok) {
+    return actions.length
+      ? actions.join('，') + '；手动字段仍可编辑。'
+      : '已读取公开页面元数据；手动字段仍可编辑。';
+  }
+
+  return preview.message || (typeof getSourcePreviewFallbackMessage === 'function'
+    ? getSourcePreviewFallbackMessage()
+    : '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。');
+}
+
+function mergeSourcePreviewIntoAnalysis(analysis, preview) {
+  if (!analysis || !preview || !preview.source) return analysis;
+
+  const source = preview.source;
+  analysis.source = analysis.source || {};
+  analysis.source.url = analysis.source.url || source.url;
+  analysis.source.host = source.host || analysis.source.host;
+  analysis.source.title = analysis.source.title || source.title || '';
+  analysis.source.image = analysis.source.image || source.image || '';
+  analysis.source.description = analysis.source.description || source.description || '';
+  analysis.source.canonicalUrl = analysis.source.canonicalUrl || source.canonicalUrl || '';
+  analysis.source.platform = analysis.source.platform || source.platform || '';
+  analysis.sourcePreview = preview;
+  analysis.limitations = Array.isArray(analysis.limitations) ? analysis.limitations : [];
+
+  if (Array.isArray(preview.limitations)) {
+    analysis.limitations = analysis.limitations.concat(preview.limitations);
+  }
+
+  if (!preview.ok && preview.message) {
+    analysis.limitations.push(preview.message);
+  }
+
+  return analysis;
 }
 
 async function checkOzonWorkerHealth() {
@@ -1071,14 +1128,42 @@ async function runOzonAutoAnalysis() {
     button.textContent = '分析中...';
   }
 
-  setAutoAnalysisStatus('已接收来源链接。正在生成测品建议；如已配置 Worker，仅会尝试请求可选的授权店铺商品摘要。', 'is-loading');
+  setAutoAnalysisStatus('已接收来源链接。正在尝试读取公开页面元数据；如已配置 Worker，仅会请求安全预览和可选授权店铺摘要。', 'is-loading');
   setAutoAnalysisProgress('link', []);
 
   try {
     await new Promise(resolve => setTimeout(resolve, 180));
     setAutoAnalysisProgress('identify', ['link']);
 
-    const analysis = applyCurrentManualAnalysisContext(await requestOzonProductAnalysis(getAnalysisPayload()));
+    let sourcePreview = null;
+    let sourcePreviewStatus = '';
+
+    if (typeof requestSourcePreview === 'function') {
+      try {
+        sourcePreview = await requestSourcePreview(sourceUrl);
+        sourcePreviewStatus = applySourcePreviewToForm(sourcePreview);
+      } catch (error) {
+        sourcePreview = {
+          ok: false,
+          source: {
+            url: sourceUrl,
+            host: new URL(sourceUrl).hostname.replace(/^www\./, ''),
+            platform: '',
+            title: '',
+            image: '',
+            description: '',
+            canonicalUrl: ''
+          },
+          message: '公开页面元数据预览暂不可用，请继续手动填写商品信息。',
+          limitations: [error.message || 'source preview 请求失败。']
+        };
+        sourcePreviewStatus = sourcePreview.message;
+      }
+    }
+
+    let analysis = await requestOzonProductAnalysis(getAnalysisPayload());
+    analysis = mergeSourcePreviewIntoAnalysis(analysis, sourcePreview);
+    applyCurrentManualAnalysisContext(analysis);
     syncOzonTemporaryConnectionStateFromAnalysis(analysis);
     setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
     renderOzonAutoAnalysis(analysis);
@@ -1086,7 +1171,7 @@ async function runOzonAutoAnalysis() {
     setAutoAnalysisStatus(
       ozonConnected
         ? '测品建议已生成。请复核利润、手动假设和 Ozon 可选上下文状态。'
-        : '测品建议已生成。请查看报告中的数据边界说明。',
+        : sourcePreviewStatus || '测品建议已生成。请查看报告中的数据边界说明。',
       ''
     );
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);

@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 2.5 / safe source metadata preview
+
+- 修改目标：为 AI Analysis 增加最小安全来源链接预览能力，让配置 Worker 后可以尝试读取公开页面基础元数据，同时保持手动测品流程和 Ozon Seller API 上下文分离。
+- 涉及文件：worker/index.js、index.html、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 `POST /api/source/preview` Worker 端点；仅允许公开 `http/https` URL，拒绝本地、内网、私有 IP、内部后缀、IPv6 literal、账号密码 URL 和不安全协议；请求公开页面时使用短超时、不跟随跳转、限制读取大小；只解析 `<title>`、`og:title`、`og:image`、`description`、`canonical`；前端在点击 `生成测品建议` 时如已配置 Worker 会先尝试 source preview，成功时仅在商品标题为空时预填标题并显示公开图片预览，失败时显示友好提示并继续手动分析。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；确认未新增 Ozon 写入端点，未新增价格/库存/规格/评论/销量读取，未新增爬虫、批量抓取、headless browser、代理抓取、登录抓取或外部商品解析 API。
+- 已知风险：部分站点会阻止 Worker 直接读取公开 HTML 或返回跳转/非 HTML 内容；此时系统只显示 fallback，仍需要卖家手动填写商品标题、采购价和类目。
+
 ## 2026-06-05 Phase 2.5 / AI Analysis seller-facing report refinement
 
 - 修改目标：把 AI 测品报告从长说明调整为更直接的卖家决策输出，减少重复限制文案，让卖家更快判断是否值得小量测试。

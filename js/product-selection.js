@@ -23,6 +23,10 @@ function getProductSelectionApiBaseUrl() {
   return String(configuredUrl || '').trim().replace(/\/+$/, '');
 }
 
+function getSourcePreviewFallbackMessage() {
+  return '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。';
+}
+
 function isBlank(value) {
   return String(value || '').trim() === '';
 }
@@ -440,7 +444,7 @@ function buildDataBoundaryText(ozon, assumptions) {
     ? 'Ozon 店铺商品摘要已连接；它只是你店铺的可选样本上下文，不代表全平台竞品、曝光、点击、转化、广告、订单或财务同步。' + sampleText
     : OZON_STORE_CONTEXT_WARNING;
 
-  return `${ozonText} ${buildManualAssumptionText(assumptions)} 当前不会自动抓取 1688、Taobao、Amazon、Ozon 或品牌站页面，也不会调用外部商品解析 API。`;
+  return `${ozonText} ${buildManualAssumptionText(assumptions)} 如果配置了 Worker，来源链接只会尝试读取公开页面元数据，不读取价格、库存、SKU、规格、评论、销量、隐藏数据或登录后数据，也不会调用外部商品解析 API。`;
 }
 
 function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
@@ -620,6 +624,61 @@ async function requestOzonProductAnalysis(payload) {
   applyManualProductContext(analysis, payload.manualProduct, payload.sourceUrl);
   analysis.report = buildOzonAutoReport(analysis, payload.profitSnapshot);
   return analysis;
+}
+
+async function requestSourcePreview(sourceUrl) {
+  const apiBaseUrl = getProductSelectionApiBaseUrl();
+
+  if (!apiBaseUrl) {
+    return null;
+  }
+
+  const response = await fetch(apiBaseUrl + '/api/source/preview', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url: sourceUrl })
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!data || typeof data !== 'object') {
+    return {
+      ok: false,
+      source: {
+        url: sourceUrl,
+        host: normalizeHost(sourceUrl),
+        platform: normalizeHost(sourceUrl),
+        title: '',
+        image: '',
+        description: '',
+        canonicalUrl: ''
+      },
+      message: getSourcePreviewFallbackMessage(),
+      limitations: ['source preview 返回了不可读取的响应。']
+    };
+  }
+
+  if (!data.source) {
+    data.source = {
+      url: sourceUrl,
+      host: normalizeHost(sourceUrl),
+      platform: normalizeHost(sourceUrl),
+      title: '',
+      image: '',
+      description: '',
+      canonicalUrl: ''
+    };
+  }
+
+  if (!data.ok && !data.message) {
+    data.message = getSourcePreviewFallbackMessage();
+  }
+
+  if (!Array.isArray(data.limitations)) {
+    data.limitations = [];
+  }
+
+  return data;
 }
 
 async function requestOzonWorkerHealth() {

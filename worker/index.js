@@ -26,6 +26,33 @@ function cleanText(value, max = 240) {
     .slice(0, max);
 }
 
+function decodeHtmlEntities(value) {
+  const named = {
+    amp: '&',
+    lt: '<',
+    gt: '>',
+    quot: '"',
+    apos: "'",
+    nbsp: ' '
+  };
+
+  return String(value || '').replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (match, entity) => {
+    const lower = entity.toLowerCase();
+    if (named[lower]) return named[lower];
+    if (lower[0] !== '#') return match;
+
+    const code = lower[1] === 'x'
+      ? parseInt(lower.slice(2), 16)
+      : parseInt(lower.slice(1), 10);
+
+    return Number.isFinite(code) ? String.fromCodePoint(code) : match;
+  });
+}
+
+function cleanMetadataText(value, max = 240) {
+  return cleanText(decodeHtmlEntities(value), max);
+}
+
 function removeSensitiveFields(value) {
   if (Array.isArray(value)) return value.map(removeSensitiveFields);
   if (!value || typeof value !== 'object') return value;
@@ -68,6 +95,121 @@ function isValidHttpUrl(value) {
   }
 }
 
+function normalizedHost(url) {
+  return url.hostname.replace(/^www\./i, '').replace(/\.$/, '').toLowerCase();
+}
+
+function isPrivateIpv4(hostname) {
+  const parts = hostname.split('.');
+  if (parts.length !== 4 || !parts.every(part => /^\d+$/.test(part))) return false;
+
+  const numbers = parts.map(Number);
+  if (!numbers.every(part => Number.isInteger(part) && part >= 0 && part <= 255)) return false;
+
+  const [a, b] = numbers;
+  return a === 0 ||
+    a === 10 ||
+    a === 127 ||
+    a === 169 && b === 254 ||
+    a === 172 && b >= 16 && b <= 31 ||
+    a === 192 && b === 168;
+}
+
+function isUnsafeSourceHost(hostname) {
+  const host = String(hostname || '').replace(/^\[|\]$/g, '').replace(/\.$/, '').toLowerCase();
+  if (!host) return true;
+  if (host === 'localhost' || host.endsWith('.localhost')) return true;
+  if (host.endsWith('.local') || host.endsWith('.internal') || host.endsWith('.lan') || host.endsWith('.home')) return true;
+  if (/^\d+$/.test(host) || /^0x[0-9a-f]+$/i.test(host)) return true;
+  if (/^\d+(?:\.\d+){1,2}$/.test(host)) return true;
+  if (isPrivateIpv4(host)) return true;
+
+  // Keep literal IPv6 out of this endpoint for now. This avoids accidentally
+  // allowing loopback/link-local/private ranges through incomplete parsing.
+  if (host.includes(':')) return true;
+
+  return false;
+}
+
+function inferSourcePlatform(host) {
+  const cleanHost = String(host || '').toLowerCase();
+  if (/(^|\.)1688\.com$/.test(cleanHost)) return '1688';
+  if (/(^|\.)taobao\.com$/.test(cleanHost)) return 'Taobao';
+  if (/(^|\.)tmall\.com$/.test(cleanHost)) return 'Tmall';
+  if (/(^|\.)amazon\./.test(cleanHost)) return 'Amazon';
+  if (/(^|\.)ozon\./.test(cleanHost)) return 'Ozon marketplace';
+  if (/(^|\.)aliexpress\./.test(cleanHost)) return 'AliExpress';
+  return cleanHost || 'External source';
+}
+
+function buildSourcePreviewSource(urlValue) {
+  const cleanUrl = String(urlValue || '').trim();
+  let url = null;
+
+  try {
+    url = cleanUrl ? new URL(cleanUrl) : null;
+  } catch (error) {
+    url = null;
+  }
+
+  const host = url ? normalizedHost(url) : '';
+
+  return {
+    url: url ? url.toString() : cleanUrl,
+    host,
+    platform: inferSourcePlatform(host),
+    title: '',
+    image: '',
+    description: '',
+    canonicalUrl: ''
+  };
+}
+
+function sourcePreviewFallback(urlValue, message, limitations = []) {
+  return {
+    ok: false,
+    source: buildSourcePreviewSource(urlValue),
+    message: message || '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。',
+    limitations
+  };
+}
+
+function validateSourcePreviewUrl(value) {
+  let url;
+
+  try {
+    url = new URL(String(value || '').trim());
+  } catch (error) {
+    return {
+      error: '请提供有效的 http/https 商品链接。',
+      status: 400
+    };
+  }
+
+  if (!['http:', 'https:'].includes(url.protocol)) {
+    return {
+      error: '只支持 http 或 https 商品链接。',
+      status: 400
+    };
+  }
+
+  if (url.username || url.password) {
+    return {
+      error: '链接中不能包含用户名或密码。',
+      status: 400
+    };
+  }
+
+  if (isUnsafeSourceHost(url.hostname)) {
+    return {
+      error: '该链接指向本地、内网或私有地址，已拒绝自动预览。',
+      status: 403
+    };
+  }
+
+  return { url };
+}
+
 function extractMeta(html, property) {
   const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const patterns = [
@@ -79,90 +221,177 @@ function extractMeta(html, property) {
 
   for (const pattern of patterns) {
     const match = html.match(pattern);
-    if (match) return cleanText(match[1], 500);
+    if (match) return cleanMetadataText(match[1], 500);
   }
 
   return '';
 }
 
 function extractTitle(html) {
-  return cleanText(extractMeta(html, 'og:title') || (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1], 180);
+  return cleanMetadataText(extractMeta(html, 'og:title') || (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i) || [])[1], 180);
 }
 
-function extractImage(html, baseUrl) {
-  const raw = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image');
+function extractLinkHref(html, rel) {
+  const escaped = rel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(`<link[^>]+rel=["'][^"']*${escaped}[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>`, 'i'),
+    new RegExp(`<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*${escaped}[^"']*["'][^>]*>`, 'i')
+  ];
+
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match) return decodeHtmlEntities(match[1]).trim();
+  }
+
+  return '';
+}
+
+function toSafePublicAbsoluteUrl(raw, baseUrl) {
   if (!raw) return '';
 
   try {
-    return new URL(raw, baseUrl).toString();
+    const parsed = new URL(raw, baseUrl);
+    if (!['http:', 'https:'].includes(parsed.protocol)) return '';
+    if (isUnsafeSourceHost(parsed.hostname)) return '';
+    return parsed.toString();
   } catch (error) {
     return '';
   }
 }
 
-function unique(items, max = 10) {
-  return [...new Set(items.map(item => cleanText(item, 32)).filter(Boolean))].slice(0, max);
+function extractImage(html, baseUrl) {
+  const raw = extractMeta(html, 'og:image');
+  return toSafePublicAbsoluteUrl(raw, baseUrl);
 }
 
-function inferCategory(text) {
-  const lower = text.toLowerCase();
-  const rules = [
-    { category: '服饰 / 配饰', words: ['dress', 'shirt', 'clothes', 'одеж', 'плать', '鞋', '衣', '服', '包'] },
-    { category: '家居 / 收纳', words: ['home', 'kitchen', 'storage', 'organizer', 'кух', 'дом', '收纳', '厨房', '家居'] },
-    { category: '美妆 / 个护', words: ['beauty', 'makeup', 'skin', 'cosmetic', 'космет', '护肤', '美妆'] },
-    { category: '车品 / 工具', words: ['auto', 'car', 'tool', 'авто', 'машин', '车', '工具'] },
-    { category: '电子 / 小家电', words: ['usb', 'phone', 'charger', 'electronic', 'смартфон', '电子', '充电'] },
-    { category: '母婴 / 玩具', words: ['baby', 'toy', 'kids', 'ребен', 'игруш', '玩具', '儿童', '母婴'] }
-  ];
-
-  const matched = rules.find(rule => rule.words.some(word => lower.includes(word)));
-  return matched ? matched.category : '待人工复核';
+function extractCanonicalUrl(html, baseUrl) {
+  return toSafePublicAbsoluteUrl(extractLinkHref(html, 'canonical'), baseUrl);
 }
 
-function extractKeywords(title, description, keywordMeta) {
-  const keywordParts = keywordMeta
-    ? keywordMeta.split(/[,，;；|]/)
-    : [];
-  const titleParts = `${title} ${description}`
-    .split(/[^\p{L}\p{N}\u4e00-\u9fa5]+/u)
-    .filter(word => word.length >= 2 && word.length <= 18);
-  return unique([...keywordParts, ...titleParts], 8);
-}
-
-async function fetchSourceProduct(sourceUrl) {
-  const response = await fetch(sourceUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 Ozon AI Profit Assistant Bot'
-    }
-  });
-
-  if (!response.ok) {
-    throw new Error(`来源页面读取失败：${response.status}`);
+async function readTextWithLimit(response, maxBytes = 120000) {
+  if (!response.body || !response.body.getReader) {
+    return (await response.text()).slice(0, maxBytes);
   }
 
-  const html = (await response.text()).slice(0, 250000);
-  const title = extractTitle(html);
-  const description = extractMeta(html, 'description') || extractMeta(html, 'og:description');
-  const keywords = extractKeywords(title, description, extractMeta(html, 'keywords'));
-  const category = inferCategory(`${title} ${description} ${keywords.join(' ')}`);
-  const host = new URL(sourceUrl).hostname.replace(/^www\./, '');
+  const reader = response.body.getReader();
+  const chunks = [];
+  let received = 0;
 
-  return {
-    source: {
-      url: sourceUrl,
-      host,
-      title,
-      description: cleanText(description, 300),
-      image: extractImage(html, sourceUrl)
-    },
-    insights: {
-      category,
-      keywords,
-      tags: unique([category, host, ...keywords.slice(0, 3)], 6),
-      sellingPoints: keywords.slice(0, 3),
-      painPoints: ['需要人工复核评价痛点', '需要确认 Ozon 类目匹配', '需要验证广告成本']
+  while (received < maxBytes) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    const remaining = maxBytes - received;
+    const chunk = value.byteLength > remaining ? value.slice(0, remaining) : value;
+    chunks.push(chunk);
+    received += chunk.byteLength;
+
+    if (value.byteLength > remaining) break;
+  }
+
+  try {
+    await reader.cancel();
+  } catch (error) {
+    // Ignore stream cancel errors; we already have enough metadata bytes.
+  }
+
+  const combined = new Uint8Array(received);
+  let offset = 0;
+  chunks.forEach(chunk => {
+    combined.set(chunk, offset);
+    offset += chunk.byteLength;
+  });
+
+  return new TextDecoder('utf-8').decode(combined);
+}
+
+async function handleSourcePreview(request) {
+  const body = await request.json().catch(() => null);
+  const inputUrl = body && typeof body === 'object' && !Array.isArray(body) ? body.url : '';
+  const validation = validateSourcePreviewUrl(inputUrl);
+
+  if (validation.error) {
+    return json(sourcePreviewFallback(inputUrl, validation.error, [
+      '仅允许公开 http/https 页面。',
+      '本端点拒绝本地、内网、私有 IP 和带账号密码的 URL。'
+    ]), validation.status);
+  }
+
+  const sourceUrl = validation.url.toString();
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+
+  try {
+    const response = await fetch(sourceUrl, {
+      method: 'GET',
+      redirect: 'manual',
+      signal: controller.signal,
+      headers: {
+        Accept: 'text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.2'
+      }
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      return json(sourcePreviewFallback(sourceUrl, '该页面返回跳转，当前不会自动跟随跳转读取公开信息，请手动填写商品标题、采购价和类目信息。', [
+        'source preview 不自动跟随跳转，避免访问非预期地址。'
+      ]));
     }
-  };
+
+    if (!response.ok) {
+      return json(sourcePreviewFallback(sourceUrl, '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。', [
+        `公开页面返回 HTTP ${response.status}。`
+      ]));
+    }
+
+    const contentType = response.headers.get('content-type') || '';
+    if (contentType && !/html|text\/plain|application\/xhtml/i.test(contentType)) {
+      return json(sourcePreviewFallback(sourceUrl, '该链接返回的不是可读取的公开 HTML 页面，请手动填写商品标题、采购价和类目信息。', [
+        `content-type: ${cleanText(contentType, 80)}`
+      ]));
+    }
+
+    const html = await readTextWithLimit(response);
+    const title = extractTitle(html);
+    const description = cleanMetadataText(extractMeta(html, 'description'), 300);
+    const image = extractImage(html, sourceUrl);
+    const canonicalUrl = extractCanonicalUrl(html, sourceUrl);
+    const source = buildSourcePreviewSource(sourceUrl);
+    const hasMetadata = Boolean(title || description || image || canonicalUrl);
+
+    source.title = title;
+    source.image = image;
+    source.description = description;
+    source.canonicalUrl = canonicalUrl;
+
+    if (!hasMetadata) {
+      return json({
+        ok: false,
+        source,
+        message: '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。',
+        limitations: [
+          '页面没有返回 title、Open Graph image、description 或 canonical 元数据。'
+        ]
+      });
+    }
+
+    return json({
+      ok: true,
+      source,
+      limitations: [
+        '仅读取公开页面元数据：title、og:title、og:image、description、canonical。',
+        '不读取价格、库存、SKU、规格、评论、销量、隐藏数据或登录后数据。'
+      ]
+    });
+  } catch (error) {
+    const aborted = error && error.name === 'AbortError';
+    return json(sourcePreviewFallback(sourceUrl, aborted
+      ? '公开页面读取超时，请手动填写商品标题、采购价和类目信息。'
+      : '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。', [
+      aborted ? '公开页面读取超过 5 秒。' : cleanText(error.message, 160)
+    ]));
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function hasOzonCredentials(env) {
@@ -789,7 +1018,37 @@ async function handleAnalyze(request, env) {
   const limitations = ['Phase 4A 只使用公开页面信息和 Ozon 官方 API 健康检查，不生成未经验证的全平台竞品数据。'];
 
   try {
-    sourceData = await fetchSourceProduct(sourceUrl);
+    const sourcePreviewRequest = new Request('https://worker.local/api/source/preview', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url: sourceUrl })
+    });
+    const sourcePreviewResponse = await handleSourcePreview(sourcePreviewRequest);
+    const sourcePreview = await sourcePreviewResponse.json();
+    const source = sourcePreview.source || buildSourcePreviewSource(sourceUrl);
+
+    sourceData = {
+      source: {
+        url: source.url || sourceUrl,
+        host: source.host || new URL(sourceUrl).hostname.replace(/^www\./, ''),
+        title: source.title || '',
+        description: source.description || '',
+        image: source.image || ''
+      },
+      insights: {
+        category: '待人工复核',
+        keywords: [],
+        tags: [],
+        sellingPoints: [],
+        painPoints: sourcePreview.ok ? [] : ['来源公开元数据无法自动读取']
+      }
+    };
+
+    if (sourcePreview.limitations && sourcePreview.limitations.length) {
+      limitations.push(...sourcePreview.limitations);
+    }
+
+    if (!sourcePreview.ok && sourcePreview.message) limitations.push(sourcePreview.message);
   } catch (error) {
     sourceData = {
       source: {
@@ -840,6 +1099,17 @@ export default {
         ozon,
         stores: parseStoreRegistry(env).map(publicStoreProfile)
       });
+    }
+
+    if (url.pathname === '/api/source/preview' && request.method !== 'POST') {
+      return json({
+        ok: false,
+        error: 'Method not allowed. Use POST /api/source/preview.'
+      }, 405);
+    }
+
+    if (url.pathname === '/api/source/preview' && request.method === 'POST') {
+      return handleSourcePreview(request);
     }
 
     if (url.pathname === '/api/stores') {

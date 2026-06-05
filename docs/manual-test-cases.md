@@ -100,6 +100,36 @@
 
 ## AI Analysis Manual Preview Workflow
 
+### Source Link Public Metadata Preview
+
+1. 1688 public link preview success or fallback
+   - Input: configure a safe Worker URL, paste a valid `https://detail.1688.com/...` URL, leave 商品标题 empty, and click `生成测品建议`.
+   - Expected: `/api/source/preview` is attempted through the Worker. If public metadata is readable, source domain and public title are shown and 商品标题 may be prefilled. If blocked or unreadable, the UI shows `无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。`; manual analysis still works.
+
+2. Ozon marketplace page preview stays separate from Seller API
+   - Input: configure a safe Worker URL, paste an `https://www.ozon.ru/...` marketplace page, leave Ozon Client ID/API Key empty, and click `生成测品建议`.
+   - Expected: source preview attempts public metadata only; Seller API limitation notice remains separate; no text claims Seller API can read arbitrary Ozon marketplace pages or other sellers' products.
+
+3. Amazon or brand-site public metadata preview
+   - Input: configure a safe Worker URL, paste an Amazon or brand-site product URL, leave 商品标题 empty, and click `生成测品建议`.
+   - Expected: if public `<title>`, `og:title`, `og:image`, `description`, or canonical metadata is readable, title/image preview appears; if not, manual workflow continues with friendly fallback.
+
+4. Invalid URL rejection
+   - Input: send `POST /api/source/preview` with `{ "url": "abc" }`, or enter an invalid source URL in the frontend and click `生成测品建议`.
+   - Expected: safe error appears; no Worker fetch to a product page is attempted; manual report is not blocked after the seller enters a valid URL.
+
+5. Private/internal URL rejection
+   - Input: send `POST /api/source/preview` with `http://127.0.0.1/`, `http://localhost/`, `http://192.168.1.10/`, or an internal/local hostname.
+   - Expected: Worker rejects the request with safe JSON; no private/internal page is fetched.
+
+6. Preview failure should not block manual analysis
+   - Input: configure a Worker URL, paste a source link that blocks public fetch, manually fill 商品标题 / 采购价 / 类目, and click `生成测品建议`.
+   - Expected: report still generates from manual fields and profit snapshot; preview failure appears only as friendly guidance or limitation text.
+
+7. Source preview must not extract restricted product data
+   - Input: inspect `/api/source/preview` response for a readable page.
+   - Expected: response contains only `url`, `host`, `platform`, `title`, `image`, `description`, and `canonicalUrl`; no price, stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
+
 1. Manual product information only should generate a testing decision
    - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.
    - Expected: report appears from source domain, manual product information, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`; report sections include `测品结论`, `利润安全边际`, `建议测试数量`, `最低售价底线`, `主要风险`, and `下一步动作`.

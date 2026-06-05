@@ -65,6 +65,7 @@ Implemented endpoint:
 
 - `POST /api/ozon/test-connection`
 - `POST /api/ozon/product-summary`
+- `POST /api/source/preview`
 
 Safe response fields:
 
@@ -208,10 +209,13 @@ Frontend interpretation:
 
 ## Current AI Analysis Manual Preview Workflow
 
-The AI Analysis page is a manual-preview workflow, not a scraper:
+The AI Analysis page is a manual-preview workflow with optional public metadata preview, not a crawler or product-data scraper:
 
 - The source URL identifies the product source domain, such as `detail.1688.com`, `amazon.com`, a brand site, or an Ozon marketplace page.
-- The frontend does not scrape source pages and does not call 1688, Taobao, Amazon, Ozon marketplace pages, or any external product parsing API.
+- When a Worker URL is configured, the frontend may call `POST /api/source/preview` to attempt a single safe public metadata read for the pasted URL.
+- Source preview only attempts to extract `<title>`, `meta[property="og:title"]`, `meta[property="og:image"]`, `meta[name="description"]`, and `link[rel="canonical"]`.
+- Source preview does not extract price, stock, SKU, specifications, seller data, reviews, sales count, hidden page data, or login-only data.
+- The frontend does not call 1688, Taobao, Amazon, Ozon marketplace pages, or any external product parsing API directly.
 - The seller manually fills product title, source cost, category/product type, and optional selling-point notes.
 - The preview report uses those manual fields together with the current profit calculator snapshot.
 - The report is organized as seller-facing decision sections: `测品结论`, `利润安全边际`, `建议测试数量`, `最低售价底线`, `主要风险`, and `下一步动作`.
@@ -239,6 +243,65 @@ If a source URL is recognized but no manual title is entered, the UI should guid
 The optional manual testing-assumption section should show this explanation:
 
 `当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`
+
+## Current Source Preview Endpoint
+
+`POST /api/source/preview` is a minimal public metadata preview endpoint.
+
+Request body:
+
+```json
+{
+  "url": "https://example.com/product-page"
+}
+```
+
+Successful response shape:
+
+```json
+{
+  "ok": true,
+  "source": {
+    "url": "https://example.com/product-page",
+    "host": "example.com",
+    "platform": "External source",
+    "title": "Public page title",
+    "image": "https://example.com/og-image.jpg",
+    "description": "Public meta description",
+    "canonicalUrl": "https://example.com/product-page"
+  },
+  "limitations": []
+}
+```
+
+Safe fallback response shape:
+
+```json
+{
+  "ok": false,
+  "source": {
+    "url": "https://example.com/product-page",
+    "host": "example.com",
+    "platform": "External source",
+    "title": "",
+    "image": "",
+    "description": "",
+    "canonicalUrl": ""
+  },
+  "message": "无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。",
+  "limitations": []
+}
+```
+
+Safety boundaries:
+
+- Accepts only `http:` and `https:` URLs.
+- Rejects URLs with username/password credentials.
+- Rejects localhost, private IPv4 ranges, local/internal host suffixes, literal IPv6 hosts, and non-standard numeric host forms.
+- Uses a short timeout and does not follow redirects.
+- Reads only a limited amount of response text needed for metadata.
+- Does not use Puppeteer, Playwright, browser automation, login cookies, proxy scraping, or external parsing APIs.
+- Does not call Ozon Seller API and does not accept Ozon credentials.
 
 ## Future Worker Endpoints
 
