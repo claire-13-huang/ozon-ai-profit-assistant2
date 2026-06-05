@@ -104,7 +104,7 @@
 
 1. Example public metadata preview success
    - Input: configure a safe Worker URL, send `POST /api/source/preview` with `{ "url": "https://example.com/" }`, or paste `https://example.com/` in AI Analysis and click `生成测品建议`.
-   - Expected: Worker returns safe public metadata such as source domain/title when readable; response may include `finalUrl` and `redirectCount`; no price, stock, SKU, specs, reviews, sales count, hidden data, or login-only data appears.
+   - Expected: Worker returns safe public metadata such as source domain/title when readable; live verification returned title `Example Domain`; response may include `finalUrl` and `redirectCount`; no price, stock, SKU, specs, reviews, sales count, hidden data, or login-only data appears.
 
 2. 1688 public link preview success or redirect fallback
    - Input: configure a safe Worker URL, paste a valid `https://detail.1688.com/...` URL, leave 商品标题 empty, and click `生成测品建议`.
@@ -130,19 +130,31 @@
    - Input: send `POST /api/source/preview` with a public URL that redirects to `https://example.com/` in one or two hops.
    - Expected: Worker follows only `GET` redirects, resolves relative `Location` values against the current URL, validates every redirect target with the same public URL safety checks, and returns readable metadata with `redirectCount` greater than `0` when successful.
 
-8. Redirect loop or too many redirects fallback
+8. HTTP-to-HTTPS redirect success
+   - Input: send `POST /api/source/preview` with `http://github.com/` or `http://www.cloudflare.com/`.
+   - Expected: Worker safely follows the public HTTP-to-HTTPS redirect, returns readable metadata, and reports `redirectCount: 1`.
+
+9. Amazon two-step redirect success
+   - Input: send `POST /api/source/preview` with `http://amazon.com/`.
+   - Expected: Worker safely follows the public redirects to `https://www.amazon.com/`, returns public metadata when readable, and reports `redirectCount: 2`. Response still must not include product price, stock, SKU, specs, reviews, sales count, seller data, hidden data, or login-only data.
+
+10. 1688 safe fallback remains expected
+   - Input: send `POST /api/source/preview` with `https://detail.1688.com/offer/123456789.html` or `https://www.1688.com/`.
+   - Expected: If metadata is not readable, Worker returns a safe fallback. 1688/Taobao and some ecommerce platforms may block Cloudflare Worker fetches, require dynamic rendering, or return metadata-empty pages. In those cases, the product remains usable through manual title/cost/category input.
+
+11. Redirect loop or too many redirects fallback
    - Input: send `POST /api/source/preview` with a URL that redirects more than 3 times.
    - Expected: Worker stops after the redirect limit and returns `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。`; no crawler, batch fetch, browser automation, or retry loop is started.
 
-9. Redirect to private/local address rejection
+12. Redirect to private/local address rejection
    - Input: send `POST /api/source/preview` with a public URL whose `Location` points to `http://127.0.0.1/`, `http://localhost/`, `http://192.168.1.10/`, an internal/local hostname, a credential URL, or an unsafe protocol.
    - Expected: Worker rejects the redirect target with safe JSON and returns `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。`; no private/internal target is fetched.
 
-10. Preview failure should not block manual analysis
+13. Preview failure should not block manual analysis
    - Input: configure a Worker URL, paste a source link that blocks public fetch, manually fill 商品标题 / 采购价 / 类目, and click `生成测品建议`.
    - Expected: report still generates from manual fields and profit snapshot; preview failure appears only as friendly guidance or limitation text.
 
-11. Source preview must not extract restricted product data
+14. Source preview must not extract restricted product data
    - Input: inspect `/api/source/preview` response for a readable page.
    - Expected: response contains only safe source metadata such as `url`, `host`, `platform`, `title`, `image`, `description`, `canonicalUrl`, optional `finalUrl`, and optional `redirectCount`; no price, stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
 

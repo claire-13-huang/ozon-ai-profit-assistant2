@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Documentation / live source preview verification
+
+- 修改目标：记录已部署 `/api/source/preview` 的线上验证结果，明确 source preview 是安全公开元数据预览，不是电商平台商品抓取。
+- 涉及文件：docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/PHASE_2_5_LIVE_CHECKPOINT.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：记录 `https://example.com/` 可返回 `Example Domain`；记录公开 HTTP-to-HTTPS 跳转线上可用，包括 `http://github.com/` 和 `http://www.cloudflare.com/` 的 `redirectCount: 1`，以及 `http://amazon.com/` 到 `https://www.amazon.com/` 的 `redirectCount: 2`；记录 `detail.1688.com` 和 `www.1688.com` 仍可能安全 fallback；补充 1688/Taobao 等平台可能阻止 Cloudflare Worker、需要动态渲染或返回空元数据，失败时继续使用手动标题、采购价和类目输入。
+- 验收方式：运行 `git diff --check`；确认未修改 Worker、前端 HTML/CSS/JavaScript、利润公式、物流匹配或平台预设；确认未部署、未推送、未使用真实 Ozon 凭证、未调用真实 Ozon API。
+- 已知风险：线上 source preview 可证明安全 redirect 逻辑有效，但不能保证 1688/Taobao/Amazon/Ozon 等电商商品页稳定返回标题、图片或描述；文档必须继续避免暗示可抓取价格、规格、库存、评论、销量或卖家数据。
+
 ## 2026-06-05 Phase 2.5 / safe source preview redirects
 
 - 修改目标：让 `/api/source/preview` 在安全边界内处理少量公开 HTTP 跳转，减少 1688 等来源链接因普通跳转而直接进入失败观感。

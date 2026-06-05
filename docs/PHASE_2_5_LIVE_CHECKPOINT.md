@@ -23,6 +23,9 @@ The live frontend is a static seller decision assistant for product testing. The
 Current live capabilities:
 
 - Recognizes a pasted source link domain, such as `detail.1688.com`, `ozon.ru`, `amazon.com`, or a brand-site domain.
+- Uses the deployed Worker `/api/source/preview` endpoint for optional public metadata preview when a safe Worker URL is configured.
+- Reads only safe public metadata fields when available: page title, Open Graph title/image, description, canonical URL, final URL, and redirect count.
+- Handles limited safe public redirects for a single pasted URL, including verified HTTP-to-HTTPS redirects.
 - Lets the seller manually enter product information:
   - 商品标题
   - 采购价
@@ -58,6 +61,8 @@ Safety boundaries:
 - Do not store real Ozon API keys in localStorage, sessionStorage, source code, commits, docs, logs, or chat.
 - Browser-side code must not call `https://api-seller.ozon.ru` directly.
 - Official seller API access must go through the Cloudflare Worker.
+- Source preview does not call Ozon Seller API and does not accept Ozon credentials.
+- Source preview does not scrape product price, stock, SKU, specifications, reviews, sales count, seller data, hidden platform data, or login-only data.
 - Ozon product-summary is optional authorized store context only.
 - Missing Ozon context must not block source-link and manual-profit analysis.
 - Optional exposure, click, conversion, competitor, and ad assumptions are manual estimates only.
@@ -97,6 +102,11 @@ The current live workflow does not provide:
 ## Current Limitations
 
 - Source links identify the domain only; the frontend does not automatically read product title, source price, image, specifications, ratings, or sales from source pages.
+- Source preview can read basic public metadata from some pages, but this is not reliable product parsing.
+- Live verification confirmed `https://example.com/` returned title `Example Domain`.
+- Live verification confirmed safe redirect handling: `http://github.com/` -> `https://github.com/` with `redirectCount: 1`, `http://www.cloudflare.com/` -> `https://www.cloudflare.com/` with `redirectCount: 1`, and `http://amazon.com/` -> `https://www.amazon.com/` with `redirectCount: 2`.
+- `https://detail.1688.com/offer/123456789.html` and `https://www.1688.com/` currently fall back safely in live checks.
+- 1688/Taobao and some ecommerce platforms may block Cloudflare Worker fetches, require dynamic rendering, or return metadata-empty pages. In those cases, the product remains usable through manual title/cost/category input.
 - Product title, source cost, category, and notes must be entered manually.
 - Optional exposure, click rate, conversion rate, competitor count, competitor price, and ad/share values are manual estimates.
 - The report can support a testing decision, but it is not proof of future sales performance.

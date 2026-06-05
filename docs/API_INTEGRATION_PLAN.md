@@ -310,6 +310,15 @@ Safety boundaries:
 - Does not use Puppeteer, Playwright, browser automation, login cookies, proxy scraping, or external parsing APIs.
 - Does not call Ozon Seller API and does not accept Ozon credentials.
 
+Live verification notes as of 2026-06-05:
+
+- `https://example.com/` returns public metadata successfully, including title `Example Domain`.
+- Safe redirect handling is live: `http://github.com/` resolves to `https://github.com/` with `redirectCount: 1`; `http://www.cloudflare.com/` resolves to `https://www.cloudflare.com/` with `redirectCount: 1`; `http://amazon.com/` resolves to `https://www.amazon.com/` with `redirectCount: 2`.
+- `https://detail.1688.com/offer/123456789.html` and `https://www.1688.com/` currently fall back safely in live checks.
+- 1688/Taobao and some ecommerce platforms may block Cloudflare Worker fetches, require dynamic rendering, or return metadata-empty pages. In those cases, the product remains usable through manual title/cost/category input.
+- These results do not mean the app can reliably scrape 1688, Taobao, Amazon, Ozon, or other ecommerce product details. The endpoint still does not extract product price, stock, SKU, specifications, reviews, sales count, seller data, hidden platform data, or login-only data.
+- Source preview failure must remain a non-blocking state; the seller can continue with manual product information and the profit calculator snapshot.
+
 ## Future Worker Endpoints
 
 Planned safe Worker endpoints:
