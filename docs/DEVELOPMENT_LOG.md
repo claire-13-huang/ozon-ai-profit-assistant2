@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 2.5 / safe source preview redirects
+
+- 修改目标：让 `/api/source/preview` 在安全边界内处理少量公开 HTTP 跳转，减少 1688 等来源链接因普通跳转而直接进入失败观感。
+- 涉及文件：worker/index.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：Worker source preview 保持 `GET` + `redirect: manual`，最多安全跟随 3 次公开跳转；每个 `Location` 都基于当前 URL 解析相对地址，并重新执行 http/https、无账号密码、非本地/内网/私有 IP/内部后缀/IPv6 literal 的 URL 安全检查；成功响应增加安全元数据 `finalUrl` 和 `redirectCount`；跳转超限、无效跳转或跳转到不安全地址时返回 `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。`。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；使用本地 Worker harness 测试 example.com、公开跳转、跳转超限、跳转到本地地址、无效 URL 和 1688 链接；确认未新增抓取、爬虫、批量抓取、headless browser、代理抓取、外部商品解析 API、价格/库存/规格读取或 Ozon Seller API 行为变更。
+- 已知风险：部分电商站点仍会阻止 Cloudflare Worker 读取公开页面或返回复杂动态页面；此时系统只显示手动填写提示，不尝试登录、浏览器渲染、代理或外部解析服务。
+
 ## 2026-06-05 Phase 2.5 / safe source metadata preview
 
 - 修改目标：为 AI Analysis 增加最小安全来源链接预览能力，让配置 Worker 后可以尝试读取公开页面基础元数据，同时保持手动测品流程和 Ozon Seller API 上下文分离。

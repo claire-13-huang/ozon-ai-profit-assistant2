@@ -102,33 +102,49 @@
 
 ### Source Link Public Metadata Preview
 
-1. 1688 public link preview success or fallback
-   - Input: configure a safe Worker URL, paste a valid `https://detail.1688.com/...` URL, leave 商品标题 empty, and click `生成测品建议`.
-   - Expected: `/api/source/preview` is attempted through the Worker. If public metadata is readable, source domain and public title are shown and 商品标题 may be prefilled. If blocked or unreadable, the UI shows `无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。`; manual analysis still works.
+1. Example public metadata preview success
+   - Input: configure a safe Worker URL, send `POST /api/source/preview` with `{ "url": "https://example.com/" }`, or paste `https://example.com/` in AI Analysis and click `生成测品建议`.
+   - Expected: Worker returns safe public metadata such as source domain/title when readable; response may include `finalUrl` and `redirectCount`; no price, stock, SKU, specs, reviews, sales count, hidden data, or login-only data appears.
 
-2. Ozon marketplace page preview stays separate from Seller API
+2. 1688 public link preview success or redirect fallback
+   - Input: configure a safe Worker URL, paste a valid `https://detail.1688.com/...` URL, leave 商品标题 empty, and click `生成测品建议`.
+   - Expected: `/api/source/preview` is attempted through the Worker. If public metadata is readable after at most 3 safe public GET redirects, source domain and public title are shown and 商品标题 may be prefilled. If blocked, unreadable, or still unresolved after redirects, the UI shows `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。` or the normal public-metadata fallback; manual analysis still works.
+
+3. Ozon marketplace page preview stays separate from Seller API
    - Input: configure a safe Worker URL, paste an `https://www.ozon.ru/...` marketplace page, leave Ozon Client ID/API Key empty, and click `生成测品建议`.
    - Expected: source preview attempts public metadata only; Seller API limitation notice remains separate; no text claims Seller API can read arbitrary Ozon marketplace pages or other sellers' products.
 
-3. Amazon or brand-site public metadata preview
+4. Amazon or brand-site public metadata preview
    - Input: configure a safe Worker URL, paste an Amazon or brand-site product URL, leave 商品标题 empty, and click `生成测品建议`.
    - Expected: if public `<title>`, `og:title`, `og:image`, `description`, or canonical metadata is readable, title/image preview appears; if not, manual workflow continues with friendly fallback.
 
-4. Invalid URL rejection
+5. Invalid URL rejection
    - Input: send `POST /api/source/preview` with `{ "url": "abc" }`, or enter an invalid source URL in the frontend and click `生成测品建议`.
    - Expected: safe error appears; no Worker fetch to a product page is attempted; manual report is not blocked after the seller enters a valid URL.
 
-5. Private/internal URL rejection
+6. Private/internal URL rejection
    - Input: send `POST /api/source/preview` with `http://127.0.0.1/`, `http://localhost/`, `http://192.168.1.10/`, or an internal/local hostname.
    - Expected: Worker rejects the request with safe JSON; no private/internal page is fetched.
 
-6. Preview failure should not block manual analysis
+7. Safe public redirect success
+   - Input: send `POST /api/source/preview` with a public URL that redirects to `https://example.com/` in one or two hops.
+   - Expected: Worker follows only `GET` redirects, resolves relative `Location` values against the current URL, validates every redirect target with the same public URL safety checks, and returns readable metadata with `redirectCount` greater than `0` when successful.
+
+8. Redirect loop or too many redirects fallback
+   - Input: send `POST /api/source/preview` with a URL that redirects more than 3 times.
+   - Expected: Worker stops after the redirect limit and returns `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。`; no crawler, batch fetch, browser automation, or retry loop is started.
+
+9. Redirect to private/local address rejection
+   - Input: send `POST /api/source/preview` with a public URL whose `Location` points to `http://127.0.0.1/`, `http://localhost/`, `http://192.168.1.10/`, an internal/local hostname, a credential URL, or an unsafe protocol.
+   - Expected: Worker rejects the redirect target with safe JSON and returns `该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。`; no private/internal target is fetched.
+
+10. Preview failure should not block manual analysis
    - Input: configure a Worker URL, paste a source link that blocks public fetch, manually fill 商品标题 / 采购价 / 类目, and click `生成测品建议`.
    - Expected: report still generates from manual fields and profit snapshot; preview failure appears only as friendly guidance or limitation text.
 
-7. Source preview must not extract restricted product data
+11. Source preview must not extract restricted product data
    - Input: inspect `/api/source/preview` response for a readable page.
-   - Expected: response contains only `url`, `host`, `platform`, `title`, `image`, `description`, and `canonicalUrl`; no price, stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
+   - Expected: response contains only safe source metadata such as `url`, `host`, `platform`, `title`, `image`, `description`, `canonicalUrl`, optional `finalUrl`, and optional `redirectCount`; no price, stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
 
 1. Manual product information only should generate a testing decision
    - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.

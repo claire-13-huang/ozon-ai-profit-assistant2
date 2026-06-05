@@ -268,8 +268,12 @@ Successful response shape:
     "title": "Public page title",
     "image": "https://example.com/og-image.jpg",
     "description": "Public meta description",
-    "canonicalUrl": "https://example.com/product-page"
+    "canonicalUrl": "https://example.com/product-page",
+    "finalUrl": "https://example.com/product-page",
+    "redirectCount": 0
   },
+  "finalUrl": "https://example.com/product-page",
+  "redirectCount": 0,
   "limitations": []
 }
 ```
@@ -289,7 +293,9 @@ Safe fallback response shape:
     "canonicalUrl": ""
   },
   "message": "无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。",
-  "limitations": []
+  "limitations": [],
+  "finalUrl": "https://example.com/product-page",
+  "redirectCount": 0
 }
 ```
 
@@ -298,7 +304,8 @@ Safety boundaries:
 - Accepts only `http:` and `https:` URLs.
 - Rejects URLs with username/password credentials.
 - Rejects localhost, private IPv4 ranges, local/internal host suffixes, literal IPv6 hosts, and non-standard numeric host forms.
-- Uses a short timeout and does not follow redirects.
+- Uses a short timeout and follows only limited public HTTP redirects: maximum 3 redirects, `GET` method only, with every `Location` resolved against the current URL and rechecked by the same URL safety rules.
+- Stops with the manual fallback message when redirect count exceeds the limit, the redirect target is invalid, or the redirect target points to localhost, private/internal addresses, unsafe protocols, credential URLs, or other blocked hosts.
 - Reads only a limited amount of response text needed for metadata.
 - Does not use Puppeteer, Playwright, browser automation, login cookies, proxy scraping, or external parsing APIs.
 - Does not call Ozon Seller API and does not accept Ozon credentials.

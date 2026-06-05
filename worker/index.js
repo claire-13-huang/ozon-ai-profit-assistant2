@@ -7,6 +7,9 @@ const CORS_HEADERS = {
 const OZON_API_BASE = 'https://api-seller.ozon.ru';
 const WB_ANALYTICS_API_BASE = 'https://seller-analytics-api.wildberries.ru';
 const YANDEX_MARKET_API_BASE = 'https://api.partner.market.yandex.ru';
+const SOURCE_PREVIEW_REDIRECT_LIMIT = 3;
+const SOURCE_PREVIEW_FALLBACK_MESSAGE = '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。';
+const SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE = '该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。';
 
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -165,12 +168,13 @@ function buildSourcePreviewSource(urlValue) {
   };
 }
 
-function sourcePreviewFallback(urlValue, message, limitations = []) {
+function sourcePreviewFallback(urlValue, message, limitations = [], metadata = {}) {
   return {
     ok: false,
     source: buildSourcePreviewSource(urlValue),
-    message: message || '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。',
-    limitations
+    message: message || SOURCE_PREVIEW_FALLBACK_MESSAGE,
+    limitations,
+    ...metadata
   };
 }
 
@@ -305,6 +309,99 @@ async function readTextWithLimit(response, maxBytes = 120000) {
   return new TextDecoder('utf-8').decode(combined);
 }
 
+function isHttpRedirectStatus(status) {
+  return status >= 300 && status < 400;
+}
+
+function resolveSafeSourceRedirect(location, currentUrl) {
+  if (!location) {
+    return {
+      error: '跳转响应缺少 Location。',
+      status: 400
+    };
+  }
+
+  let nextUrl;
+  try {
+    nextUrl = new URL(location, currentUrl);
+  } catch (error) {
+    return {
+      error: '跳转 Location 不是有效 URL。',
+      status: 400
+    };
+  }
+
+  return validateSourcePreviewUrl(nextUrl.toString());
+}
+
+async function fetchSourcePreviewPage(sourceUrl, signal) {
+  let currentUrl = sourceUrl;
+  let redirectCount = 0;
+
+  while (true) {
+    let response;
+    try {
+      response = await fetch(currentUrl, {
+        method: 'GET',
+        redirect: 'manual',
+        signal,
+        headers: {
+          Accept: 'text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.2'
+        }
+      });
+    } catch (error) {
+      if (!redirectCount || error.name === 'AbortError') throw error;
+
+      return {
+        error: SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE,
+        status: 200,
+        finalUrl: currentUrl,
+        redirectCount,
+        limitations: [
+          cleanText(error.message, 160) || '跳转后的公开页面读取失败。'
+        ]
+      };
+    }
+
+    if (!isHttpRedirectStatus(response.status)) {
+      return {
+        response,
+        finalUrl: currentUrl,
+        redirectCount
+      };
+    }
+
+    if (redirectCount >= SOURCE_PREVIEW_REDIRECT_LIMIT) {
+      return {
+        error: SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE,
+        status: 200,
+        finalUrl: currentUrl,
+        redirectCount,
+        limitations: [
+          `公开页面跳转超过 ${SOURCE_PREVIEW_REDIRECT_LIMIT} 次，已停止继续访问。`
+        ]
+      };
+    }
+
+    const redirect = resolveSafeSourceRedirect(response.headers.get('location'), currentUrl);
+    if (redirect.error) {
+      return {
+        error: SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE,
+        status: redirect.status,
+        finalUrl: currentUrl,
+        redirectCount,
+        limitations: [
+          redirect.error,
+          '跳转目标必须继续满足公开 http/https URL 安全检查。'
+        ]
+      };
+    }
+
+    redirectCount += 1;
+    currentUrl = redirect.url.toString();
+  }
+}
+
 async function handleSourcePreview(request) {
   const body = await request.json().catch(() => null);
   const inputUrl = body && typeof body === 'object' && !Array.isArray(body) ? body.url : '';
@@ -322,30 +419,30 @@ async function handleSourcePreview(request) {
   const timeout = setTimeout(() => controller.abort(), 5000);
 
   try {
-    const response = await fetch(sourceUrl, {
-      method: 'GET',
-      redirect: 'manual',
-      signal: controller.signal,
-      headers: {
-        Accept: 'text/html,application/xhtml+xml,text/plain;q=0.8,*/*;q=0.2'
-      }
-    });
-
-    if (response.status >= 300 && response.status < 400) {
-      return json(sourcePreviewFallback(sourceUrl, '该页面返回跳转，当前不会自动跟随跳转读取公开信息，请手动填写商品标题、采购价和类目信息。', [
-        'source preview 不自动跟随跳转，避免访问非预期地址。'
-      ]));
+    const fetchResult = await fetchSourcePreviewPage(sourceUrl, controller.signal);
+    if (fetchResult.error) {
+      return json(sourcePreviewFallback(fetchResult.finalUrl || sourceUrl, fetchResult.error, fetchResult.limitations, {
+        finalUrl: fetchResult.finalUrl || sourceUrl,
+        redirectCount: fetchResult.redirectCount || 0
+      }), fetchResult.status || 200);
     }
 
+    const { response, finalUrl, redirectCount } = fetchResult;
+    const fallbackMessage = redirectCount > 0
+      ? SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE
+      : SOURCE_PREVIEW_FALLBACK_MESSAGE;
+
     if (!response.ok) {
-      return json(sourcePreviewFallback(sourceUrl, '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。', [
+      return json(sourcePreviewFallback(finalUrl, fallbackMessage, [
         `公开页面返回 HTTP ${response.status}。`
       ]));
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType && !/html|text\/plain|application\/xhtml/i.test(contentType)) {
-      return json(sourcePreviewFallback(sourceUrl, '该链接返回的不是可读取的公开 HTML 页面，请手动填写商品标题、采购价和类目信息。', [
+      return json(sourcePreviewFallback(finalUrl, redirectCount > 0
+        ? SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE
+        : '该链接返回的不是可读取的公开 HTML 页面，请手动填写商品标题、采购价和类目信息。', [
         `content-type: ${cleanText(contentType, 80)}`
       ]));
     }
@@ -353,40 +450,48 @@ async function handleSourcePreview(request) {
     const html = await readTextWithLimit(response);
     const title = extractTitle(html);
     const description = cleanMetadataText(extractMeta(html, 'description'), 300);
-    const image = extractImage(html, sourceUrl);
-    const canonicalUrl = extractCanonicalUrl(html, sourceUrl);
-    const source = buildSourcePreviewSource(sourceUrl);
+    const image = extractImage(html, finalUrl);
+    const canonicalUrl = extractCanonicalUrl(html, finalUrl);
+    const source = buildSourcePreviewSource(finalUrl);
     const hasMetadata = Boolean(title || description || image || canonicalUrl);
 
     source.title = title;
     source.image = image;
     source.description = description;
     source.canonicalUrl = canonicalUrl;
+    source.finalUrl = finalUrl;
+    source.redirectCount = redirectCount;
 
     if (!hasMetadata) {
       return json({
         ok: false,
         source,
-        message: '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。',
+        message: fallbackMessage,
         limitations: [
           '页面没有返回 title、Open Graph image、description 或 canonical 元数据。'
-        ]
+        ],
+        finalUrl,
+        redirectCount
       });
     }
 
     return json({
       ok: true,
       source,
+      finalUrl,
+      redirectCount,
       limitations: [
         '仅读取公开页面元数据：title、og:title、og:image、description、canonical。',
+        redirectCount > 0 ? `已安全跟随 ${redirectCount} 次公开 GET 跳转。` : '',
         '不读取价格、库存、SKU、规格、评论、销量、隐藏数据或登录后数据。'
       ]
+        .filter(Boolean)
     });
   } catch (error) {
     const aborted = error && error.name === 'AbortError';
     return json(sourcePreviewFallback(sourceUrl, aborted
       ? '公开页面读取超时，请手动填写商品标题、采购价和类目信息。'
-      : '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。', [
+      : SOURCE_PREVIEW_FALLBACK_MESSAGE, [
       aborted ? '公开页面读取超过 5 秒。' : cleanText(error.message, 160)
     ]));
   } finally {
