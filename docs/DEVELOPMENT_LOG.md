@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Documentation / Phase 2.5 live checkpoint
+
+- 修改目标：记录当前已部署的 AI 测品决策工作流状态，方便后续人工测试、产品判断和边界复核。
+- 涉及文件：docs/PHASE_2_5_LIVE_CHECKPOINT.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增 Phase 2.5 live checkpoint 文档，记录 Cloudflare Pages 前端地址、Cloudflare Worker 地址、最新确认提交 `ad8d7cb`、当前能力、安全边界、非能力项、已知限制、卖家人工测试清单，以及暂不应建设的 API/同步/爬虫/ERP 能力。
+- 验收方式：文档应明确不支持自动 1688/Taobao/Amazon/Ozon 页面抓取，不支持真实 Ozon 曝光、点击、转化、广告、订单、财务、库存或价格同步；运行 `git diff --check`。
+- 已知风险：本次仅更新文档，不修改源码、不部署、不推送、不使用真实 Ozon 凭证、不调用真实 Ozon API。
+
 ## 2026-06-05 Phase 2.5 / AI Analysis product-testing decision workflow
 
 - 修改目标：把 AI Analysis 从“像是需要真实店铺流量数据”的页面调整为清晰的测品决策流程：来源链接、手动商品信息、利润快照、测品建议，以及可选的人工预估测品参数。
