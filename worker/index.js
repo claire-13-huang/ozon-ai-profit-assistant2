@@ -11,6 +11,23 @@ const SOURCE_PREVIEW_REDIRECT_LIMIT = 3;
 const SOURCE_PREVIEW_FALLBACK_MESSAGE = '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。';
 const SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE = '该链接跳转后仍无法读取公开页面信息，请手动填写商品标题、采购价和类目信息。';
 
+const SUPPLIER_PRICE_NOTICE = '识别到的是候选采购价，请确认是否为真实拿货成本。';
+const MARKETPLACE_PRICE_NOTICE = '识别到的是平台销售参考价，不等于你的采购成本。';
+const NO_PRICE_NOTICE = '未能自动识别价格，请手动填写或确认。';
+
+const SOURCE_PLATFORM_RULES = [
+  { platform: '1688', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)1688\.com$/.test(host) },
+  { platform: 'Taobao', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)taobao\.com$/.test(host) },
+  { platform: 'Tmall', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)tmall\.com$/.test(host) },
+  { platform: 'Pinduoduo', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)pinduoduo\.com$/.test(host) || /(^|\.)yangkeduo\.com$/.test(host) },
+  { platform: 'JD', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)jd\.com$/.test(host) },
+  { platform: 'AliExpress', platformType: 'supplier', priceRole: 'candidate_source_cost', match: host => /(^|\.)aliexpress\./.test(host) },
+  { platform: 'Amazon', platformType: 'marketplace', priceRole: 'market_reference_price', match: host => /(^|\.)amazon\./.test(host) },
+  { platform: 'Ozon', platformType: 'marketplace', priceRole: 'market_reference_price', match: host => /(^|\.)ozon\.ru$/.test(host) },
+  { platform: 'Wildberries', platformType: 'marketplace', priceRole: 'market_reference_price', match: host => /(^|\.)wildberries\.ru$/.test(host) },
+  { platform: 'Yandex Market', platformType: 'marketplace', priceRole: 'market_reference_price', match: host => /(^|\.)market\.yandex\.ru$/.test(host) }
+];
+
 function json(data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -136,13 +153,27 @@ function isUnsafeSourceHost(hostname) {
 
 function inferSourcePlatform(host) {
   const cleanHost = String(host || '').toLowerCase();
-  if (/(^|\.)1688\.com$/.test(cleanHost)) return '1688';
-  if (/(^|\.)taobao\.com$/.test(cleanHost)) return 'Taobao';
-  if (/(^|\.)tmall\.com$/.test(cleanHost)) return 'Tmall';
-  if (/(^|\.)amazon\./.test(cleanHost)) return 'Amazon';
-  if (/(^|\.)ozon\./.test(cleanHost)) return 'Ozon marketplace';
-  if (/(^|\.)aliexpress\./.test(cleanHost)) return 'AliExpress';
-  return cleanHost || 'External source';
+  const rule = SOURCE_PLATFORM_RULES.find(item => item.match(cleanHost));
+  return rule ? rule.platform : cleanHost ? 'Generic ecommerce' : 'External source';
+}
+
+function detectSourcePlatform(host) {
+  const cleanHost = String(host || '').toLowerCase();
+  const rule = SOURCE_PLATFORM_RULES.find(item => item.match(cleanHost));
+
+  if (rule) {
+    return {
+      platform: rule.platform,
+      platformType: rule.platformType,
+      priceRole: rule.priceRole
+    };
+  }
+
+  return {
+    platform: cleanHost ? 'Generic ecommerce' : 'External source',
+    platformType: 'unknown',
+    priceRole: 'unknown'
+  };
 }
 
 function buildSourcePreviewSource(urlValue) {
@@ -156,22 +187,104 @@ function buildSourcePreviewSource(urlValue) {
   }
 
   const host = url ? normalizedHost(url) : '';
+  const platform = detectSourcePlatform(host);
 
   return {
     url: url ? url.toString() : cleanUrl,
+    finalUrl: url ? url.toString() : cleanUrl,
     host,
-    platform: inferSourcePlatform(host),
+    platform: platform.platform,
+    platformType: platform.platformType,
     title: '',
     image: '',
     description: '',
-    canonicalUrl: ''
+    canonicalUrl: '',
+    price: null,
+    currency: '',
+    priceRole: platform.priceRole,
+    categorySuggestion: '',
+    confidence: {
+      title: 'none',
+      price: 'none',
+      category: 'none'
+    },
+    extractionSources: {
+      title: '',
+      price: '',
+      image: '',
+      category: ''
+    }
   };
 }
 
+function buildSourcePreviewAnalysis(source, ok) {
+  const manualNeeded = [];
+  const sellingPoints = [];
+  const riskNotes = [];
+  const limitations = [];
+  const titleText = source.title ? `已识别商品标题：${source.title}` : '未能识别商品标题';
+  const platformText = source.platform ? `来源平台：${source.platform}` : '来源平台待确认';
+
+  if (source.image) sellingPoints.push('页面提供了公开商品图片，可用于初步判断主图方向');
+  if (source.categorySuggestion) sellingPoints.push(`初步类目方向：${source.categorySuggestion}`);
+  if (source.description) sellingPoints.push('页面提供了公开描述，可用于人工复核卖点');
+
+  if (!source.title) manualNeeded.push('商品标题');
+  if (!source.categorySuggestion) manualNeeded.push('类目或产品类型');
+  if (source.price === null) {
+    manualNeeded.push('采购价或平台参考价');
+    riskNotes.push(NO_PRICE_NOTICE);
+  }
+
+  if (source.priceRole === 'candidate_source_cost') {
+    manualNeeded.push('确认候选采购价是否是真实拿货成本');
+    riskNotes.push(SUPPLIER_PRICE_NOTICE);
+  } else if (source.priceRole === 'market_reference_price') {
+    manualNeeded.push('确认真实采购成本，不能直接使用平台销售参考价');
+    riskNotes.push(MARKETPLACE_PRICE_NOTICE);
+  }
+
+  if (!ok) {
+    limitations.push('页面可能阻止 Worker 读取、需要动态渲染，或没有返回可用公开商品信息。');
+  }
+
+  return {
+    summary: ok
+      ? `${platformText}。${titleText}。当前结果只基于公开页面返回内容和本地规则。`
+      : `${platformText}。未能可靠读取公开商品信息，请使用手动字段继续。`,
+    likelyUseCase: source.platformType === 'supplier'
+      ? '供应商/货源页，可作为采购成本候选线索'
+      : source.platformType === 'marketplace'
+        ? '市场销售页，可作为目标市场价格参考'
+        : '通用商品页，需要人工判断是货源还是销售参考',
+    sellingPoints: uniqueSourceItems(sellingPoints, 5),
+    riskNotes: uniqueSourceItems(riskNotes, 5),
+    manualConfirmationNeeded: uniqueSourceItems(manualNeeded, 6)
+  };
+}
+
+function uniqueSourceItems(items, maxItems = 8) {
+  return [...new Set((items || [])
+    .map(item => cleanText(item, 180))
+    .filter(Boolean))]
+    .slice(0, maxItems);
+}
+
 function sourcePreviewFallback(urlValue, message, limitations = [], metadata = {}) {
+  const source = buildSourcePreviewSource(urlValue);
+  if (metadata.finalUrl) {
+    const finalSource = buildSourcePreviewSource(metadata.finalUrl);
+    source.finalUrl = metadata.finalUrl;
+    source.host = finalSource.host;
+    source.platform = finalSource.platform;
+    source.platformType = finalSource.platformType;
+    source.priceRole = finalSource.priceRole;
+  }
+
   return {
     ok: false,
-    source: buildSourcePreviewSource(urlValue),
+    source,
+    analysis: buildSourcePreviewAnalysis(source, false),
     message: message || SOURCE_PREVIEW_FALLBACK_MESSAGE,
     limitations,
     ...metadata
@@ -270,6 +383,334 @@ function extractImage(html, baseUrl) {
 
 function extractCanonicalUrl(html, baseUrl) {
   return toSafePublicAbsoluteUrl(extractLinkHref(html, 'canonical'), baseUrl);
+}
+
+function extractJsonLdBlocks(html) {
+  const blocks = [];
+  const pattern = /<script[^>]+type=["']application\/ld\+json["'][^>]*>([\s\S]*?)<\/script>/gi;
+  let match;
+
+  while ((match = pattern.exec(html)) !== null) {
+    const text = decodeHtmlEntities(match[1]).trim();
+    if (!text) continue;
+
+    try {
+      blocks.push(JSON.parse(text));
+    } catch (error) {
+      // Some platforms return malformed JSON-LD fragments. Ignore them rather
+      // than trying to repair or infer private data.
+    }
+  }
+
+  return blocks;
+}
+
+function jsonLdTypeMatches(value, typeName) {
+  if (Array.isArray(value)) return value.some(item => jsonLdTypeMatches(item, typeName));
+  return String(value || '').toLowerCase() === typeName.toLowerCase();
+}
+
+function walkJsonLd(value, callback) {
+  if (Array.isArray(value)) {
+    value.forEach(item => walkJsonLd(item, callback));
+    return;
+  }
+
+  if (!value || typeof value !== 'object') return;
+  callback(value);
+
+  if (value['@graph']) walkJsonLd(value['@graph'], callback);
+  if (value.itemListElement) walkJsonLd(value.itemListElement, callback);
+  if (value.item) walkJsonLd(value.item, callback);
+}
+
+function firstCleanValue(value, max = 240) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const clean = firstCleanValue(item, max);
+      if (clean) return clean;
+    }
+    return '';
+  }
+
+  if (value && typeof value === 'object') {
+    return firstCleanValue(value.name || value.url || value.contentUrl, max);
+  }
+
+  return cleanMetadataText(value, max);
+}
+
+function firstSafeImage(value, baseUrl) {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const safe = firstSafeImage(item, baseUrl);
+      if (safe) return safe;
+    }
+    return '';
+  }
+
+  if (value && typeof value === 'object') {
+    return firstSafeImage(value.url || value.contentUrl, baseUrl);
+  }
+
+  return toSafePublicAbsoluteUrl(value, baseUrl);
+}
+
+function normalizePriceValue(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  let clean = raw.replace(/[^\d.,-]/g, '');
+  if (!clean || clean === '-' || clean === '.' || clean === ',') return null;
+
+  if (clean.includes(',') && clean.includes('.')) {
+    clean = clean.replace(/,/g, '');
+  } else if (clean.includes(',') && !clean.includes('.')) {
+    const parts = clean.split(',');
+    clean = parts[parts.length - 1].length <= 2 ? clean.replace(',', '.') : clean.replace(/,/g, '');
+  }
+
+  const number = Number(clean);
+  return Number.isFinite(number) && number >= 0 ? number : null;
+}
+
+function normalizeCurrency(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  if (/[¥￥]/.test(raw) || /\b(CNY|RMB)\b/i.test(raw)) return 'CNY';
+  if (/\$/.test(raw) || /\bUSD\b/i.test(raw)) return 'USD';
+  if (/₽/.test(raw) || /\bRUB\b/i.test(raw) || /руб/i.test(raw)) return 'RUB';
+  if (/€/.test(raw) || /\bEUR\b/i.test(raw)) return 'EUR';
+  return cleanText(raw, 12).toUpperCase();
+}
+
+function extractJsonLdProductData(html, baseUrl) {
+  const result = {};
+  const blocks = extractJsonLdBlocks(html);
+  const products = [];
+  const breadcrumbs = [];
+
+  blocks.forEach(block => {
+    walkJsonLd(block, item => {
+      if (jsonLdTypeMatches(item['@type'], 'Product')) products.push(item);
+      if (jsonLdTypeMatches(item['@type'], 'BreadcrumbList')) breadcrumbs.push(item);
+    });
+  });
+
+  const product = products[0];
+  if (product) {
+    const title = firstCleanValue(product.name, 180);
+    const description = firstCleanValue(product.description, 300);
+    const image = firstSafeImage(product.image, baseUrl);
+    const category = firstCleanValue(product.category, 120);
+
+    if (title) result.title = { value: title, source: 'json-ld Product.name', confidence: 'high' };
+    if (description) result.description = { value: description, source: 'json-ld Product.description' };
+    if (image) result.image = { value: image, source: 'json-ld Product.image', confidence: 'high' };
+    if (category) result.category = { value: category, source: 'json-ld Product.category', confidence: 'high' };
+
+    const offers = Array.isArray(product.offers) ? product.offers[0] : product.offers;
+    if (offers && typeof offers === 'object') {
+      const price = normalizePriceValue(offers.price || offers.lowPrice || offers.highPrice);
+      if (price !== null) {
+        result.price = {
+          value: price,
+          currency: normalizeCurrency(offers.priceCurrency),
+          source: offers.price ? 'json-ld Product.offers.price' : 'json-ld Product.offers price range',
+          confidence: 'high'
+        };
+      }
+    }
+  }
+
+  if (!result.category) {
+    const crumbs = breadcrumbs
+      .flatMap(item => Array.isArray(item.itemListElement) ? item.itemListElement : [])
+      .map(item => firstCleanValue(item && (item.name || item.item), 80))
+      .filter(Boolean);
+    const category = crumbs.length ? crumbs.slice(-2).join(' / ') : '';
+    if (category) result.category = { value: category, source: 'json-ld BreadcrumbList', confidence: 'medium' };
+  }
+
+  return result;
+}
+
+function extractMetaProductData(html, baseUrl) {
+  const result = {};
+  const title = extractMeta(html, 'og:title') || extractMeta(html, 'twitter:title') || extractMeta(html, 'title');
+  const description = extractMeta(html, 'og:description') || extractMeta(html, 'twitter:description') || extractMeta(html, 'description');
+  const image = extractMeta(html, 'og:image') || extractMeta(html, 'twitter:image') || extractMeta(html, 'image');
+  const category = extractMeta(html, 'product:category') || extractMeta(html, 'category') || extractMeta(html, 'og:type');
+  const priceText = extractMeta(html, 'product:price:amount') ||
+    extractMeta(html, 'product:price') ||
+    extractMeta(html, 'price') ||
+    extractMeta(html, 'twitter:data1');
+  const currencyText = extractMeta(html, 'product:price:currency') || extractMeta(html, 'priceCurrency') || extractMeta(html, 'currency');
+  const price = normalizePriceValue(priceText);
+
+  if (title) result.title = { value: cleanMetadataText(title, 180), source: title === extractMeta(html, 'og:title') ? 'Open Graph title' : 'meta title', confidence: 'medium' };
+  if (description) result.description = { value: cleanMetadataText(description, 300), source: 'meta description' };
+  if (image) {
+    const safeImage = toSafePublicAbsoluteUrl(image, baseUrl);
+    if (safeImage) result.image = { value: safeImage, source: 'Open Graph/Twitter image', confidence: 'medium' };
+  }
+  if (category) result.category = { value: cleanMetadataText(category, 120), source: 'product/category meta', confidence: 'medium' };
+  if (price !== null) {
+    result.price = {
+      value: price,
+      currency: normalizeCurrency(currencyText || priceText),
+      source: 'product price meta',
+      confidence: 'medium'
+    };
+  }
+
+  return result;
+}
+
+function extractItempropValue(html, property) {
+  const escaped = property.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const contentPattern = new RegExp(`<[^>]+itemprop=["']${escaped}["'][^>]+content=["']([^"']+)["'][^>]*>`, 'i');
+  const valuePattern = new RegExp(`<[^>]+itemprop=["']${escaped}["'][^>]+(?:href|src)=["']([^"']+)["'][^>]*>`, 'i');
+  const textPattern = new RegExp(`<[^>]+itemprop=["']${escaped}["'][^>]*>([\\s\\S]{0,300})<\\/[^>]+>`, 'i');
+  const match = html.match(contentPattern) || html.match(valuePattern) || html.match(textPattern);
+  return match ? cleanMetadataText(match[1], 300) : '';
+}
+
+function extractItempropProductData(html, baseUrl) {
+  const result = {};
+  const title = extractItempropValue(html, 'name');
+  const image = extractItempropValue(html, 'image');
+  const priceText = extractItempropValue(html, 'price');
+  const currencyText = extractItempropValue(html, 'priceCurrency');
+  const category = extractItempropValue(html, 'category');
+  const price = normalizePriceValue(priceText);
+
+  if (title) result.title = { value: title.slice(0, 180), source: 'itemprop name', confidence: 'medium' };
+  if (image) {
+    const safeImage = toSafePublicAbsoluteUrl(image, baseUrl);
+    if (safeImage) result.image = { value: safeImage, source: 'itemprop image', confidence: 'medium' };
+  }
+  if (category) result.category = { value: category.slice(0, 120), source: 'itemprop category', confidence: 'medium' };
+  if (price !== null) {
+    result.price = {
+      value: price,
+      currency: normalizeCurrency(currencyText || priceText),
+      source: 'itemprop price',
+      confidence: 'medium'
+    };
+  }
+
+  return result;
+}
+
+function stripHtmlForVisibleText(html) {
+  return cleanMetadataText(String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<[^>]+(?:display\s*:\s*none|visibility\s*:\s*hidden)[^>]*>[\s\S]*?<\/[^>]+>/gi, ' ')
+    .replace(/<[^>]+>/g, ' '), 8000);
+}
+
+function extractVisiblePriceData(html) {
+  const text = stripHtmlForVisibleText(html);
+  const symbolPattern = /(?:价格|售价|price|цена|стоимость)?\s*([¥￥$€₽]|CNY|RMB|USD|RUB|EUR)\s*([0-9][0-9\s.,]{0,14})/i;
+  const codePattern = /(?:价格|售价|price|цена|стоимость)?\s*([0-9][0-9\s.,]{0,14})\s*(CNY|RMB|USD|RUB|EUR|₽|руб\.?|рублей)\b/i;
+  const match = text.match(symbolPattern) || text.match(codePattern);
+  if (!match) return null;
+
+  const priceToken = /^[0-9]/.test(match[1]) ? match[1] : match[2];
+  const currencyToken = /^[0-9]/.test(match[1]) ? match[2] : match[1];
+  const price = normalizePriceValue(priceToken);
+  if (price === null) return null;
+
+  return {
+    value: price,
+    currency: normalizeCurrency(currencyToken),
+    source: 'visible page text price pattern',
+    confidence: 'low'
+  };
+}
+
+const SOURCE_CATEGORY_RULES = [
+  { category: '服饰', keywords: ['clothing', 'apparel', 'shirt', 'dress', 'pants', 'jacket', '服装', '服饰', '衣服', '上衣', '连衣裙', '裤'] },
+  { category: '鞋靴', keywords: ['shoe', 'sneaker', 'slipper', 'sandal', 'boot', '鞋', '拖鞋', '凉鞋', '运动鞋', '靴'] },
+  { category: '母婴童装', keywords: ['baby', 'kids', 'children', 'toddler', '婴儿', '儿童', '童装', '母婴'] },
+  { category: '3C配件', keywords: ['phone case', 'charger', 'cable', 'adapter', 'usb', 'earphone', '手机壳', '数据线', '充电器', '耳机'] },
+  { category: '饰品', keywords: ['jewelry', 'necklace', 'earrings', 'bracelet', 'ring', '首饰', '饰品', '项链', '耳环', '手链', '戒指'] },
+  { category: '家居百货', keywords: ['kitchen', 'storage', 'organizer', 'home', 'household', 'cleaning', '厨房', '收纳', '置物', '家居', '百货', '清洁'] }
+];
+
+function suggestSourceCategory(text) {
+  const clean = String(text || '').toLowerCase();
+  if (!clean) return '';
+
+  const match = SOURCE_CATEGORY_RULES.find(rule =>
+    rule.keywords.some(keyword => clean.includes(keyword.toLowerCase()))
+  );
+
+  return match ? match.category : '';
+}
+
+function preferField(target, key, candidate) {
+  if (!candidate || candidate.value === undefined || candidate.value === null || candidate.value === '') return;
+  if (target[key] && target[key].value !== undefined && target[key].value !== null && target[key].value !== '') return;
+  target[key] = candidate;
+}
+
+function extractPlatformAwareProductData(html, finalUrl, source) {
+  const extracted = {};
+  const jsonLd = extractJsonLdProductData(html, finalUrl);
+  const meta = extractMetaProductData(html, finalUrl);
+  const itemprop = extractItempropProductData(html, finalUrl);
+  const titleFallback = extractTitle(html);
+  const visiblePrice = extractVisiblePriceData(html);
+
+  ['title', 'description', 'image', 'category', 'price'].forEach(key => preferField(extracted, key, jsonLd[key]));
+  ['title', 'description', 'image', 'category', 'price'].forEach(key => preferField(extracted, key, meta[key]));
+  ['title', 'image', 'category', 'price'].forEach(key => preferField(extracted, key, itemprop[key]));
+  preferField(extracted, 'title', titleFallback ? { value: titleFallback, source: '<title>', confidence: 'low' } : null);
+  preferField(extracted, 'price', visiblePrice);
+
+  if (!extracted.category) {
+    const suggested = suggestSourceCategory([
+      extracted.title && extracted.title.value,
+      extracted.description && extracted.description.value,
+      source.platform,
+      source.host
+    ].filter(Boolean).join(' '));
+    preferField(extracted, 'category', suggested ? { value: suggested, source: 'local keyword category rule', confidence: 'low' } : null);
+  }
+
+  return extracted;
+}
+
+function applyExtractedDataToSource(source, extracted) {
+  if (extracted.title) {
+    source.title = extracted.title.value;
+    source.confidence.title = extracted.title.confidence || 'medium';
+    source.extractionSources.title = extracted.title.source || '';
+  }
+
+  if (extracted.description) source.description = extracted.description.value;
+
+  if (extracted.image) {
+    source.image = extracted.image.value;
+    source.extractionSources.image = extracted.image.source || '';
+  }
+
+  if (extracted.category) {
+    source.categorySuggestion = extracted.category.value;
+    source.confidence.category = extracted.category.confidence || 'medium';
+    source.extractionSources.category = extracted.category.source || '';
+  }
+
+  if (extracted.price) {
+    source.price = extracted.price.value;
+    source.currency = extracted.price.currency || source.currency || '';
+    source.confidence.price = extracted.price.confidence || 'medium';
+    source.extractionSources.price = extracted.price.source || '';
+  }
 }
 
 async function readTextWithLimit(response, maxBytes = 120000) {
@@ -421,7 +862,7 @@ async function handleSourcePreview(request) {
   try {
     const fetchResult = await fetchSourcePreviewPage(sourceUrl, controller.signal);
     if (fetchResult.error) {
-      return json(sourcePreviewFallback(fetchResult.finalUrl || sourceUrl, fetchResult.error, fetchResult.limitations, {
+      return json(sourcePreviewFallback(sourceUrl, fetchResult.error, fetchResult.limitations, {
         finalUrl: fetchResult.finalUrl || sourceUrl,
         redirectCount: fetchResult.redirectCount || 0
       }), fetchResult.status || 200);
@@ -433,57 +874,73 @@ async function handleSourcePreview(request) {
       : SOURCE_PREVIEW_FALLBACK_MESSAGE;
 
     if (!response.ok) {
-      return json(sourcePreviewFallback(finalUrl, fallbackMessage, [
+      return json(sourcePreviewFallback(sourceUrl, fallbackMessage, [
         `公开页面返回 HTTP ${response.status}。`
-      ]));
+      ], { finalUrl, redirectCount }));
     }
 
     const contentType = response.headers.get('content-type') || '';
     if (contentType && !/html|text\/plain|application\/xhtml/i.test(contentType)) {
-      return json(sourcePreviewFallback(finalUrl, redirectCount > 0
+      return json(sourcePreviewFallback(sourceUrl, redirectCount > 0
         ? SOURCE_PREVIEW_REDIRECT_FALLBACK_MESSAGE
         : '该链接返回的不是可读取的公开 HTML 页面，请手动填写商品标题、采购价和类目信息。', [
         `content-type: ${cleanText(contentType, 80)}`
-      ]));
+      ], { finalUrl, redirectCount }));
     }
 
     const html = await readTextWithLimit(response);
-    const title = extractTitle(html);
-    const description = cleanMetadataText(extractMeta(html, 'description'), 300);
-    const image = extractImage(html, finalUrl);
+    const source = buildSourcePreviewSource(sourceUrl);
+    const finalSource = buildSourcePreviewSource(finalUrl);
     const canonicalUrl = extractCanonicalUrl(html, finalUrl);
-    const source = buildSourcePreviewSource(finalUrl);
-    const hasMetadata = Boolean(title || description || image || canonicalUrl);
-
-    source.title = title;
-    source.image = image;
-    source.description = description;
-    source.canonicalUrl = canonicalUrl;
     source.finalUrl = finalUrl;
+    source.host = finalSource.host;
+    source.platform = finalSource.platform;
+    source.platformType = finalSource.platformType;
+    source.priceRole = finalSource.priceRole;
+    const extracted = extractPlatformAwareProductData(html, finalUrl, source);
+    applyExtractedDataToSource(source, extracted);
     source.redirectCount = redirectCount;
+    source.canonicalUrl = canonicalUrl;
+
+    const hasMetadata = Boolean(
+      source.title ||
+      source.description ||
+      source.image ||
+      source.canonicalUrl ||
+      source.price !== null ||
+      source.categorySuggestion
+    );
 
     if (!hasMetadata) {
       return json({
         ok: false,
         source,
+        analysis: buildSourcePreviewAnalysis(source, false),
         message: fallbackMessage,
         limitations: [
-          '页面没有返回 title、Open Graph image、description 或 canonical 元数据。'
+          '页面没有返回可用的公开商品标题、图片、价格、类目、description 或 canonical 元数据。',
+          '平台可能阻止 Worker 读取、需要动态渲染，或只在登录/客户端环境返回商品信息。'
         ],
         finalUrl,
         redirectCount
       });
     }
 
+    const analysis = buildSourcePreviewAnalysis(source, true);
+
     return json({
       ok: true,
       source,
+      analysis,
       finalUrl,
       redirectCount,
       limitations: [
-        '仅读取公开页面元数据：title、og:title、og:image、description、canonical。',
+        '仅读取公开页面返回内容：JSON-LD Product、Open Graph、Twitter card、常见商品 meta、title、canonical 和保守可见价格文本。',
         redirectCount > 0 ? `已安全跟随 ${redirectCount} 次公开 GET 跳转。` : '',
-        '不读取价格、库存、SKU、规格、评论、销量、隐藏数据或登录后数据。'
+        source.price === null ? NO_PRICE_NOTICE : '',
+        source.priceRole === 'candidate_source_cost' ? SUPPLIER_PRICE_NOTICE : '',
+        source.priceRole === 'market_reference_price' ? MARKETPLACE_PRICE_NOTICE : '',
+        '不读取库存、SKU、规格、评论、销量、卖家私有数据、订单、隐藏数据或登录后数据。'
       ]
         .filter(Boolean)
     });
@@ -1135,13 +1592,23 @@ async function handleAnalyze(request, env) {
     sourceData = {
       source: {
         url: source.url || sourceUrl,
+        finalUrl: source.finalUrl || sourcePreview.finalUrl || source.url || sourceUrl,
         host: source.host || new URL(sourceUrl).hostname.replace(/^www\./, ''),
+        platform: source.platform || inferSourcePlatform(source.host),
+        platformType: source.platformType || 'unknown',
         title: source.title || '',
         description: source.description || '',
-        image: source.image || ''
+        image: source.image || '',
+        canonicalUrl: source.canonicalUrl || '',
+        price: source.price === undefined ? null : source.price,
+        currency: source.currency || '',
+        priceRole: source.priceRole || 'unknown',
+        categorySuggestion: source.categorySuggestion || '',
+        confidence: source.confidence || { title: 'none', price: 'none', category: 'none' },
+        extractionSources: source.extractionSources || { title: '', price: '', image: '', category: '' }
       },
       insights: {
-        category: '待人工复核',
+        category: source.categorySuggestion || '待人工复核',
         keywords: [],
         tags: [],
         sellingPoints: [],
@@ -1158,10 +1625,20 @@ async function handleAnalyze(request, env) {
     sourceData = {
       source: {
         url: sourceUrl,
+        finalUrl: sourceUrl,
         host: new URL(sourceUrl).hostname.replace(/^www\./, ''),
+        platform: inferSourcePlatform(new URL(sourceUrl).hostname.replace(/^www\./, '')),
+        platformType: 'unknown',
         title: '',
         description: '',
-        image: ''
+        image: '',
+        canonicalUrl: '',
+        price: null,
+        currency: '',
+        priceRole: 'unknown',
+        categorySuggestion: '',
+        confidence: { title: 'none', price: 'none', category: 'none' },
+        extractionSources: { title: '', price: '', image: '', category: '' }
       },
       insights: {
         category: '待人工复核',

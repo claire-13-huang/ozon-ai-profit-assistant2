@@ -1292,6 +1292,42 @@ input.input-warning:focus {
   overflow: hidden;
 }
 
+.manual-product-helper {
+  grid-column: 1 / -1;
+}
+
+.manual-product-helper textarea {
+  min-height: 96px;
+}
+
+.manual-product-helper p {
+  margin: 8px 0 0;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.source-extraction-details {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #f8fafc;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.source-extraction-details.is-warning {
+  border-color: #f0d39a;
+  background: #fff9ed;
+}
+
+.source-extraction-details.is-error {
+  border-color: #f1b4b4;
+  background: #fff5f5;
+}
+
 .product-image-preview.is-empty {
   display: none;
 }

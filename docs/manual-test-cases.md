@@ -104,7 +104,7 @@
 
 1. Example public metadata preview success
    - Input: configure a safe Worker URL, send `POST /api/source/preview` with `{ "url": "https://example.com/" }`, or paste `https://example.com/` in AI Analysis and click `生成测品建议`.
-   - Expected: Worker returns safe public metadata such as source domain/title when readable; live verification returned title `Example Domain`; response may include `finalUrl` and `redirectCount`; no price, stock, SKU, specs, reviews, sales count, hidden data, or login-only data appears.
+   - Expected: Worker returns safe public metadata such as source domain/title when readable; live verification returned title `Example Domain`; response may include `finalUrl`, `redirectCount`, `platform`, `platformType`, `confidence`, and `extractionSources`; no stock, SKU, specs, reviews, sales count, hidden data, or login-only data appears.
 
 2. 1688 public link preview success or redirect fallback
    - Input: configure a safe Worker URL, paste a valid `https://detail.1688.com/...` URL, leave 商品标题 empty, and click `生成测品建议`.
@@ -136,7 +136,7 @@
 
 9. Amazon two-step redirect success
    - Input: send `POST /api/source/preview` with `http://amazon.com/`.
-   - Expected: Worker safely follows the public redirects to `https://www.amazon.com/`, returns public metadata when readable, and reports `redirectCount: 2`. Response still must not include product price, stock, SKU, specs, reviews, sales count, seller data, hidden data, or login-only data.
+   - Expected: Worker safely follows the public redirects to `https://www.amazon.com/`, returns public metadata when readable, detects `Amazon`, marks the platform type as marketplace, and reports `redirectCount: 2`. If a public visible price is present, `priceRole` is `market_reference_price`; response still must not include stock, SKU, specs, reviews, sales count, seller data, hidden data, or login-only data.
 
 10. 1688 safe fallback remains expected
    - Input: send `POST /api/source/preview` with `https://detail.1688.com/offer/123456789.html` or `https://www.1688.com/`.
@@ -156,7 +156,87 @@
 
 14. Source preview must not extract restricted product data
    - Input: inspect `/api/source/preview` response for a readable page.
-   - Expected: response contains only safe source metadata such as `url`, `host`, `platform`, `title`, `image`, `description`, `canonicalUrl`, optional `finalUrl`, and optional `redirectCount`; no price, stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
+   - Expected: response contains only safe public product fields such as `url`, `host`, `platform`, `platformType`, `title`, `image`, `description`, `canonicalUrl`, optional `price`, `currency`, `priceRole`, `categorySuggestion`, `confidence`, `extractionSources`, `finalUrl`, and `redirectCount`; no stock, SKU, specs, seller data, reviews, orders, sales count, or hidden data appears.
+
+15. Generic JSON-LD Product page
+   - Input: test a public product page that returns JSON-LD Product data with `name`, `image`, `offers.price`, and `offers.priceCurrency`.
+   - Expected: title, image, price, currency, category when available, confidence, and extraction sources are shown. Price remains a public visible price line only and must still be manually confirmed.
+
+16. Supplier price should be candidate source cost
+   - Input: paste a 1688, Taobao, Tmall, Pinduoduo, JD, or AliExpress product URL that returns a public visible price.
+   - Expected: platform is detected; `platformType` is `supplier`; `priceRole` is `candidate_source_cost`; if `采购价` is empty the frontend may fill it and shows `识别到的是候选采购价，请确认是否为真实拿货成本。`; all fields remain editable.
+
+17. Marketplace price should not become purchase cost
+   - Input: paste an Amazon, Ozon, Wildberries, or Yandex Market product URL that returns a public visible price.
+   - Expected: platform is detected; `platformType` is `marketplace`; `priceRole` is `market_reference_price`; the frontend shows `识别到的是平台销售参考价，不等于你的采购成本。`; `采购价` is not silently filled.
+
+18. No price found
+   - Input: paste a readable product page that returns title/image but no public visible price.
+   - Expected: `price` is `null`, price confidence is `none`, and the frontend shows `未能自动识别价格，请手动填写或确认。`
+
+19. Ozon extraction or fallback
+   - Input: paste an `ozon.ru` product page.
+   - Expected: Ozon is detected as marketplace. Public readable title/image/price may appear when available; if blocked or metadata-empty, fallback is clear and Seller API limitation remains separate.
+
+20. Wildberries extraction or fallback
+   - Input: paste a `wildberries.ru` product page.
+   - Expected: Wildberries is detected as marketplace. Public readable fields may appear when available; if blocked or dynamic, the manual workflow remains available and no old data is reused.
+
+21. Yandex Market extraction or fallback
+   - Input: paste a `market.yandex.ru` product page.
+   - Expected: Yandex Market is detected as marketplace and any visible price is market reference price; blocked/dynamic pages show fallback guidance.
+
+22. Taobao/Tmall extraction or fallback
+   - Input: paste `item.taobao.com` and `detail.tmall.com` product URLs.
+   - Expected: Taobao/Tmall are detected as suppliers; visible prices are candidate source costs; blocked or login/dynamic pages show fallback without claiming success.
+
+23. Pinduoduo extraction or fallback
+   - Input: paste a `pinduoduo.com` or `yangkeduo.com` product URL.
+   - Expected: Pinduoduo is detected as supplier; visible prices are candidate source costs; fallback is clear if blocked.
+
+24. AliExpress extraction or fallback
+   - Input: paste an `aliexpress.com` product URL.
+   - Expected: AliExpress is detected as supplier; visible price is candidate source cost; fallback is clear if blocked or metadata-empty.
+
+25. Source preview should clear stale metadata when URL changes
+   - Input: configure a safe Worker URL, paste `http://amazon.com/`, click `生成测品建议`, and confirm public Amazon title metadata appears. Then replace the source URL with a blocked or fallback link such as a 1688/Ozon-related URL and click `生成测品建议` again.
+   - Expected: previous Amazon title, image, description, canonical URL, and source metadata are cleared before the second report. If the second preview fails, the report shows fallback guidance for the current URL only and does not show Amazon metadata.
+
+26. Auto-filled preview title should clear on a different URL
+   - Input: paste a link that successfully auto-fills 商品标题 from public metadata, do not manually edit the title, then replace the source URL with a different link.
+   - Expected: the old auto-filled title is cleared when the URL changes, so the next report cannot reuse the previous link title.
+
+27. Manually typed title should survive URL changes
+   - Input: paste a source link, manually type 商品标题, then replace the source URL with a different link.
+   - Expected: the manually typed title remains in place unless the seller clears it. The report uses the current URL and the user-entered title, not stale preview metadata.
+
+28. Preview failure should not block manual report after stale metadata reset
+   - Input: after a successful preview, replace the URL with a blocked/fallback source, manually fill or keep manual 商品标题 / 采购价 / 类目, and click `生成测品建议`.
+   - Expected: report still generates from current source URL, current manual fields, and the profit snapshot. No previous title/image/source metadata appears.
+
+29. Metadata success can also suggest category
+   - Input: configure a safe Worker URL, paste a source link that returns public title metadata, leave 商品标题 and 类目或产品类型 empty, then click `生成测品建议`.
+   - Expected: title may auto-fill from public metadata. If the title contains a supported keyword such as clothing, shoes, phone case, jewelry, kitchen, storage, or organizer, category is suggested only when the category field is empty.
+
+30. Metadata failure plus pasted text suggests title and category
+   - Input: paste a blocked/fallback source link, paste visible product text into `粘贴商品标题/详情文本（可选）`, leave 商品标题 and 类目或产品类型 empty, then click `生成测品建议`.
+   - Expected: 商品标题 is suggested from the first meaningful pasted-text line, 类目或产品类型 is suggested from simple keyword rules, and all fields remain editable.
+
+31. User-edited title is preserved
+   - Input: let public metadata or pasted text suggest a title, then manually edit 商品标题 and trigger analysis again.
+   - Expected: the app does not overwrite the manually edited title unexpectedly.
+
+32. User-entered category is not overwritten
+   - Input: manually enter 类目或产品类型, then paste helper text with keywords for a different category.
+   - Expected: the manually entered category remains unchanged unless the seller clears or edits it.
+
+33. Source cost is never guessed from pasted helper text
+   - Input: paste helper text that includes visible prices, ranges, promotional text, or supplier notes, but leave 采购价 empty.
+   - Expected: 采购价 stays empty. The report reminds: `采购价会直接影响利润判断，请手动填写或确认。` No guessed price, stock, SKU, specs, reviews, sales count, seller data, or hidden data appears.
+
+34. First URL success then second URL fallback must not keep stale data
+   - Input: first use a URL that successfully returns title/image/price, then immediately replace it with a blocked 1688/Taobao/Ozon page and click `生成测品建议`.
+   - Expected: the second report only shows the current URL fallback. Old title, image, price, priceRole, confidence, and extraction sources do not appear.
 
 1. Manual product information only should generate a testing decision
    - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.

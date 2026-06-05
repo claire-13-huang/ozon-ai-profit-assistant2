@@ -8,6 +8,7 @@ const STORE_TYPE_TEXT = {
 const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。';
 const OZON_MARKETPLACE_LINK_NOTICE = '当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。';
 const MANUAL_PRODUCT_GUIDANCE = '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
+const SOURCE_COST_CONFIRMATION_NOTICE = '采购价会直接影响利润判断，请手动填写或确认。';
 
 function getProductSelectionApiBaseUrl() {
   const inputUrl = ['backendWorkerUrl', 'ozonWorkerUrl']
@@ -352,14 +353,16 @@ function buildProfitSafetyText(type, profitSnapshot, manualProduct) {
     return '等待利润计算器快照。报告可以先填写商品信息，但最终测品结论需要有效利润数据。';
   }
 
+  const needsSourceCost = !Number.isFinite(manualProduct.sourceCost);
   const purchaseText = Number.isFinite(manualProduct.sourceCost)
     ? `手动采购价 ${formatManualCost(manualProduct.sourceCost)}`
     : `采购成本 ${yuan(profitSnapshot.purchaseCost)}`;
   const base = `当前单件利润约 ${yuan(profitSnapshot.profit)}，利润率约 ${percent(profitSnapshot.profitRate)}，${purchaseText}。`;
+  const costNotice = needsSourceCost ? ` ${SOURCE_COST_CONFIRMATION_NOTICE}` : '';
 
-  if (type === 'risk') return base + ' 安全边际偏弱，价格、采购或物流任一项波动都可能吞掉利润。';
-  if (type === 'warning') return base + ' 安全边际一般，只能低数量验证。';
-  return base + ' 安全边际可用于小量测试，但仍需要记录真实广告和退货成本。';
+  if (type === 'risk') return base + ' 安全边际偏弱，价格、采购或物流任一项波动都可能吞掉利润。' + costNotice;
+  if (type === 'warning') return base + ' 安全边际一般，只能低数量验证。' + costNotice;
+  return base + ' 安全边际可用于小量测试，但仍需要记录真实广告和退货成本。' + costNotice;
 }
 
 function buildSuggestedTestQuantityText(type, profitSnapshot, assumptions) {
@@ -412,7 +415,7 @@ function buildMainRiskText(type, profitSnapshot, manualProduct, assumptions, has
   const risks = [];
 
   if (!manualProduct.title) risks.push('商品标题未补齐，无法判断具体规格和卖点');
-  if (!Number.isFinite(manualProduct.sourceCost)) risks.push('采购价未补齐，利润边际可能失真');
+  if (!Number.isFinite(manualProduct.sourceCost)) risks.push(SOURCE_COST_CONFIRMATION_NOTICE);
   if (!hasCategory) risks.push('类目或产品类型未补齐，上架类目和佣金口径需人工复核');
 
   if (type === 'risk') {
@@ -444,7 +447,27 @@ function buildDataBoundaryText(ozon, assumptions) {
     ? 'Ozon 店铺商品摘要已连接；它只是你店铺的可选样本上下文，不代表全平台竞品、曝光、点击、转化、广告、订单或财务同步。' + sampleText
     : OZON_STORE_CONTEXT_WARNING;
 
-  return `${ozonText} ${buildManualAssumptionText(assumptions)} 如果配置了 Worker，来源链接只会尝试读取公开页面元数据，不读取价格、库存、SKU、规格、评论、销量、隐藏数据或登录后数据，也不会调用外部商品解析 API。`;
+  return `${ozonText} ${buildManualAssumptionText(assumptions)} 如果配置了 Worker，来源链接只会尝试读取公开页面返回的商品标题、图片、类目建议和可见价格线索；价格必须按候选采购价或平台销售参考价人工确认，不读取库存、SKU、规格、评论、销量、隐藏数据或登录后数据，也不会调用外部商品解析 API。`;
+}
+
+function buildSourcePriceRoleText(source) {
+  if (!source || source.price === null || source.price === undefined || source.price === '') {
+    return '未能自动识别价格，请手动填写或确认。';
+  }
+
+  const price = Number(source.price);
+  const priceText = Number.isFinite(price) ? price.toFixed(2) : String(source.price);
+  const display = `${source.currency || '未识别币种'} ${priceText}`;
+
+  if (source.priceRole === 'candidate_source_cost') {
+    return `公开页面价格 ${display} 被标记为候选采购价，请确认是否为真实拿货成本。`;
+  }
+
+  if (source.priceRole === 'market_reference_price') {
+    return `公开页面价格 ${display} 被标记为平台销售参考价，不等于你的采购成本。`;
+  }
+
+  return `公开页面价格 ${display} 的用途未知，请人工确认。`;
 }
 
 function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
@@ -502,7 +525,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     profitText: buildSuggestedTestQuantityText(type, profitSnapshot, manualAssumptions),
     competitionText: buildMinimumPriceFloorText(profitSnapshot),
     adText: buildMainRiskText(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory),
-    storeText: buildDataBoundaryText(ozon, manualAssumptions),
+    storeText: `${buildDataBoundaryText(ozon, manualAssumptions)} ${buildSourcePriceRoleText(source)}`,
     actions: buildNextActionList(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory)
   };
 }
@@ -515,9 +538,18 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct) 
     ok: false,
     source: {
       url: sourceUrl,
+      finalUrl: sourceUrl,
       host,
+      platform: host,
+      platformType: 'unknown',
       title: '',
-      image: ''
+      image: '',
+      price: null,
+      currency: '',
+      priceRole: 'unknown',
+      categorySuggestion: '',
+      confidence: { title: 'none', price: 'none', category: 'none' },
+      extractionSources: { title: '', price: '', image: '', category: '' }
     },
     insights: {
       category: '',
@@ -561,9 +593,18 @@ function buildDemoOzonAnalysis(profitSnapshot) {
     ok: true,
     source: {
       url: 'https://example.com/product/demo',
+      finalUrl: 'https://example.com/product/demo',
       host: 'example.com',
+      platform: 'Generic ecommerce',
+      platformType: 'unknown',
       title: '示例商品：便携收纳包',
-      image: ''
+      image: '',
+      price: null,
+      currency: '',
+      priceRole: 'unknown',
+      categorySuggestion: '家居 / 收纳',
+      confidence: { title: 'high', price: 'none', category: 'medium' },
+      extractionSources: { title: 'demo data', price: '', image: '', category: 'demo data' }
     },
     insights: {
       category: '家居 / 收纳',
@@ -644,14 +685,23 @@ async function requestSourcePreview(sourceUrl) {
   if (!data || typeof data !== 'object') {
     return {
       ok: false,
+      requestedUrl: sourceUrl,
       source: {
         url: sourceUrl,
+        finalUrl: sourceUrl,
         host: normalizeHost(sourceUrl),
         platform: normalizeHost(sourceUrl),
+        platformType: 'unknown',
         title: '',
         image: '',
         description: '',
-        canonicalUrl: ''
+        canonicalUrl: '',
+        price: null,
+        currency: '',
+        priceRole: 'unknown',
+        categorySuggestion: '',
+        confidence: { title: 'none', price: 'none', category: 'none' },
+        extractionSources: { title: '', price: '', image: '', category: '' }
       },
       message: getSourcePreviewFallbackMessage(),
       limitations: ['source preview 返回了不可读取的响应。']
@@ -661,14 +711,36 @@ async function requestSourcePreview(sourceUrl) {
   if (!data.source) {
     data.source = {
       url: sourceUrl,
+      finalUrl: sourceUrl,
       host: normalizeHost(sourceUrl),
       platform: normalizeHost(sourceUrl),
+      platformType: 'unknown',
       title: '',
       image: '',
       description: '',
-      canonicalUrl: ''
+      canonicalUrl: '',
+      price: null,
+      currency: '',
+      priceRole: 'unknown',
+      categorySuggestion: '',
+      confidence: { title: 'none', price: 'none', category: 'none' },
+      extractionSources: { title: '', price: '', image: '', category: '' }
     };
   }
+
+  data.source = {
+    ...data.source,
+    finalUrl: data.source.finalUrl || data.finalUrl || data.source.url || sourceUrl,
+    platformType: data.source.platformType || 'unknown',
+    price: data.source.price === undefined ? null : data.source.price,
+    currency: data.source.currency || '',
+    priceRole: data.source.priceRole || 'unknown',
+    categorySuggestion: data.source.categorySuggestion || '',
+    confidence: data.source.confidence || { title: 'none', price: 'none', category: 'none' },
+    extractionSources: data.source.extractionSources || { title: '', price: '', image: '', category: '' }
+  };
+
+  data.requestedUrl = sourceUrl;
 
   if (!data.ok && !data.message) {
     data.message = getSourcePreviewFallbackMessage();

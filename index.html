@@ -313,6 +313,11 @@
               <label>5. 卖点或备注</label>
               <textarea id="manualProductNotes" rows="3" placeholder="例如 材质、规格、适用场景、差异化卖点、需要复核的问题。"></textarea>
             </div>
+            <div class="manual-product-helper">
+              <label>粘贴商品标题/详情文本（可选）</label>
+              <textarea id="manualProductTextHelper" rows="4" placeholder="可粘贴商品标题、详情页可见文案或供应商备注。系统只会辅助建议标题和类目，不会读取或猜测价格。"></textarea>
+              <p id="manualProductTextHelperStatus">系统可以根据标题或粘贴文本建议类目，但采购价必须由你确认，避免误把促销价、区间价或起批价当成真实成本。</p>
+            </div>
           </div>
           <div class="profit-snapshot-note">利润快照来自上方利润计算器：售价、总成本、利润率、采购成本和物流成本会进入测品报告。请先在利润计算器中填好基础成本。</div>
           <div class="analysis-store-row">
@@ -326,6 +331,7 @@
           <div class="auto-selection-note">当前视图用于整理选品判断资料。配置 Worker 后只会尝试读取公开页面元数据；Ozon 店铺商品摘要只是可选授权店铺上下文。</div>
 
           <div class="analysis-status" id="autoAnalysisStatus">等待粘贴链接并开始分析。</div>
+          <div class="source-extraction-details" id="sourceExtractionDetails">公开商品信息识别结果会显示在这里。</div>
           <div class="analysis-progress" id="autoAnalysisProgress">
             <span data-step="link">接收链接</span>
             <span data-step="identify">预览分析</span>

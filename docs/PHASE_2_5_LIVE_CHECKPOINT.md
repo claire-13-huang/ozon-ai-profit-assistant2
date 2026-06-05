@@ -261,3 +261,25 @@ Do not build the following until the manual workflow is stable and explicitly ap
 - No real Ozon credentials were used for this checkpoint.
 - No real Ozon API call was made for this checkpoint.
 - No scraping, crawler, external product parsing API, or new backend behavior was added for this checkpoint.
+
+## Local Follow-Up Not Yet Deployed
+
+After this live checkpoint, the local Worker implementation was upgraded toward a platform-aware source preview model. This note does not claim the live URLs already run the new behavior.
+
+Local intended behavior:
+
+- Detect major ecommerce hosts by URL, including 1688, Taobao, Tmall, Pinduoduo/Yangkeduo, JD, AliExpress, Amazon, Ozon, Wildberries, and Yandex Market.
+- Extract public product fields when they are present in returned HTML: title, image, visible price, currency, category suggestion, confidence, extraction source, and first-pass rule-based analysis.
+- Mark supplier-platform visible prices as `candidate_source_cost`.
+- Mark marketplace visible prices as `market_reference_price`.
+- Keep `price: null` when no public visible price is found.
+- Keep manual title, source cost, category, and notes editable.
+- Keep fallback behavior clear for blocked, dynamic, metadata-empty, or timeout pages.
+
+Safety boundaries remain unchanged:
+
+- no real Ozon credentials for source preview
+- no Ozon Seller API call for source preview
+- no headless browser, crawler, proxy scraping, login scraping, cookie scraping, captcha bypass, or external product parser
+- no hidden/private/login-only data
+- no stock, SKU, reviews, sales count, seller private data, orders, or write endpoints

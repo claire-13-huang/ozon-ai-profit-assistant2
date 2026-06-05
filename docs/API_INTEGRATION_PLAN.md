@@ -213,8 +213,9 @@ The AI Analysis page is a manual-preview workflow with optional public metadata 
 
 - The source URL identifies the product source domain, such as `detail.1688.com`, `amazon.com`, a brand site, or an Ozon marketplace page.
 - When a Worker URL is configured, the frontend may call `POST /api/source/preview` to attempt a single safe public metadata read for the pasted URL.
-- Source preview only attempts to extract `<title>`, `meta[property="og:title"]`, `meta[property="og:image"]`, `meta[name="description"]`, and `link[rel="canonical"]`.
-- Source preview does not extract price, stock, SKU, specifications, seller data, reviews, sales count, hidden page data, or login-only data.
+- Source preview attempts a platform-aware public product extraction from the single pasted URL. Extraction order is JSON-LD Product, Open Graph metadata, Twitter card metadata, common product meta/itemprop fields, `<title>`, and conservative visible price text patterns returned in the HTML.
+- Source preview may return a public visible price only when it is clearly present in returned public page data. It must label the price as `candidate_source_cost`, `market_reference_price`, or `unknown`; it must not invent or infer hidden price.
+- Source preview does not extract stock, SKU, specifications, seller data, reviews, sales count, hidden page data, login-only data, orders, or private platform fields.
 - The frontend does not call 1688, Taobao, Amazon, Ozon marketplace pages, or any external product parsing API directly.
 - The seller manually fills product title, source cost, category/product type, and optional selling-point notes.
 - The preview report uses those manual fields together with the current profit calculator snapshot.
@@ -246,7 +247,7 @@ The optional manual testing-assumption section should show this explanation:
 
 ## Current Source Preview Endpoint
 
-`POST /api/source/preview` is a minimal public metadata preview endpoint.
+`POST /api/source/preview` is a single-URL public product preview endpoint. It is platform-aware, but it is still not a crawler, scraper, headless browser, login session, or external product parser.
 
 Request body:
 
@@ -263,14 +264,41 @@ Successful response shape:
   "ok": true,
   "source": {
     "url": "https://example.com/product-page",
+    "finalUrl": "https://example.com/product-page",
     "host": "example.com",
-    "platform": "External source",
+    "platform": "Generic ecommerce",
+    "platformType": "unknown",
     "title": "Public page title",
     "image": "https://example.com/og-image.jpg",
     "description": "Public meta description",
     "canonicalUrl": "https://example.com/product-page",
-    "finalUrl": "https://example.com/product-page",
+    "price": null,
+    "currency": "",
+    "priceRole": "unknown",
+    "categorySuggestion": "家居百货",
+    "confidence": {
+      "title": "medium",
+      "price": "none",
+      "category": "low"
+    },
+    "extractionSources": {
+      "title": "Open Graph title",
+      "price": "",
+      "image": "Open Graph/Twitter image",
+      "category": "local keyword category rule"
+    },
     "redirectCount": 0
+  },
+  "analysis": {
+    "summary": "来源平台：Generic ecommerce。已识别商品标题：Public page title。当前结果只基于公开页面返回内容和本地规则。",
+    "likelyUseCase": "通用商品页，需要人工判断是货源还是销售参考",
+    "sellingPoints": [],
+    "riskNotes": [
+      "未能自动识别价格，请手动填写或确认。"
+    ],
+    "manualConfirmationNeeded": [
+      "采购价或平台参考价"
+    ]
   },
   "finalUrl": "https://example.com/product-page",
   "redirectCount": 0,
@@ -307,6 +335,10 @@ Safety boundaries:
 - Uses a short timeout and follows only limited public HTTP redirects: maximum 3 redirects, `GET` method only, with every `Location` resolved against the current URL and rechecked by the same URL safety rules.
 - Stops with the manual fallback message when redirect count exceeds the limit, the redirect target is invalid, or the redirect target points to localhost, private/internal addresses, unsafe protocols, credential URLs, or other blocked hosts.
 - Reads only a limited amount of response text needed for metadata.
+- Detects major ecommerce hosts, including 1688, Taobao, Tmall, Pinduoduo/Yangkeduo, JD, AliExpress, Amazon, Ozon, Wildberries, and Yandex Market.
+- Marks 1688/Taobao/Tmall/Pinduoduo/JD/AliExpress prices as `candidate_source_cost`.
+- Marks Amazon/Ozon/Wildberries/Yandex Market prices as `market_reference_price`.
+- Returns `price: null` when no public visible price is found.
 - Does not use Puppeteer, Playwright, browser automation, login cookies, proxy scraping, or external parsing APIs.
 - Does not call Ozon Seller API and does not accept Ozon credentials.
 

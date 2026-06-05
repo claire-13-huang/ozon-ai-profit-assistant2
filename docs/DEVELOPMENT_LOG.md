@@ -3,6 +3,30 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 4A / platform-aware source extraction
+
+- 修改目标：将 `/api/source/preview` 从通用公开元数据预览升级为平台识别的公开商品信息提取流程，减少卖家粘贴主流电商链接后的手动负担。
+- 涉及文件：worker/index.js、index.html、css/style.css、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/PHASE_2_5_LIVE_CHECKPOINT.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：Worker 新增 1688、Taobao、Tmall、Pinduoduo/Yangkeduo、JD、AliExpress、Amazon、Ozon、Wildberries、Yandex Market 和 generic ecommerce 平台识别；按 JSON-LD Product、Open Graph、Twitter card、common meta/itemprop、title、保守可见价格文本顺序提取公开标题、图片、价格、币种和类目建议；返回 `platformType`、`priceRole`、`confidence`、`extractionSources` 和本地规则 first-pass analysis；前端新增公开商品信息识别状态条，供应商候选价仅在采购价为空时预填并提示确认，市场参考价不自动写入采购价；报告数据边界补充价格角色说明；blocked/dynamic/metadata-empty 页面继续 fallback 到手动流程并避免旧链接数据串台。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；手工测试 JSON-LD 商品页、Amazon/Ozon/Wildberries/Yandex Market、1688/Taobao/Tmall/Pinduoduo/AliExpress、generic public product page、first URL success then second URL fallback、market reference price 不自动当采购成本。
+- 已知风险：主流电商平台可能阻止 Cloudflare Worker、需要动态渲染或只在登录/客户端环境返回数据；本次不使用 headless browser、爬虫、代理、登录、cookie、验证码绕过或外部解析器，不保证所有平台都能提取价格；公开价格仍需卖家确认用途。
+
+## 2026-06-05 Phase 2.5 / manual title and category assistance
+
+- 修改目标：降低 source preview fallback 后的手动输入负担，让卖家可粘贴可见标题/详情文本来辅助生成商品标题和类目建议，同时明确采购价必须人工确认。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：AI Analysis 手动商品信息区域新增 `粘贴商品标题/详情文本（可选）`；前端从粘贴文本的第一条有意义文本行建议商品标题；按标题、粘贴文本、备注和来源域名中的轻量关键词建议类目，覆盖范围包括服饰、鞋靴、母婴童装、3C配件、饰品、家居百货，未知时显示 `待人工确认`；只在标题/类目为空或仍属于系统自动建议值时填充，用户手动编辑的标题、类目、采购价和备注不被覆盖；采购价为空时报告显示 `采购价会直接影响利润判断，请手动填写或确认。`。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；确认未修改 Worker，未新增 API、抓取、爬虫、headless browser、代理抓取、登录抓取、外部商品解析器，也未猜测价格、库存、SKU、规格、评论、销量或卖家数据。
+- 已知风险：类目建议只是关键词辅助，不能替代卖家确认平台真实类目、佣金口径和采购成本。
+
+## 2026-06-05 Phase 2.5 / source preview stale state reset
+
+- 修改目标：修复 AI Analysis 中更换来源链接后仍沿用上一条链接公开元数据的问题，避免 Amazon 等旧标题、图片或来源信息出现在新链接 fallback 报告里。
+- 涉及文件：js/main.js、js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：前端记录 source preview 的 `requestedUrl`，并在来源 URL 变化、新预览开始、异步预览返回和报告合并时校验当前 URL；URL 变化时清空上一条预览的标题、图片、描述、canonical 和 source metadata 展示；记录自动填充的商品标题和图片，只有当字段仍等于上一条自动填充值时才清空，用户手动编辑的标题、采购价、类目和备注保持不变；新链接预览失败时只显示当前链接 fallback，并继续允许基于当前手动字段生成报告。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；浏览器手动测试 Amazon 预览成功后切换到 blocked/fallback 链接，确认旧 Amazon metadata 不再出现在第二份报告；确认浏览器端不直接请求 `https://api-seller.ozon.ru`。
+- 已知风险：source preview 仍然只是公开元数据预览；部分平台会 fallback，需要卖家继续手动填写标题、采购价和类目。
+
 ## 2026-06-05 Documentation / live source preview verification
 
 - 修改目标：记录已部署 `/api/source/preview` 的线上验证结果，明确 source preview 是安全公开元数据预览，不是电商平台商品抓取。

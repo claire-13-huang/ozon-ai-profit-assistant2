@@ -5,6 +5,18 @@ let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], 
 let lastProfitSnapshot = null;
 let lastOzonAutoAnalysis = null;
 let ozonTemporaryConnectionState = { status: 'not_connected', message: '未测试' };
+let sourcePreviewState = {
+  lastPreviewUrl: '',
+  activeRequestUrl: '',
+  lastAutoFilledTitle: '',
+  lastAutoFilledImage: '',
+  lastAutoFilledSourceCost: '',
+  lastSuggestedCategory: '',
+  isTitleAutoFilledFromPreview: false,
+  isImageAutoFilledFromPreview: false,
+  isSourceCostAutoFilledFromPreview: false,
+  isCategorySuggestedFromAssist: false
+};
 
 const apiPreparationFieldIds = [
   'ozonTestStoreName',
@@ -17,7 +29,8 @@ const manualProductFieldIds = [
   'manualProductTitle',
   'manualSourceCost',
   'manualProductCategory',
-  'manualProductNotes'
+  'manualProductNotes',
+  'manualProductTextHelper'
 ];
 
 const manualTestingAssumptionFieldIds = [
@@ -64,6 +77,7 @@ const savedFieldIds = [
   'manualSourceCost',
   'manualProductCategory',
   'manualProductNotes',
+  'manualProductTextHelper',
   'estimatedExposure',
   'estimatedClickRate',
   'estimatedConversionRate',
@@ -894,6 +908,316 @@ function setAutoAnalysisProgress(activeStep, doneSteps = []) {
   });
 }
 
+const productCategorySuggestionRules = [
+  {
+    category: '服饰',
+    keywords: ['clothing', 'apparel', 'shirt', 't-shirt', 'dress', 'pants', 'jeans', 'hoodie', 'jacket', 'coat', 'skirt', 'top', 'blouse', 'sweater', '服装', '服饰', '衣服', '上衣', '外套', '连衣裙', '裤', '牛仔', '卫衣', '毛衣', '短袖', 't恤']
+  },
+  {
+    category: '鞋靴',
+    keywords: ['shoe', 'shoes', 'sneaker', 'sneakers', 'slipper', 'slippers', 'sandal', 'sandals', 'boot', 'boots', 'footwear', '鞋', '拖鞋', '凉鞋', '运动鞋', '靴']
+  },
+  {
+    category: '母婴童装',
+    keywords: ['baby', 'kids', 'kid', 'children', 'child', 'toddler', 'infant', 'newborn', 'maternity', '婴儿', '宝宝', '儿童', '童装', '母婴', '新生儿', '亲子']
+  },
+  {
+    category: '3C配件',
+    keywords: ['phone', 'case', 'cable', 'charger', 'adapter', 'usb', 'type-c', 'type c', 'earphone', 'headphone', 'screen protector', '手机', '手机壳', '数据线', '充电器', '充电线', '耳机', '贴膜', '保护壳', '3c']
+  },
+  {
+    category: '饰品',
+    keywords: ['jewelry', 'jewellery', 'necklace', 'earrings', 'earring', 'bracelet', 'ring', 'hair clip', 'pendant', '首饰', '饰品', '项链', '耳环', '耳饰', '手链', '戒指', '发夹', '吊坠']
+  },
+  {
+    category: '家居百货',
+    keywords: ['kitchen', 'storage', 'organizer', 'home', 'household', 'container', 'rack', 'basket', 'cleaning', 'bathroom', '厨房', '收纳', '置物', '整理', '家居', '百货', '储物', '清洁', '浴室', '厨房用品']
+  }
+];
+
+function normalizeSourcePreviewUrl(value) {
+  return String(value || '').trim();
+}
+
+function getPreviewRequestedUrl(preview) {
+  if (!preview || typeof preview !== 'object') return '';
+  return normalizeSourcePreviewUrl(preview.requestedUrl || preview.inputUrl || '');
+}
+
+function sourcePreviewBelongsToUrl(preview, sourceUrl) {
+  const requestedUrl = getPreviewRequestedUrl(preview);
+  const currentUrl = normalizeSourcePreviewUrl(sourceUrl);
+  if (requestedUrl) return requestedUrl === currentUrl;
+  return Boolean(preview && preview.source && normalizeSourcePreviewUrl(preview.source.url) === currentUrl);
+}
+
+function sourceInputStillMatches(sourceUrl) {
+  return normalizeSourcePreviewUrl(fieldValue('sourceProductUrl')) === normalizeSourcePreviewUrl(sourceUrl);
+}
+
+function formatExtractedSourcePrice(source) {
+  if (!source || source.price === null || source.price === undefined || source.price === '') return '未识别价格';
+
+  const price = Number(source.price);
+  const priceText = Number.isFinite(price) ? price.toFixed(2) : String(source.price);
+  return `${source.currency || '未识别币种'} ${priceText}`;
+}
+
+function getSourcePriceRoleNotice(source) {
+  if (!source) return '未能自动识别价格，请手动填写或确认。';
+  if (source.price === null || source.price === undefined || source.price === '') return '未能自动识别价格，请手动填写或确认。';
+  if (source.priceRole === 'candidate_source_cost') return '识别到的是候选采购价，请确认是否为真实拿货成本。';
+  if (source.priceRole === 'market_reference_price') return '识别到的是平台销售参考价，不等于你的采购成本。';
+  return '识别到公开页面价格，但用途未知，请人工确认它是采购价还是销售参考价。';
+}
+
+function formatExtractionConfidence(source) {
+  const confidence = source && source.confidence ? source.confidence : {};
+  return `标题 ${confidence.title || 'none'} / 价格 ${confidence.price || 'none'} / 类目 ${confidence.category || 'none'}`;
+}
+
+function formatExtractionSources(source) {
+  const sources = source && source.extractionSources ? source.extractionSources : {};
+  const parts = [];
+  if (sources.title) parts.push(`标题来源：${sources.title}`);
+  if (sources.price) parts.push(`价格来源：${sources.price}`);
+  if (sources.image) parts.push(`图片来源：${sources.image}`);
+  if (sources.category) parts.push(`类目来源：${sources.category}`);
+  return parts.join('；') || '暂无可显示的提取来源';
+}
+
+function renderSourceExtractionDetails(preview) {
+  const el = document.getElementById('sourceExtractionDetails');
+  if (!el) return;
+
+  el.classList.remove('is-warning', 'is-error');
+
+  if (!preview || !preview.source) {
+    el.textContent = '公开商品信息识别结果会显示在这里。';
+    return;
+  }
+
+  const source = preview.source;
+  const priceNotice = getSourcePriceRoleNotice(source);
+  const platformText = `${source.platform || source.host || '未知平台'} / ${source.platformType || 'unknown'}`;
+  const priceText = formatExtractedSourcePrice(source);
+  const categoryText = source.categorySuggestion ? `类目建议：${source.categorySuggestion}` : '类目建议：未识别';
+  const statusText = preview.ok ? '识别成功' : (preview.message || '识别失败，请手动填写。');
+
+  if (!preview.ok) {
+    el.classList.add('is-error');
+  } else if (source.priceRole === 'candidate_source_cost' || source.priceRole === 'market_reference_price' || source.price === null) {
+    el.classList.add('is-warning');
+  }
+
+  el.textContent = `${statusText}。平台：${platformText}。价格：${priceText}。${priceNotice}。${categoryText}。置信度：${formatExtractionConfidence(source)}。${formatExtractionSources(source)}。`;
+}
+
+function resetSourcePreviewTracking() {
+  sourcePreviewState.lastPreviewUrl = '';
+  sourcePreviewState.activeRequestUrl = '';
+  sourcePreviewState.lastAutoFilledTitle = '';
+  sourcePreviewState.lastAutoFilledImage = '';
+  sourcePreviewState.lastAutoFilledSourceCost = '';
+  sourcePreviewState.lastSuggestedCategory = '';
+  sourcePreviewState.isTitleAutoFilledFromPreview = false;
+  sourcePreviewState.isImageAutoFilledFromPreview = false;
+  sourcePreviewState.isSourceCostAutoFilledFromPreview = false;
+  sourcePreviewState.isCategorySuggestedFromAssist = false;
+}
+
+function clearAutoFilledSourcePreviewFields() {
+  if (
+    sourcePreviewState.isTitleAutoFilledFromPreview &&
+    fieldValue('manualProductTitle') === sourcePreviewState.lastAutoFilledTitle
+  ) {
+    setInput('manualProductTitle', '');
+  }
+
+  if (
+    sourcePreviewState.isImageAutoFilledFromPreview &&
+    fieldValue('imageUrl') === sourcePreviewState.lastAutoFilledImage
+  ) {
+    setInput('imageUrl', '');
+    renderProductImagePreview('');
+  }
+
+  if (
+    sourcePreviewState.isSourceCostAutoFilledFromPreview &&
+    fieldValue('manualSourceCost') === sourcePreviewState.lastAutoFilledSourceCost
+  ) {
+    setInput('manualSourceCost', '');
+  }
+
+  if (
+    sourcePreviewState.isCategorySuggestedFromAssist &&
+    fieldValue('manualProductCategory') === sourcePreviewState.lastSuggestedCategory
+  ) {
+    setInput('manualProductCategory', '');
+  }
+
+  resetSourcePreviewTracking();
+}
+
+function clearSourcePreviewDisplay() {
+  setText('sourceProductInsight', '等待分析来源链接。');
+  setText('sourceKeywordInsight', '等待提取关键词和主题标签。');
+  setText('ozonApiInsight', '可选 Ozon 店铺商品摘要未连接，不影响本次测品建议。');
+  setText('analysisLimitInsight', '未开始分析。');
+  renderSourceExtractionDetails(null);
+  renderProductImagePreview(fieldValue('imageUrl'));
+}
+
+function handleSourceUrlChanged() {
+  const currentUrl = normalizeSourcePreviewUrl(fieldValue('sourceProductUrl'));
+  const trackedUrl = normalizeSourcePreviewUrl(sourcePreviewState.lastPreviewUrl || sourcePreviewState.activeRequestUrl);
+  const urlChanged = trackedUrl && trackedUrl !== currentUrl;
+
+  if (urlChanged) {
+    clearAutoFilledSourcePreviewFields();
+  } else {
+    resetSourcePreviewTracking();
+  }
+
+  lastOzonAutoAnalysis = null;
+  clearSourcePreviewDisplay();
+  setProductLinkPreviewStatus();
+  setAutoAnalysisProgress('', []);
+}
+
+function handleManualTitleChanged() {
+  if (
+    sourcePreviewState.isTitleAutoFilledFromPreview &&
+    fieldValue('manualProductTitle') !== sourcePreviewState.lastAutoFilledTitle
+  ) {
+    sourcePreviewState.isTitleAutoFilledFromPreview = false;
+    sourcePreviewState.lastAutoFilledTitle = '';
+  }
+}
+
+function handleManualImageChanged() {
+  if (
+    sourcePreviewState.isImageAutoFilledFromPreview &&
+    fieldValue('imageUrl') !== sourcePreviewState.lastAutoFilledImage
+  ) {
+    sourcePreviewState.isImageAutoFilledFromPreview = false;
+    sourcePreviewState.lastAutoFilledImage = '';
+  }
+}
+
+function handleManualCategoryChanged() {
+  if (
+    sourcePreviewState.isCategorySuggestedFromAssist &&
+    fieldValue('manualProductCategory') !== sourcePreviewState.lastSuggestedCategory
+  ) {
+    sourcePreviewState.isCategorySuggestedFromAssist = false;
+    sourcePreviewState.lastSuggestedCategory = '';
+  }
+}
+
+function handleManualSourceCostChanged() {
+  if (
+    sourcePreviewState.isSourceCostAutoFilledFromPreview &&
+    fieldValue('manualSourceCost') !== sourcePreviewState.lastAutoFilledSourceCost
+  ) {
+    sourcePreviewState.isSourceCostAutoFilledFromPreview = false;
+    sourcePreviewState.lastAutoFilledSourceCost = '';
+  }
+}
+
+function normalizeAssistText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function extractTitleFromPastedProductText(value) {
+  const lines = String(value || '')
+    .split(/\r?\n/)
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
+
+  for (const line of lines) {
+    if (/^(价格|售价|采购价|批发价|促销价|区间价|起批价|price|cost|sale price)\s*[:：-]/i.test(line)) continue;
+
+    const withoutLabel = line.replace(/^(商品标题|标题|品名|product title|title)\s*[:：-]\s*/i, '').trim();
+    const clean = withoutLabel.replace(/[|｜]{2,}/g, ' ').trim();
+
+    if (!clean) continue;
+    if (/^https?:\/\//i.test(clean)) continue;
+    if (/^[¥$€₽\d\s.,~\-起批价促销价区间价格price]+$/i.test(clean)) continue;
+    if (clean.length < 3) continue;
+
+    return clean.slice(0, 120);
+  }
+
+  return '';
+}
+
+function suggestCategoryFromText(value) {
+  const text = normalizeAssistText(value).toLowerCase();
+  if (!text) return '';
+
+  const match = productCategorySuggestionRules.find(rule =>
+    rule.keywords.some(keyword => text.includes(keyword.toLowerCase()))
+  );
+
+  return match ? match.category : '待人工确认';
+}
+
+function getProductAssistSourceText() {
+  const parts = [
+    fieldValue('manualProductTitle'),
+    fieldValue('manualProductTextHelper'),
+    fieldValue('manualProductNotes'),
+    fieldValue('sourceProductUrl')
+  ];
+
+  return parts.filter(Boolean).join('\n');
+}
+
+function setManualProductAssistStatus(message) {
+  setText('manualProductTextHelperStatus', message || '系统可以根据标题或粘贴文本建议类目，但采购价必须由你确认，避免误把促销价、区间价或起批价当成真实成本。');
+}
+
+function applyManualProductTextAssistance(options = {}) {
+  const helperText = fieldValue('manualProductTextHelper');
+  const extractedTitle = extractTitleFromPastedProductText(helperText);
+  const actions = [];
+  const titleEmpty = !fieldValue('manualProductTitle');
+  const titleAutoOwned = sourcePreviewState.isTitleAutoFilledFromPreview &&
+    fieldValue('manualProductTitle') === sourcePreviewState.lastAutoFilledTitle;
+
+  if (extractedTitle && (titleEmpty || (options.replaceAutoTitle && titleAutoOwned))) {
+    setInput('manualProductTitle', extractedTitle);
+    sourcePreviewState.lastAutoFilledTitle = extractedTitle;
+    sourcePreviewState.isTitleAutoFilledFromPreview = true;
+    actions.push('已根据粘贴文本建议商品标题');
+  }
+
+  const categorySource = getProductAssistSourceText();
+  const suggestedCategory = suggestCategoryFromText(categorySource);
+  const currentCategory = fieldValue('manualProductCategory');
+  const categoryAutoOwned = sourcePreviewState.isCategorySuggestedFromAssist &&
+    currentCategory === sourcePreviewState.lastSuggestedCategory;
+
+  if (suggestedCategory && (!currentCategory || categoryAutoOwned)) {
+    setInput('manualProductCategory', suggestedCategory);
+    sourcePreviewState.lastSuggestedCategory = suggestedCategory;
+    sourcePreviewState.isCategorySuggestedFromAssist = true;
+    actions.push(`已建议类目：${suggestedCategory}`);
+  }
+
+  const costMessage = fieldValue('manualSourceCost')
+    ? '采购价已填写，请确认它是真实采购成本。'
+    : '采购价会直接影响利润判断，请手动填写或确认。';
+  const guidance = '系统可以根据标题或粘贴文本建议类目，但采购价必须由你确认，避免误把促销价、区间价或起批价当成真实成本。';
+
+  setManualProductAssistStatus(actions.length
+    ? `${actions.join('；')}。${costMessage}`
+    : `${guidance} ${costMessage}`);
+
+  return actions;
+}
+
 function renderOzonAnalysisDetails(analysis) {
   const source = analysis && analysis.source ? analysis.source : {};
   const insights = analysis && analysis.insights ? analysis.insights : {};
@@ -908,8 +1232,13 @@ function renderOzonAnalysisDetails(analysis) {
     ? MANUAL_PRODUCT_GUIDANCE
     : '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
   const titleText = source.title || (source.url ? manualGuidance : '未识别标题');
+  const platformText = source.platform ? ` · ${source.platform}` : '';
+  const priceNotice = source.priceRole ? ` · ${getSourcePriceRoleNotice(source)}` : '';
+  const sourceAnalysisText = analysis && analysis.sourceAnalysis && analysis.sourceAnalysis.summary
+    ? ` ${analysis.sourceAnalysis.summary}`
+    : '';
 
-  setText('sourceProductInsight', `${titleText} · ${source.host || '未知来源'} · ${insights.category || '类目待复核'}`);
+  setText('sourceProductInsight', `${titleText} · ${source.host || '未知来源'}${platformText} · ${insights.category || source.categorySuggestion || '类目待复核'}${priceNotice}${sourceAnalysisText}`);
   setText('sourceKeywordInsight', `关键词：${keywords}。标签：${tags}。`);
   setText('ozonApiInsight', ozon.status === 'connected'
     ? (ozon.message || 'Ozon 店铺商品摘要已连接。') + productText
@@ -918,6 +1247,7 @@ function renderOzonAnalysisDetails(analysis) {
     ? analysis.limitations.join('；')
     : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
   renderProductImagePreview(source.image || fieldValue('imageUrl'));
+  renderSourceExtractionDetails(analysis && analysis.sourcePreview ? analysis.sourcePreview : null);
   renderAiAnalysisStatusModel();
 }
 
@@ -929,46 +1259,107 @@ function renderOzonAutoAnalysis(analysis) {
   renderProductSelectionReport(analysis.report);
 }
 
-function applySourcePreviewToForm(preview) {
+function applySourcePreviewToForm(preview, sourceUrl) {
   if (!preview || !preview.source) return '';
+  if (!sourcePreviewBelongsToUrl(preview, sourceUrl)) return '';
 
   const source = preview.source;
   const actions = [];
+  sourcePreviewState.lastPreviewUrl = normalizeSourcePreviewUrl(sourceUrl);
+  sourcePreviewState.activeRequestUrl = '';
+  renderSourceExtractionDetails(preview);
 
   if (preview.ok && source.title && !fieldValue('manualProductTitle')) {
     setInput('manualProductTitle', source.title);
-    actions.push('已从公开页面元数据预填商品标题');
+    sourcePreviewState.lastAutoFilledTitle = source.title;
+    sourcePreviewState.isTitleAutoFilledFromPreview = true;
+    actions.push('已从公开页面预填商品标题');
   }
+
+  const assistActions = applyManualProductTextAssistance({ replaceAutoTitle: false });
+  assistActions.forEach(action => actions.push(action));
 
   if (preview.ok && source.image && !fieldValue('imageUrl')) {
     setInput('imageUrl', source.image);
     renderProductImagePreview(source.image);
-    actions.push('已显示公开 Open Graph 图片预览');
+    sourcePreviewState.lastAutoFilledImage = source.image;
+    sourcePreviewState.isImageAutoFilledFromPreview = true;
+    actions.push('已显示公开商品图片预览');
+  }
+
+  const currentCategory = fieldValue('manualProductCategory');
+  const categoryAutoOwned = sourcePreviewState.isCategorySuggestedFromAssist &&
+    currentCategory === sourcePreviewState.lastSuggestedCategory;
+
+  if (preview.ok && source.categorySuggestion && (!currentCategory || categoryAutoOwned)) {
+    setInput('manualProductCategory', source.categorySuggestion);
+    sourcePreviewState.lastSuggestedCategory = source.categorySuggestion;
+    sourcePreviewState.isCategorySuggestedFromAssist = true;
+    actions.push(`已建议类目：${source.categorySuggestion}`);
+  }
+
+  const hasExtractedPrice = preview.ok && source.price !== null && source.price !== undefined && source.price !== '';
+  const extractedPrice = Number(source.price);
+
+  if (hasExtractedPrice && source.priceRole === 'candidate_source_cost') {
+    if (!fieldValue('manualSourceCost') && Number.isFinite(extractedPrice)) {
+      const priceText = String(extractedPrice);
+      setInput('manualSourceCost', priceText);
+      sourcePreviewState.lastAutoFilledSourceCost = priceText;
+      sourcePreviewState.isSourceCostAutoFilledFromPreview = true;
+      actions.push('已把候选采购价填入采购价字段，请确认是否为真实拿货成本');
+    } else {
+      actions.push('识别到候选采购价，但当前采购价已填写，请人工复核');
+    }
+    setManualProductAssistStatus('识别到的是候选采购价，请确认是否为真实拿货成本。');
+  } else if (hasExtractedPrice && source.priceRole === 'market_reference_price') {
+    actions.push('识别到平台销售参考价，不会自动写入采购价');
+    setManualProductAssistStatus('识别到的是平台销售参考价，不等于你的采购成本。请手动填写真实采购价。');
+  } else if (preview.ok) {
+    actions.push('未能自动识别价格，请手动填写或确认');
   }
 
   if (preview.ok) {
     return actions.length
       ? actions.join('，') + '；手动字段仍可编辑。'
-      : '已读取公开页面元数据；手动字段仍可编辑。';
+      : '已读取公开商品信息；手动字段仍可编辑。';
   }
+
+  applyManualProductTextAssistance({ replaceAutoTitle: false });
 
   return preview.message || (typeof getSourcePreviewFallbackMessage === 'function'
     ? getSourcePreviewFallbackMessage()
     : '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。');
 }
 
-function mergeSourcePreviewIntoAnalysis(analysis, preview) {
+function mergeSourcePreviewIntoAnalysis(analysis, preview, sourceUrl) {
   if (!analysis || !preview || !preview.source) return analysis;
+  if (!sourcePreviewBelongsToUrl(preview, sourceUrl)) return analysis;
 
   const source = preview.source;
   analysis.source = analysis.source || {};
-  analysis.source.url = analysis.source.url || source.url;
+  analysis.source.url = sourceUrl || analysis.source.url || source.url;
   analysis.source.host = source.host || analysis.source.host;
-  analysis.source.title = analysis.source.title || source.title || '';
-  analysis.source.image = analysis.source.image || source.image || '';
-  analysis.source.description = analysis.source.description || source.description || '';
-  analysis.source.canonicalUrl = analysis.source.canonicalUrl || source.canonicalUrl || '';
+  analysis.source.title = preview.ok ? (analysis.source.title || source.title || '') : '';
+  analysis.source.image = preview.ok ? (analysis.source.image || source.image || '') : '';
+  analysis.source.description = preview.ok ? (analysis.source.description || source.description || '') : '';
+  analysis.source.canonicalUrl = preview.ok ? (analysis.source.canonicalUrl || source.canonicalUrl || '') : '';
   analysis.source.platform = analysis.source.platform || source.platform || '';
+  analysis.source.platformType = source.platformType || analysis.source.platformType || '';
+  analysis.source.finalUrl = source.finalUrl || analysis.source.finalUrl || '';
+  analysis.source.price = preview.ok ? source.price : null;
+  analysis.source.currency = preview.ok ? source.currency || '' : '';
+  analysis.source.priceRole = source.priceRole || analysis.source.priceRole || 'unknown';
+  analysis.source.categorySuggestion = preview.ok ? source.categorySuggestion || '' : '';
+  analysis.source.confidence = source.confidence || analysis.source.confidence || {};
+  analysis.source.extractionSources = source.extractionSources || analysis.source.extractionSources || {};
+  analysis.insights = analysis.insights || {};
+  if (preview.ok && source.categorySuggestion && !analysis.insights.category) {
+    analysis.insights.category = source.categorySuggestion;
+  }
+  if (preview.ok && preview.analysis) {
+    analysis.sourceAnalysis = preview.analysis;
+  }
   analysis.sourcePreview = preview;
   analysis.limitations = Array.isArray(analysis.limitations) ? analysis.limitations : [];
 
@@ -1128,6 +1519,14 @@ async function runOzonAutoAnalysis() {
     button.textContent = '分析中...';
   }
 
+  const trackedUrl = normalizeSourcePreviewUrl(sourcePreviewState.lastPreviewUrl || sourcePreviewState.activeRequestUrl);
+  if (trackedUrl && trackedUrl !== normalizeSourcePreviewUrl(sourceUrl)) {
+    clearAutoFilledSourcePreviewFields();
+  }
+
+  sourcePreviewState.activeRequestUrl = normalizeSourcePreviewUrl(sourceUrl);
+  lastOzonAutoAnalysis = null;
+  clearSourcePreviewDisplay();
   setAutoAnalysisStatus('已接收来源链接。正在尝试读取公开页面元数据；如已配置 Worker，仅会请求安全预览和可选授权店铺摘要。', 'is-loading');
   setAutoAnalysisProgress('link', []);
 
@@ -1141,28 +1540,52 @@ async function runOzonAutoAnalysis() {
     if (typeof requestSourcePreview === 'function') {
       try {
         sourcePreview = await requestSourcePreview(sourceUrl);
-        sourcePreviewStatus = applySourcePreviewToForm(sourcePreview);
+        if (!sourceInputStillMatches(sourceUrl)) {
+          setAutoAnalysisStatus('来源链接已变化。旧链接预览已忽略，请重新点击生成测品建议。');
+          setAutoAnalysisProgress('', []);
+          return;
+        }
+        sourcePreviewStatus = applySourcePreviewToForm(sourcePreview, sourceUrl);
       } catch (error) {
         sourcePreview = {
           ok: false,
+          requestedUrl: sourceUrl,
           source: {
             url: sourceUrl,
             host: new URL(sourceUrl).hostname.replace(/^www\./, ''),
             platform: '',
+            platformType: 'unknown',
             title: '',
             image: '',
             description: '',
-            canonicalUrl: ''
+            canonicalUrl: '',
+            price: null,
+            currency: '',
+            priceRole: 'unknown'
           },
           message: '公开页面元数据预览暂不可用，请继续手动填写商品信息。',
           limitations: [error.message || 'source preview 请求失败。']
         };
+        renderSourceExtractionDetails(sourcePreview);
         sourcePreviewStatus = sourcePreview.message;
       }
     }
 
+    if (!sourceInputStillMatches(sourceUrl)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接分析已忽略，请重新点击生成测品建议。');
+      setAutoAnalysisProgress('', []);
+      return;
+    }
+
+    applyManualProductTextAssistance({ replaceAutoTitle: false });
     let analysis = await requestOzonProductAnalysis(getAnalysisPayload());
-    analysis = mergeSourcePreviewIntoAnalysis(analysis, sourcePreview);
+    if (!sourceInputStillMatches(sourceUrl)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接报告已忽略，请重新点击生成测品建议。');
+      setAutoAnalysisProgress('', []);
+      return;
+    }
+
+    analysis = mergeSourcePreviewIntoAnalysis(analysis, sourcePreview, sourceUrl);
     applyCurrentManualAnalysisContext(analysis);
     syncOzonTemporaryConnectionStateFromAnalysis(analysis);
     setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
@@ -1919,10 +2342,18 @@ document.querySelectorAll('input,select,textarea').forEach(e => {
     }
 
     if (e.id === 'sourceProductUrl') {
-      lastOzonAutoAnalysis = null;
-      setProductLinkPreviewStatus();
-      setAutoAnalysisProgress('', []);
-    } else if (manualProductFieldIds.includes(e.id) || manualTestingAssumptionFieldIds.includes(e.id)) {
+      handleSourceUrlChanged();
+    } else {
+      if (e.id === 'manualProductTitle') handleManualTitleChanged();
+      if (e.id === 'imageUrl') handleManualImageChanged();
+      if (e.id === 'manualProductCategory') handleManualCategoryChanged();
+      if (e.id === 'manualSourceCost') handleManualSourceCostChanged();
+      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost'].includes(e.id)) {
+        applyManualProductTextAssistance({ replaceAutoTitle: e.id === 'manualProductTextHelper' });
+      }
+    }
+
+    if (e.id !== 'sourceProductUrl' && (manualProductFieldIds.includes(e.id) || manualTestingAssumptionFieldIds.includes(e.id) || e.id === 'imageUrl')) {
       setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
@@ -1946,10 +2377,18 @@ document.querySelectorAll('input,select,textarea').forEach(e => {
     }
 
     if (e.id === 'sourceProductUrl') {
-      lastOzonAutoAnalysis = null;
-      setProductLinkPreviewStatus();
-      setAutoAnalysisProgress('', []);
-    } else if (manualProductFieldIds.includes(e.id) || manualTestingAssumptionFieldIds.includes(e.id)) {
+      handleSourceUrlChanged();
+    } else {
+      if (e.id === 'manualProductTitle') handleManualTitleChanged();
+      if (e.id === 'imageUrl') handleManualImageChanged();
+      if (e.id === 'manualProductCategory') handleManualCategoryChanged();
+      if (e.id === 'manualSourceCost') handleManualSourceCostChanged();
+      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost'].includes(e.id)) {
+        applyManualProductTextAssistance({ replaceAutoTitle: e.id === 'manualProductTextHelper' });
+      }
+    }
+
+    if (e.id !== 'sourceProductUrl' && (manualProductFieldIds.includes(e.id) || manualTestingAssumptionFieldIds.includes(e.id) || e.id === 'imageUrl')) {
       setProductLinkPreviewStatus();
       setAutoAnalysisProgress('', []);
     }
