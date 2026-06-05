@@ -312,6 +312,165 @@ function buildProfitReportText(profitSnapshot) {
   return base + ' 利润具备测试空间，但还需要人工复核点击、转化、评价门槛和退货风险。';
 }
 
+function getDecisionStatusLabel(type) {
+  if (type === 'risk') return '暂不建议测试';
+  if (type === 'warning') return '谨慎测试';
+  if (type === 'waiting') return '等待利润测算';
+  return '建议小量测试';
+}
+
+function buildDecisionConclusionText(type, profitSnapshot, hasTitle) {
+  if (!hasTitle) {
+    return MANUAL_PRODUCT_GUIDANCE;
+  }
+
+  if (type === 'waiting') {
+    return '等待利润测算。先补齐售价、重量、采购成本和物流输入，再判断是否值得测品。';
+  }
+
+  if (type === 'risk') {
+    return '暂不建议测试。当前利润安全边际不足，先改善售价、采购价、物流成本或广告假设。';
+  }
+
+  if (type === 'warning') {
+    return '谨慎测试。只适合低数量验证，不适合直接备货或放大广告。';
+  }
+
+  if (profitSnapshot && Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
+    return '建议小量测试。当前利润率较好，但仍要用小批量验证点击、转化、退货和广告消耗。';
+  }
+
+  return '建议小量测试。利润具备测试空间，先用小批量验证真实转化，不要直接放大库存。';
+}
+
+function buildProfitSafetyText(type, profitSnapshot, manualProduct) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    return '等待利润计算器快照。报告可以先填写商品信息，但最终测品结论需要有效利润数据。';
+  }
+
+  const purchaseText = Number.isFinite(manualProduct.sourceCost)
+    ? `手动采购价 ${formatManualCost(manualProduct.sourceCost)}`
+    : `采购成本 ${yuan(profitSnapshot.purchaseCost)}`;
+  const base = `当前单件利润约 ${yuan(profitSnapshot.profit)}，利润率约 ${percent(profitSnapshot.profitRate)}，${purchaseText}。`;
+
+  if (type === 'risk') return base + ' 安全边际偏弱，价格、采购或物流任一项波动都可能吞掉利润。';
+  if (type === 'warning') return base + ' 安全边际一般，只能低数量验证。';
+  return base + ' 安全边际可用于小量测试，但仍需要记录真实广告和退货成本。';
+}
+
+function buildSuggestedTestQuantityText(type, profitSnapshot, assumptions) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  const preference = input.localPreference ? ` 本地偏好：${input.localPreference}。` : '';
+
+  if (!profitSnapshot || !profitSnapshot.mainInputValid || type === 'waiting') {
+    return '暂不建议给出测试数量。先补齐利润计算器基础数据，人工曝光/点击/转化为空不会阻止报告生成。' + preference;
+  }
+
+  if (type === 'risk') {
+    return '建议 0 件，先不备货。除非售价、采购价、物流成本或广告假设明显改善，否则不要进入实测。' + preference;
+  }
+
+  if (type === 'warning') {
+    return '建议首轮 1-3 件，只验证是否有点击、加购和订单信号，不做批量库存。' + preference;
+  }
+
+  if (Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
+    return '建议首轮 5-10 件，配合小预算广告或自然流量观察，不要跳过人工复盘。' + preference;
+  }
+
+  return '建议首轮 3-5 件，先确认点击、加购、订单、退货和广告消耗。' + preference;
+}
+
+function buildMinimumPriceFloorText(profitSnapshot) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    return '等待有效售价和成本快照。补齐利润计算器后，页面会给出当前口径下的保本参考价。';
+  }
+
+  if (!Number.isFinite(profitSnapshot.sale) || !Number.isFinite(profitSnapshot.profit)) {
+    return '当前售价或利润无效，暂时无法给出最低售价底线。';
+  }
+
+  const breakEvenPrice = profitSnapshot.sale - profitSnapshot.profit;
+  if (!Number.isFinite(breakEvenPrice) || breakEvenPrice <= 0) {
+    return '当前成本快照不足以估算保本线。改价前请回到利润计算器重新测算目标售价。';
+  }
+
+  const rubRate = Number.isFinite(profitSnapshot.saleRub) && profitSnapshot.sale > 0
+    ? profitSnapshot.saleRub / profitSnapshot.sale
+    : null;
+  const rubText = Number.isFinite(rubRate) ? `（约 ${rub(breakEvenPrice * rubRate)}）` : '';
+
+  return `按当前一次利润快照，售价低于约 ${yuan(breakEvenPrice)}${rubText} 会接近无利润。实际改价前请把目标售价重新输入利润计算器复核。`;
+}
+
+function buildMainRiskText(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  const risks = [];
+
+  if (!manualProduct.title) risks.push('商品标题未补齐，无法判断具体规格和卖点');
+  if (!Number.isFinite(manualProduct.sourceCost)) risks.push('采购价未补齐，利润边际可能失真');
+  if (!hasCategory) risks.push('类目或产品类型未补齐，上架类目和佣金口径需人工复核');
+
+  if (type === 'risk') {
+    risks.push('利润率偏低，暂不适合广告放量或备货');
+  } else if (type === 'warning') {
+    risks.push('利润率处于谨慎区间，广告、退货或汇率波动可能压缩利润');
+  }
+
+  risks.push(buildLogisticsRiskText(profitSnapshot));
+
+  if (input.adShare !== null && input.adShare >= 15) {
+    risks.push(`广告占比手动预估为 ${percent(input.adShare)}，需要重点控制投放预算`);
+  } else if (input.adShare === null) {
+    risks.push('广告占比未填写，实测时要单独记录广告花费');
+  }
+
+  return uniqueList(risks, 5).join('；') + '。';
+}
+
+function buildDataBoundaryText(ozon, assumptions) {
+  const hasOzonData = ozon && ozon.status === 'connected';
+  const products = hasOzonData && Array.isArray(ozon.products) ? ozon.products : [];
+  const sampleText = products.length
+    ? ' 可选店铺样本：' + products
+      .map(item => `${item.offer_id || item.product_id || '未命名'}${item.name ? ' / ' + item.name : ''}`)
+      .join('；') + '。'
+    : '';
+  const ozonText = hasOzonData
+    ? 'Ozon 店铺商品摘要已连接；它只是你店铺的可选样本上下文，不代表全平台竞品、曝光、点击、转化、广告、订单或财务同步。' + sampleText
+    : OZON_STORE_CONTEXT_WARNING;
+
+  return `${ozonText} ${buildManualAssumptionText(assumptions)} 当前不会自动抓取 1688、Taobao、Amazon、Ozon 或品牌站页面，也不会调用外部商品解析 API。`;
+}
+
+function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
+  const input = normalizeManualTestingAssumptions(assumptions);
+  const actions = [];
+
+  if (!manualProduct.title || !Number.isFinite(manualProduct.sourceCost) || !hasCategory) {
+    actions.push('先补齐商品标题、采购价和类目或产品类型，再复核一次利润快照。');
+  }
+
+  if (type === 'risk') {
+    actions.push('暂不备货，先把售价、采购价、物流成本或广告假设调整到可接受区间。');
+  } else if (type === 'warning') {
+    actions.push('只做 1-3 件低数量测试，验证有无点击、加购和订单信号。');
+  } else if (type === 'test' && profitSnapshot && Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
+    actions.push('首轮按 5-10 件小批量测试，先验证真实转化，不直接放大库存。');
+  } else if (type === 'test') {
+    actions.push('首轮按 3-5 件小批量测试，观察转化后再决定是否补货。');
+  }
+
+  actions.push('测试期人工记录点击、加购、订单、退货和广告花费。');
+  actions.push('验证前不要批量备货，尤其是重货、易损或规格复杂商品。');
+
+  if (input.competitorAvgPrice !== null) {
+    actions.push(`用手动记录的竞品均价 ${rub(input.competitorAvgPrice)} 对照当前售价，避免明显脱离价格带。`);
+  }
+
+  return uniqueList(actions, 5);
+}
+
 function buildOzonAutoReport(analysis, profitSnapshot) {
   const source = analysis.source || {};
   const ozon = analysis.ozon || {};
@@ -321,70 +480,26 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const type = getProfitReportType(profitSnapshot);
   const displayTitle = manualProduct.title || source.title || '';
   const displayCategory = manualProduct.category || insights.category || '';
-  const displayNotes = formatManualNotes(manualProduct.notes);
   const hasTitle = !isBlank(displayTitle);
-  const hasImage = !isBlank(source.image);
   const hasCategory = !isBlank(displayCategory);
-  const hasOzonData = ozon.status === 'connected';
-  const hasManualData = hasManualProductData(manualProduct);
-  const ozonProducts = Array.isArray(ozon.products) ? ozon.products : [];
-  const ozonSampleText = ozonProducts.length
-    ? ' 店铺样本商品：' + ozonProducts
-      .map(item => `${item.offer_id || item.product_id || '未命名'}${item.name ? ' / ' + item.name : ''}`)
-      .join('；')
-    : '';
-  const actions = [];
-
-  if (!hasTitle) {
-    actions.push('先手动填写商品标题、采购价和类目信息，再判断是否进入小量测试。');
-  } else if (!hasImage) {
-    actions.push('来源链接不会自动抓取主图，请人工复核商品主图、规格和页面卖点。');
-  }
-
-  if (!hasCategory) {
-    actions.push('请手动补充类目或产品类型，上架前仍需要人工确认 Ozon 目标类目。');
-  }
-
-  if (!hasOzonData) actions.push(OZON_STORE_CONTEXT_WARNING);
-
-  if (profitSnapshot && profitSnapshot.profitRate < 10) {
-    actions.push('当前利润率低于 10%，暂不建议进入测品。');
-  } else if (profitSnapshot && profitSnapshot.profitRate < 20) {
-    actions.push('只做小预算谨慎测试，不要直接放量。');
-  } else {
-    actions.push('可以进入小量测试，但曝光、点击、加购、订单和退货需要人工记录复盘。');
-  }
-
-  if (uniqueList(insights.keywords).length) {
-    actions.push('用识别出的关键词先检查 Ozon 搜索结果和头部商品卡片质量。');
-  }
-
-  const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : type === 'waiting' ? '等待利润测算' : '建议小量测试';
+  const status = getDecisionStatusLabel(type);
   const sourceHost = source.host || normalizeHost(source.url);
   const marketplaceNotice = getOzonMarketplaceLinkNotice(source.url);
-  const manualSummaryParts = [
-    hasTitle ? `手动商品：${displayTitle}` : MANUAL_PRODUCT_GUIDANCE,
-    `采购价：${formatManualCost(manualProduct.sourceCost)}`,
-    `类目/类型：${displayCategory || '未填写'}`,
-    displayNotes ? `卖点/备注：${displayNotes}` : ''
-  ].filter(Boolean);
-  const summary = hasManualData
-    ? `已识别来源：${sourceHost}。${manualSummaryParts.join('。')}。${marketplaceNotice}`.trim()
-    : `已识别来源：${sourceHost}。${hasTitle ? '商品标题为“' + displayTitle + '”。' : MANUAL_PRODUCT_GUIDANCE} ${marketplaceNotice}`.trim();
-  const logisticsRiskText = buildLogisticsRiskText(profitSnapshot);
+  const titleText = hasTitle ? `商品：${displayTitle}。` : '';
+  const categoryText = hasCategory ? `类目/类型：${displayCategory}。` : '';
+  const sourceText = sourceHost ? `已识别来源：${sourceHost}。` : '';
+  const summary = `${buildDecisionConclusionText(type, profitSnapshot, hasTitle)} ${sourceText}${titleText}${categoryText}${marketplaceNotice}`.trim();
 
   return {
     type,
     status,
     summary,
-    priceText: `${buildProfitCostSnapshotText(profitSnapshot, manualProduct)} 当前不抓取来源站价格或 Ozon 全平台竞品均价；需要人工录入或后续接入合规数据源。`,
-    profitText: buildProfitReportText(profitSnapshot),
-    competitionText: hasOzonData
-      ? 'Ozon API 已通过后端连接检查，已能读取你店铺的商品样本。全平台相似竞品数量、均价、评分评论需要后续接入可用的官方报告或合规第三方数据源。' + ozonSampleText
-      : `${buildOptionalOzonContextText(ozon)} ${buildManualAssumptionText(manualAssumptions)}`,
-    adText: buildTestingSuggestionText(type, profitSnapshot, manualAssumptions),
-    storeText: `手动类目/产品类型：${displayCategory || '待人工补充'}。${displayNotes ? '卖点/备注：' + displayNotes + '。' : ''}${logisticsRiskText} 关键词：${formatList(insights.keywords, '待提取')}。主题标签：${formatList(insights.tags, '待提取')}。`,
-    actions: uniqueList(actions, 5)
+    priceText: buildProfitSafetyText(type, profitSnapshot, manualProduct),
+    profitText: buildSuggestedTestQuantityText(type, profitSnapshot, manualAssumptions),
+    competitionText: buildMinimumPriceFloorText(profitSnapshot),
+    adText: buildMainRiskText(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory),
+    storeText: buildDataBoundaryText(ozon, manualAssumptions),
+    actions: buildNextActionList(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory)
   };
 }
 
@@ -434,7 +549,6 @@ function buildWorkerEndpointNotReadyAnalysis(sourceUrl, profitSnapshot, manualPr
   analysis.ozon.status = 'endpoint_not_ready';
   analysis.ozon.message = 'Worker 已配置，但未来的 /api/ozon/product-summary 端点尚未可用。';
   analysis.report = buildOzonAutoReport(analysis, profitSnapshot);
-  analysis.report.actions = ['确认 Worker 后端需要新增 /api/ozon/product-summary。', '端点完成前继续使用人工备注和利润测算做预判。', '不要从浏览器直接调用 Ozon 官方 API 或保存真实 API Key。'];
   return analysis;
 }
 

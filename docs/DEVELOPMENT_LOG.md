@@ -3,6 +3,14 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-05 Phase 2.5 / AI Analysis seller-facing report refinement
+
+- 修改目标：把 AI 测品报告从长说明调整为更直接的卖家决策输出，减少重复限制文案，让卖家更快判断是否值得小量测试。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/API_INTEGRATION_PLAN.md、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：可选人工测品假设和备注统一放在生成报告前的折叠区域；报告区块改为 `测品结论`、`利润安全边际`、`建议测试数量`、`最低售价底线`、`主要风险`、`下一步动作`；决策标签统一为 `建议小量测试`、`谨慎测试`、`暂不建议测试`；Ozon 店铺摘要不可用提示只作为 `数据边界` 说明，不阻断主流程；下一步动作补充首轮测试数量、最低售价底线复核、人工记录点击/加购/订单/退货/广告花费和不要批量备货。
+- 验收方式：运行 `node --check js/product-selection.js`、`node --check js/main.js`、`node --check js/store-api.js`、`git diff --check`；确认浏览器端不直接请求 `https://api-seller.ozon.ru`，未新增抓取、爬虫、外部商品解析 API、Worker 行为或 Ozon 流量/广告/订单/财务同步。
+- 已知风险：最低售价底线是基于当前一次利润快照的保本参考，不替代利润计算器重新输入目标售价后的复核；可选曝光、点击、转化、竞品和广告假设仍然全部是人工估算。
+
 ## 2026-06-05 Documentation / Phase 2.5 live checkpoint
 
 - 修改目标：记录当前已部署的 AI 测品决策工作流状态，方便后续人工测试、产品判断和边界复核。

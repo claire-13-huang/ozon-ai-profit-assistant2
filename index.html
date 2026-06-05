@@ -454,6 +454,22 @@
                 <label>本地备注 / 偏好</label>
                 <input id="localPreference" placeholder="例如 不压库存 / 只小预算测试">
               </div>
+              <div>
+                <label>预计曝光量备注（手动预估）</label>
+                <textarea id="estimatedExposureNotes" placeholder="例如：估计首轮测试曝光范围、自然曝光或广告曝光假设。"></textarea>
+              </div>
+              <div>
+                <label>预计点击率备注（手动预估）</label>
+                <textarea id="estimatedClickRateNotes" placeholder="例如：主图可能影响点击，预计点击率偏保守。"></textarea>
+              </div>
+              <div>
+                <label>预计转化率备注（手动预估）</label>
+                <textarea id="estimatedConversionRateNotes" placeholder="例如：评价少、价格敏感或规格复杂时，转化率需要保守估计。"></textarea>
+              </div>
+              <div>
+                <label>平台观察备注（人工）</label>
+                <textarea id="manualMarketObservationNotes" placeholder="例如：前台头部商品、主图质量、评论痛点、关键词或价格带观察。"></textarea>
+              </div>
             </div>
           </details>
           <div class="product-image-preview is-empty" id="productImagePreview">
@@ -462,33 +478,33 @@
           <div class="notice" id="aiResultBox">粘贴来源商品链接并填写手动商品信息后，页面会基于来源域名、手动字段和当前利润测算生成测品建议。</div>
           <div class="selection-report selection-waiting" id="productSelectionReport">
             <div class="decision-head">
-              <span class="decision-label">测品决策报告</span>
+              <span class="decision-label">测品结论</span>
               <span class="decision-status" id="productSelectionStatus">等待输入</span>
             </div>
             <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接，并手动填写商品标题、采购价和类目信息。当前页面不会自动抓取任意网站或平台竞品数据。</div>
             <div class="selection-report-grid">
               <div>
-                <span>采购与成本</span>
-                <p id="selectionPriceText">等待竞品均价。</p>
+                <span>利润安全边际</span>
+                <p id="selectionPriceText">等待利润快照。</p>
               </div>
               <div>
-                <span>利润判断</span>
+                <span>建议测试数量</span>
                 <p id="selectionProfitText">等待利润测算。</p>
               </div>
               <div>
-                <span>市场假设</span>
-                <p id="selectionCompetitionText">等待相似竞品数量、评分、评价和痛点。</p>
+                <span>最低售价底线</span>
+                <p id="selectionCompetitionText">等待当前成本快照。</p>
               </div>
               <div>
-                <span>测品建议</span>
-                <p id="selectionAdText">等待广告占比假设。</p>
+                <span>主要风险</span>
+                <p id="selectionAdText">等待商品信息和利润测算。</p>
               </div>
               <div>
-                <span>商品定位</span>
-                <p id="selectionStoreText">等待店铺类型。</p>
+                <span>数据边界</span>
+                <p id="selectionStoreText">等待来源链接和可选上下文状态。</p>
               </div>
             </div>
-            <div class="selection-actions-title">下一步建议</div>
+            <div class="selection-actions-title">下一步动作</div>
             <ul class="selection-actions" id="selectionNextActions">
               <li>先补齐商品信息和利润测算，再决定是否小量测试。</li>
             </ul>
@@ -539,33 +555,6 @@
       </div>
 
       <div id="aiAnalysisMount"></div>
-
-      <div class="section workspace-card optional-testing-card">
-        <div class="view-title-row">
-          <div>
-            <div class="settings-subtitle">可选：人工预估测品参数</div>
-            <p class="panel-intro">当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。</p>
-          </div>
-        </div>
-        <div class="analysis-notes-grid">
-          <div>
-            <label>预计曝光量（手动预估）</label>
-            <textarea id="estimatedExposureNotes" placeholder="例如：估计首轮测试曝光范围、自然曝光或广告曝光假设。"></textarea>
-          </div>
-          <div>
-            <label>预计点击率（手动预估）</label>
-            <textarea id="estimatedClickRateNotes" placeholder="例如：主图可能影响点击，预计点击率偏保守。"></textarea>
-          </div>
-          <div>
-            <label>预计转化率（手动预估）</label>
-            <textarea id="estimatedConversionRateNotes" placeholder="例如：评价少、价格敏感或规格复杂时，转化率需要保守估计。"></textarea>
-          </div>
-          <div>
-            <label>平台观察备注（人工）</label>
-            <textarea id="manualMarketObservationNotes" placeholder="例如：前台头部商品、主图质量、评论痛点、关键词或价格带观察。"></textarea>
-          </div>
-        </div>
-      </div>
     </section>
 
     <section class="app-view" id="apiConnectionView" data-view="api">

@@ -535,16 +535,16 @@ textarea:focus {
   padding: 0 14px 14px;
 }
 
+.manual-fallback-panel textarea {
+  min-height: 82px;
+}
+
 .manual-assumption-panel {
   margin-bottom: 14px;
 }
 
 .manual-assumption-panel .manual-assumption-copy {
   padding: 0 14px;
-}
-
-.optional-testing-card {
-  border-style: dashed;
 }
 
 .store-plan-row,

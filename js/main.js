@@ -910,7 +910,7 @@ function renderOzonAnalysisDetails(analysis) {
   setText('sourceKeywordInsight', `关键词：${keywords}。标签：${tags}。`);
   setText('ozonApiInsight', ozon.status === 'connected'
     ? (ozon.message || 'Ozon 店铺商品摘要已连接。') + productText
-    : 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。');
+    : '可选 Ozon 店铺商品摘要未连接，不影响本次测品建议。');
   setText('analysisLimitInsight', (analysis && analysis.limitations && analysis.limitations.length)
     ? analysis.limitations.join('；')
     : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
@@ -1086,7 +1086,7 @@ async function runOzonAutoAnalysis() {
     setAutoAnalysisStatus(
       ozonConnected
         ? '测品建议已生成。请复核利润、手动假设和 Ozon 可选上下文状态。'
-        : 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。',
+        : '测品建议已生成。请查看报告中的数据边界说明。',
       ''
     );
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
@@ -1097,7 +1097,7 @@ async function runOzonAutoAnalysis() {
     fallback.ozon.message = error.message || 'Worker 产品摘要暂不可用。';
     applyCurrentManualAnalysisContext(fallback);
     renderOzonAutoAnalysis(fallback);
-    setAutoAnalysisStatus('Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。');
+    setAutoAnalysisStatus('测品建议已生成。可选店铺摘要暂不可用，请查看报告中的数据边界说明。');
     setAutoAnalysisProgress('', ['link']);
   } finally {
     setInput('ozonTestApiKey', '');

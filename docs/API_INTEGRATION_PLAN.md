@@ -204,7 +204,7 @@ Frontend interpretation:
 - Ozon Seller API `product-summary` is optional authorized store context only.
 - A failed or missing `product-summary` response must not fail the source-link analysis preview.
 - Ozon marketplace product page links are treated as pasted source links; Seller API cannot directly read arbitrary Ozon pages or other sellers' product data.
-- When `ozon.status !== "connected"`, the frontend should show the source preview and display this warning as optional store-context status: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
+- When `ozon.status !== "connected"`, the frontend should show the source preview and keep the unavailable store-context warning in the report's single `数据边界` note: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
 
 ## Current AI Analysis Manual Preview Workflow
 
@@ -214,8 +214,9 @@ The AI Analysis page is a manual-preview workflow, not a scraper:
 - The frontend does not scrape source pages and does not call 1688, Taobao, Amazon, Ozon marketplace pages, or any external product parsing API.
 - The seller manually fills product title, source cost, category/product type, and optional selling-point notes.
 - The preview report uses those manual fields together with the current profit calculator snapshot.
+- The report is organized as seller-facing decision sections: `测品结论`, `利润安全边际`, `建议测试数量`, `最低售价底线`, `主要风险`, and `下一步动作`.
 - Ozon `product-summary` remains optional authorized store context only and cannot block the manual preview.
-- Optional exposure, click-rate, conversion-rate, competitor, ad-share, and market-observation fields are manual estimates only. Empty optional estimate fields must not block the product-testing decision report.
+- Optional exposure, click-rate, conversion-rate, competitor, ad-share, and market-observation fields are manual estimates only. They should be available before the seller clicks `生成测品建议`. Empty optional estimate fields must not block the product-testing decision report.
 - The frontend does not read real Ozon exposure, click, conversion, advertising, order, finance, stock, or price data in the current workflow.
 
 Manual product fields used by the frontend:

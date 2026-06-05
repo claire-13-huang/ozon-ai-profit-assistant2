@@ -102,45 +102,57 @@
 
 1. Manual product information only should generate a testing decision
    - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.
-   - Expected: report appears from source domain, manual product information, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`.
+   - Expected: report appears from source domain, manual product information, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`; report sections include `测品结论`, `利润安全边际`, `建议测试数量`, `最低售价底线`, `主要风险`, and `下一步动作`.
 
 2. Optional manual testing assumptions should be labeled as estimates
-   - Input: fill 预计曝光量（手动预估）, 预计点击率（手动预估）, 预计转化率（手动预估）, and optional competitor/ad-share assumptions, then click `生成测品建议`.
-   - Expected: report includes those values as manual estimates only; UI shows `当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`; no text implies API sync.
+   - Input: expand the optional manual assumption panel before clicking `生成测品建议`; fill 预计曝光量（手动预估）, 预计点击率（手动预估）, 预计转化率（手动预估）, exposure/click/conversion notes, competitor observations, and optional ad-share assumptions.
+   - Expected: the fields are clearly part of the pre-generation workflow; report includes those values as manual estimates only; UI shows `当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`; no text implies API sync.
 
 3. Report should not fail when optional metrics are empty
    - Input: clear 预计曝光量 / 预计点击率 / 预计转化率 and all optional market assumptions; keep source URL, manual product info, and profit calculator inputs valid; click `生成测品建议`.
-   - Expected: report still shows a testing decision based on profit margin, total cost, source cost, category, selling point, and logistics/profit snapshot.
+   - Expected: report still shows a testing decision based on profit margin, total cost, source cost, category, selling point, and logistics/profit snapshot; `数据边界` explains optional assumptions are empty but does not make the report look failed.
 
-4. 1688 link with manual product information
-   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
-   - Expected: source domain is recognized; manual product information drives the analysis preview; optional Ozon context unavailable appears only as a warning.
+4. High-margin product should produce small-test decision
+   - Input: set profit calculator values so profit margin is 30% or higher, fill source URL and manual product fields, then click `生成测品建议`.
+   - Expected: decision label is `建议小量测试`; report suggests a small first test quantity such as 5-10 units, gives a current-cost minimum price reference, and reminds the seller to record clicks/add-to-cart/orders/returns/ad spend.
 
-5. Ozon product page link with manual product information
-   - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
-   - Expected: Seller API limitation notice appears; manual product information and profit snapshot still drive the testing decision.
+5. Medium-margin product should produce cautious decision
+   - Input: set profit calculator values so profit margin is between 10% and 20%, fill source URL and manual product fields, then click `生成测品建议`.
+   - Expected: decision label is `谨慎测试`; report suggests a low first test quantity such as 1-3 units and warns that ad spend, returns, or logistics changes may compress profit.
 
-6. 1688 link with empty manual fields
-   - Input: open AI Analysis, paste a valid `https://detail.1688.com/...` product URL, leave 商品标题 / 采购价 / 类目 empty, then click `生成测品建议`.
-   - Expected: source domain is recognized; the UI shows `已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`; no hard failure state appears.
+6. Low-margin or negative product should not be recommended
+   - Input: set profit calculator values so profit margin is below 10% or profit is negative, fill source URL and manual product fields, then click `生成测品建议`.
+   - Expected: decision label is `暂不建议测试`; report tells the seller not to stock yet and to improve price, purchase cost, logistics cost, or ad assumptions before testing.
 
 7. 1688 link with manual product information
    - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
-   - Expected: analysis preview shows the source domain, manual product title, source cost, category/product type, notes, and current profit snapshot if available; editing the manual fields after analysis refreshes the preview; Ozon context unavailable appears only as optional warning.
+   - Expected: source domain is recognized; manual product information drives the analysis preview; optional Ozon context unavailable appears only once under `数据边界`.
 
-8. Ozon product page link with manual fields
+8. Ozon product page link with manual product information
+   - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
+   - Expected: Seller API limitation notice appears; manual product information and profit snapshot still drive the testing decision.
+
+9. 1688 link with empty manual fields
+   - Input: open AI Analysis, paste a valid `https://detail.1688.com/...` product URL, leave 商品标题 / 采购价 / 类目 empty, then click `生成测品建议`.
+   - Expected: source domain is recognized; the UI shows `已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。`; no hard failure state appears.
+
+10. 1688 link with manual product information
+   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
+   - Expected: analysis preview shows the source domain, manual product title, source cost, category/product type, notes, and current profit snapshot if available; editing the manual fields after analysis refreshes the preview; Ozon context unavailable appears only once under `数据边界`.
+
+11. Ozon product page link with manual fields
    - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
    - Expected: the page is recognized as an Ozon marketplace/product page; the Seller API limitation notice appears; manual analysis preview still continues and does not claim Seller API can read arbitrary Ozon pages or competitor products.
 
-9. Amazon or external source link with manual fields
+12. Amazon or external source link with manual fields
    - Input: paste an Amazon or brand-site product URL and fill manual title, source cost, category, and notes.
    - Expected: source domain is recognized and the manual fields drive the analysis preview; no scraping, crawler, or external product API request is required.
 
-10. Ozon store context unavailable remains optional
+13. Ozon store context unavailable remains optional
    - Input: run AI Analysis without Ozon credentials or with Ozon context unavailable.
-   - Expected: report still renders from source link + manual fields; the only Ozon unavailable warning is `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
+   - Expected: report still renders from source link + manual fields; the only Ozon unavailable warning appears under `数据边界`: `Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。`
 
-11. No direct source-page scraping
+14. No direct source-page scraping
    - Input: inspect browser network during the above tests.
    - Expected: browser-side code does not call `https://api-seller.ozon.ru`, 1688/Taobao/Amazon product parsing APIs, or scraper/crawler endpoints.
 
