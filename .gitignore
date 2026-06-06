@@ -20,3 +20,4 @@ build/
 # 本地 API 凭证
 worker/.dev.vars
 worker/.wrangler/
+docs/codex-runs/
