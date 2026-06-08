@@ -3,6 +3,16 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-08 Modular UI Refactor / Function Center
+
+- 修改目标：把原本密集的单页工作流整理为 `功能中心` + 独立模块面板，遵循 `一个入口，一个任务，一个结果`，避免利润计算器、选品测品、链接助手、API 设置和未来功能混在一个长页面里。
+- 涉及文件：index.html、css/style.css、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增功能中心模块卡片和顶部模块导航；模块包括 `利润计算器`、`选品测品分析`、`主题标签助手`、`标题关键词助手`、`详情页优化`、`广告数据复盘`、`API 设置`。已有可用模块标记为 `已可用` 或 `设置`，未来模块标记为 `下一阶段`。
+- 功能保留：`利润计算器` 保留原售价、采购成本、重量、物流、佣金、广告假设、汇率、利润、利润率和导出；`选品测品分析` 保留 Evidence Pack、竞品观察、卡片质量、六项评分、测品报告和缺失利润数据的 `商品卡片观察报告` 行为；`API 设置` 保持原有安全设置页面。
+- 占位模块：`主题标签助手`、`标题关键词助手`、`详情页 / 商品卡片优化`、`广告数据复盘` 仅新增入口卡和占位面板，说明未来输入与输出；本次不实现标签生成、标题生成、详情页生成或广告复盘引擎。
+- 安全边界：未新增 LLM API、crawler、dynamic renderer、parser、新后端、新依赖或部署设置；未修改利润公式、物流匹配逻辑、平台预设、Worker 行为或平台切换逻辑；未使用真实凭证、未提交、未推送、未部署。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；浏览器检查功能中心可见、模块切换可用、可用模块行为保留、未来模块为占位且无控制台错误。
+
 ## 2026-06-08 Diagnosis Quality / seller-actionable score explanations
 
 - 修改目标：在不调整 UI 结构、不新增接口和不修改业务公式的前提下，提高 Evidence Pack + Product Testing Score Diagnosis v0.1 的本地规则报告质量，减少泛泛描述，让卖家看到更具体的上架前改动和上架后观察动作。

@@ -1,5 +1,43 @@
 # Manual Test Cases
 
+## Function Center / Modular Navigation
+
+1. Function Center is visible on app load
+   - Input: open `index.html`.
+   - Expected: the page shows `功能中心` with module cards for `利润计算器`, `选品测品分析`, `主题标签助手`, `标题关键词助手`, `详情页优化`, `广告数据复盘`, and `API 设置`.
+
+2. Module statuses are correct
+   - Input: inspect the Function Center cards.
+   - Expected: `利润计算器` and `选品测品分析` show `已可用`; `API 设置` shows `设置`; `主题标签助手`, `标题关键词助手`, `详情页优化`, and `广告数据复盘` show `下一阶段`.
+
+3. Only the selected main module is visible
+   - Input: click each module card and top navigation button.
+   - Expected: only the selected module panel is visible below the Function Center; previous module panels are hidden, so the page does not become one long stacked workflow.
+
+4. Profit Calculator module is preserved
+   - Input: click `利润计算器`, enter sale price, purchase cost, weight, dimensions, exchange rate, commission and ad assumptions.
+   - Expected: platform tabs, logistics matching, total cost, profit, profit rate, decision copy, and CSV export still work with the existing formulas.
+
+5. Product Testing Analysis module is preserved
+   - Input: click `选品测品分析`, fill evidence pack and product testing fields, then click `生成测品决策报告`.
+   - Expected: Evidence Pack, six score cards, report sections, and limited `商品卡片观察报告` behavior still work.
+
+6. Future modules are placeholders only
+   - Input: click `主题标签助手`, `标题关键词助手`, `详情页优化`, and `广告数据复盘`.
+   - Expected: each module opens a placeholder panel that explains future input and output. No tag generation, title generation, detail page generation, or advertising analysis engine runs.
+
+7. API Settings remains accessible
+   - Input: click `API 设置`.
+   - Expected: the existing API settings / backend connection section opens. It does not ask the user to store real API keys in frontend storage.
+
+8. Switching modules preserves inputs
+   - Input: fill a few calculator fields and evidence pack fields, switch to placeholders and back.
+   - Expected: previously entered calculator and product testing inputs remain in place.
+
+9. No new engine or extraction behavior appears
+   - Input: inspect future placeholder modules and generated reports.
+   - Expected: no LLM API, crawler, dynamic renderer, parser, new backend, or new dependency behavior is introduced.
+
 ## AI Analysis Product Card Testing Decision Workspace
 
 1. Evidence pack is the primary input

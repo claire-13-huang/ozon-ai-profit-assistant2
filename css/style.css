@@ -87,11 +87,13 @@ body.theme-yandex {
 
 .app-navigation {
   display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 6px;
   padding: 4px;
   background: #eef0f4;
   border: 1px solid rgba(209, 213, 219, .86);
-  border-radius: 999px;
+  border-radius: 18px;
 }
 
 .app-nav-button {
@@ -123,6 +125,166 @@ button:focus-visible {
   min-height: calc(100vh - 82px);
   margin: 0 auto;
   padding: 18px 24px 28px;
+}
+
+.function-center {
+  margin-bottom: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .82);
+  box-shadow: var(--shadow-card);
+}
+
+.function-center-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.function-center-head h2 {
+  margin: 0 0 5px;
+  color: var(--text);
+  font-size: 22px;
+  letter-spacing: 0;
+}
+
+.function-center-head p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.function-center-note {
+  flex-shrink: 0;
+  padding: 8px 10px;
+  border: 1px solid #dbe7f3;
+  border-radius: 999px;
+  background: #f8fbff;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.module-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.module-card {
+  min-height: 142px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--surface-soft);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  box-shadow: none;
+}
+
+.module-card:hover,
+.module-card.is-active {
+  border-color: color-mix(in srgb, var(--brand) 45%, var(--line));
+  background: #fff;
+}
+
+.module-card.is-active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--brand) 14%, transparent);
+}
+
+.module-card strong {
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 950;
+  line-height: 1.25;
+}
+
+.module-card > span:last-child {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.module-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  padding: 4px 8px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.module-status.status-ready {
+  border-color: #b7e4c7;
+  background: #eefbf3;
+  color: #1f6b43;
+}
+
+.module-status.status-next {
+  border-color: #dbe7f3;
+  background: #f8fbff;
+  color: #365a7d;
+}
+
+.module-status.status-settings {
+  border-color: #fee5a5;
+  background: #fffaf0;
+  color: #7a4b00;
+}
+
+.module-placeholder-panel {
+  min-height: 360px;
+}
+
+.module-placeholder-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+}
+
+.placeholder-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.placeholder-detail-grid > div {
+  min-height: 138px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.placeholder-detail-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.placeholder-detail-grid p {
+  color: var(--muted-strong);
+  font-size: 14px;
+  font-weight: 750;
+  line-height: 1.6;
 }
 
 .app-view {
@@ -2002,6 +2164,12 @@ input.input-warning:focus {
   font-size: 16px;
 }
 
+@media (max-width: 1300px) {
+  .module-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
 @media (max-width: 1000px) {
   .app-topbar {
     position: static;
@@ -2021,6 +2189,7 @@ input.input-warning:focus {
 
   .app-navigation {
     min-width: max-content;
+    flex-wrap: nowrap;
   }
 
   .app-main {
@@ -2033,9 +2202,13 @@ input.input-warning:focus {
   }
 
   .top,
+  .function-center-head,
   .auto-selection-entry,
   .manual-product-correction-grid,
   .decision-input-grid,
+  .module-grid,
+  .module-placeholder-head,
+  .placeholder-detail-grid,
   .workspace-section-head,
   .url-first-steps,
   .extraction-result-grid,
@@ -2095,6 +2268,24 @@ input.input-warning:focus {
   .subsidy-panel,
   .section {
     padding: 16px;
+  }
+
+  .function-center {
+    padding: 14px;
+  }
+
+  .function-center-head {
+    display: block;
+  }
+
+  .function-center-note {
+    display: inline-flex;
+    margin-top: 10px;
+    border-radius: 8px;
+  }
+
+  .module-card {
+    min-height: auto;
   }
 
   .metric .num,

@@ -17,13 +17,65 @@
       <div class="topbar-actions">
         <div class="app-navigation" aria-label="主功能导航">
           <button class="app-nav-button is-active" type="button" data-view-target="profit">利润计算器</button>
-          <button class="app-nav-button" type="button" data-view-target="ai">AI 分析</button>
+          <button class="app-nav-button" type="button" data-view-target="ai">选品测品分析</button>
+          <button class="app-nav-button" type="button" data-view-target="topic-tags">主题标签</button>
+          <button class="app-nav-button" type="button" data-view-target="title-keywords">标题关键词</button>
+          <button class="app-nav-button" type="button" data-view-target="detail-page">详情页优化</button>
+          <button class="app-nav-button" type="button" data-view-target="ad-review">广告复盘</button>
           <button class="app-nav-button" type="button" data-view-target="api">API 设置</button>
         </div>
       </div>
     </header>
 
     <main class="app-main">
+    <section class="function-center" aria-label="功能中心">
+      <div class="function-center-head">
+        <div>
+          <p class="eyebrow">Function Center</p>
+          <h2>功能中心</h2>
+          <p>一个入口，一个任务，一个结果。选择当前要处理的卖家任务，只显示对应工作台。</p>
+        </div>
+        <span class="function-center-note">当前可用：利润计算器 / 选品测品分析 / API 设置</span>
+      </div>
+      <div class="module-grid">
+        <button class="module-card is-active" type="button" data-view-target="profit">
+          <span class="module-status status-ready">已可用</span>
+          <strong>利润计算器</strong>
+          <span>判断这个商品在当前售价、采购价、物流、佣金、广告假设下是否有利润空间。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="ai">
+          <span class="module-status status-ready">已可用</span>
+          <strong>选品测品分析</strong>
+          <span>基于商品证据包、竞品观察、卡片质量和利润底盘，判断是否值得上架测试。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="topic-tags">
+          <span class="module-status status-next">下一阶段</span>
+          <strong>主题标签助手</strong>
+          <span>拆解核心标签、场景标签、属性标签和长尾标签方向。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="title-keywords">
+          <span class="module-status status-next">下一阶段</span>
+          <strong>标题关键词助手</strong>
+          <span>规划适合 Ozon / Wildberries / Yandex 的标题结构和关键词。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="detail-page">
+          <span class="module-status status-next">下一阶段</span>
+          <strong>详情页优化</strong>
+          <span>规划主图、场景图、细节图、卖点图和详情页内容顺序。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="ad-review">
+          <span class="module-status status-next">下一阶段</span>
+          <strong>广告数据复盘</strong>
+          <span>复盘曝光、点击、加购、订单、广告花费、利润和退货信号。</span>
+        </button>
+        <button class="module-card" type="button" data-view-target="api">
+          <span class="module-status status-settings">设置</span>
+          <strong>API 设置</strong>
+          <span>管理未来平台连接配置和安全说明，不在前端保存真实 API Key。</span>
+        </button>
+      </div>
+    </section>
+
     <section class="app-view is-active" id="profitCalculatorView" data-view="profit">
       <div class="tabs">
         <button class="tab active" data-platform="Ozon">Ozon</button>
@@ -751,8 +803,8 @@
       <div class="section workspace-card">
         <div class="view-title-row">
           <div>
-            <div class="title">AI Analysis</div>
-            <p class="panel-intro">这里集中查看来源商品信息、手动测品假设、利润快照和测品决策。当前不会自动读取 Ozon 曝光、点击、转化、广告、订单或财务数据。</p>
+            <div class="title">选品测品分析</div>
+            <p class="panel-intro">基于商品证据包、竞品观察、卡片质量和利润底盘，判断一个商品是否值得上架测试。当前不会自动读取 Ozon 曝光、点击、转化、广告、订单或财务数据。</p>
           </div>
         </div>
 
@@ -786,6 +838,114 @@
       </div>
 
       <div id="aiAnalysisMount"></div>
+    </section>
+
+    <section class="app-view placeholder-module-view" id="topicTagAssistantView" data-view="topic-tags">
+      <div class="section module-placeholder-panel">
+        <div class="module-placeholder-head">
+          <div>
+            <p class="eyebrow">Next Module</p>
+            <div class="title">主题标签助手</div>
+            <p class="panel-intro">根据商品标题、类目、卖点、材质、使用场景和竞品关键词，帮助卖家拆解主题标签方向。</p>
+          </div>
+          <span class="module-status status-next">下一阶段</span>
+        </div>
+        <div class="placeholder-detail-grid">
+          <div>
+            <span>未来输入</span>
+            <p>商品标题、类目、核心卖点、材质、使用场景、竞品关键词。</p>
+          </div>
+          <div>
+            <span>未来输出</span>
+            <p>下一阶段开发：生成核心标签、场景标签、属性标签、长尾标签和不建议使用的泛标签。</p>
+          </div>
+          <div>
+            <span>当前状态</span>
+            <p>占位模块，仅用于功能中心导航结构；本次不实现标签生成逻辑。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-view placeholder-module-view" id="titleKeywordAssistantView" data-view="title-keywords">
+      <div class="section module-placeholder-panel">
+        <div class="module-placeholder-head">
+          <div>
+            <p class="eyebrow">Next Module</p>
+            <div class="title">标题关键词助手</div>
+            <p class="panel-intro">帮助卖家生成适合 Ozon / Wildberries / Yandex 的商品标题和关键词结构。</p>
+          </div>
+          <span class="module-status status-next">下一阶段</span>
+        </div>
+        <div class="placeholder-detail-grid">
+          <div>
+            <span>未来输入</span>
+            <p>商品标题、类目、卖点、材质、使用场景、目标平台和竞品关键词。</p>
+          </div>
+          <div>
+            <span>未来输出</span>
+            <p>下一阶段开发：生成标题结构、俄语标题建议、核心关键词和长尾搜索词。</p>
+          </div>
+          <div>
+            <span>当前状态</span>
+            <p>占位模块，仅用于功能中心导航结构；本次不实现标题或关键词生成逻辑。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-view placeholder-module-view" id="detailPageAssistantView" data-view="detail-page">
+      <div class="section module-placeholder-panel">
+        <div class="module-placeholder-head">
+          <div>
+            <p class="eyebrow">Next Module</p>
+            <div class="title">详情页 / 商品卡片优化</div>
+            <p class="panel-intro">帮助卖家规划主图、场景图、细节图、卖点图和详情页内容顺序。</p>
+          </div>
+          <span class="module-status status-next">下一阶段</span>
+        </div>
+        <div class="placeholder-detail-grid">
+          <div>
+            <span>未来输入</span>
+            <p>商品证据包、卖点、材质、规格、使用场景、差评痛点和竞品卡片观察。</p>
+          </div>
+          <div>
+            <span>未来输出</span>
+            <p>下一阶段开发：生成主图方向、场景图方向、细节图展示点、详情页卖点顺序和差评预防说明。</p>
+          </div>
+          <div>
+            <span>当前状态</span>
+            <p>占位模块，仅用于功能中心导航结构；本次不实现详情页生成或图片方案引擎。</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="app-view placeholder-module-view" id="adReviewAssistantView" data-view="ad-review">
+      <div class="section module-placeholder-panel">
+        <div class="module-placeholder-head">
+          <div>
+            <p class="eyebrow">Next Module</p>
+            <div class="title">广告数据复盘</div>
+            <p class="panel-intro">根据曝光、点击、加购、订单、广告花费和利润结果，判断问题出在流量、点击、转化、利润还是退货。</p>
+          </div>
+          <span class="module-status status-next">下一阶段</span>
+        </div>
+        <div class="placeholder-detail-grid">
+          <div>
+            <span>未来输入</span>
+            <p>曝光、点击、加购、订单、广告花费、利润率、退货和差评信号。</p>
+          </div>
+          <div>
+            <span>未来输出</span>
+            <p>下一阶段开发：分析曝光、点击、加购、订单、广告花费、利润和退货信号，判断继续、优化或暂停。</p>
+          </div>
+          <div>
+            <span>当前状态</span>
+            <p>占位模块，仅用于功能中心导航结构；本次不实现广告数据分析逻辑。</p>
+          </div>
+        </div>
+      </div>
     </section>
 
     <section class="app-view" id="apiConnectionView" data-view="api">
