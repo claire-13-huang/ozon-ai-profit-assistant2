@@ -38,6 +38,26 @@
    - Input: inspect the generated report after using only evidence pack and manual fields.
    - Expected: report works without a product URL, without Store API authorization, without LLM API, and without crawler/dynamic-renderer/parser behavior.
 
+10. Score explanations are seller-actionable
+   - Input: generate a report with evidence pack, competitor price range, review pain points, weak main image, missing material, and complete source cost / target selling price.
+   - Expected: each score reason names a concrete action, such as adjusting price, changing title keywords, changing the main image, strengthening material/spec details, avoiding high ad spend, or recording exposure/click/add-to-cart/order signals.
+
+11. High price produces a concrete price action
+   - Input: make current target price clearly higher than the manually observed competitor price range, then generate a report.
+   - Expected: the price score or action list tells the seller to adjust price, or to justify the higher price with material/spec/package/use-scene differentiation. It must not only say the product has generic price risk.
+
+12. Weak product card produces concrete card fixes
+   - Input: mark title clarity, main image quality, selling point clarity, or category fit as weak.
+   - Expected: report says to change the title, improve the first main-image visual, and add material/spec/usage details. It should not use vague wording such as `可以适当优化`.
+
+13. Review/trust weakness limits ad spending
+   - Input: enter high competitor review count, negative review signals, or high review trust risk.
+   - Expected: report says not to rely on high ad spend before improving main image, price, material explanation, and trust details.
+
+14. Missing evidence stays bounded
+   - Input: leave evidence pack, competitor price, review signals, and backend data empty, then generate a report.
+   - Expected: report states missing evidence/data boundaries and asks the seller to collect specific public inputs. It does not invent demand, orders, ad performance, review details, or platform backend data.
+
 1. Product-card workspace loads
    - Input: open the app, switch to `AI Analysis`.
    - Expected: the main visible flow is `商品基础信息 -> 公开市场与竞品观察 -> 产品卡片质量判断 -> 利润与风险判断 -> 测品决策报告`; 商品标题、来源平台、目标平台、类目、采购成本、目标售价、估重、材质、使用场景和核心卖点 are primary fields.

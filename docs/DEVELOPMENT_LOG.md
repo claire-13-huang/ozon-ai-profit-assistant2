@@ -3,6 +3,15 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-08 Diagnosis Quality / seller-actionable score explanations
+
+- 修改目标：在不调整 UI 结构、不新增接口和不修改业务公式的前提下，提高 Evidence Pack + Product Testing Score Diagnosis v0.1 的本地规则报告质量，减少泛泛描述，让卖家看到更具体的上架前改动和上架后观察动作。
+- 涉及文件：js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：改写 `利润安全评分`、`价格竞争力评分`、`产品卡片质量评分`、`评价与信任评分`、`物流与退货风险评分`、`平台匹配度评分` 的原因文案；报告动作更明确输出改标题、改主图、强化材质说明、调整价格、避免高广告消耗、上架后记录曝光/点击/加购/订单，以及有点击无订单时检查价格、评价、物流时效和主图信任感。
+- 数据边界：继续明确缺少来源成本或目标售价时只生成 `商品卡片观察报告`，显示 `利润数据不足，本次不输出利润安全结论。`；不发明平台需求、订单、广告表现、评价明细或后台数据。
+- 安全边界：未新增 LLM API、crawler、dynamic renderer、parser、新后端、新依赖或部署设置；未修改利润公式、物流匹配逻辑、平台预设、Worker 行为或平台切换逻辑；未使用真实凭证、未提交、未推送、未部署。
+- 验收方式：运行 `node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；检查报告文案不包含 `建议综合判断`、`需要进一步观察`、`可以适当优化`、`存在一定风险` 等泛化表达。
+
 ## 2026-06-06 Product Direction Upgrade / Evidence Pack + Product Testing Score Diagnosis
 
 - 修改目标：把 AI Analysis 的 Product Card Testing Decision Workspace 升级为 `Evidence Pack + Product Testing Score Diagnosis`，让卖家可以粘贴一段商品证据、竞品观察、评价痛点和个人疑问，再由本地规则结构化并生成更具体的测品诊断。

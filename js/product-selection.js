@@ -523,14 +523,14 @@ function buildDecisionConclusionText(type, profitSnapshot, hasTitle) {
   }
 
   if (type === 'warning') {
-    return '谨慎测试。可以考虑一件代发低风险上架，但要先控制广告和重点观察点击、加购、评价信号。';
+    return '谨慎测试。可以一件代发低风险上架，但先限制广告消耗，上架后逐项记录曝光、点击、加购、订单和退货原因。';
   }
 
   if (profitSnapshot && Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
     return '建议上架测试。当前利润率较好，但仍要用一件代发方式验证真实点击、加购、订单和退货。';
   }
 
-  return '建议上架测试。利润具备测试空间，先低风险上架观察真实前台信号。';
+  return '建议上架测试。利润具备测试空间，先低风险上架，重点看曝光、点击、加购、订单和退货原因是否支持继续。';
 }
 
 function getAnalysisSourceCostContext(manualProduct, source) {
@@ -776,7 +776,7 @@ function getProductCardStrengths(product, assumptions) {
 
 function getPriceCompetitivenessText(profitSnapshot, assumptions) {
   if (!profitSnapshot || !profitSnapshot.mainInputValid || !Number.isFinite(profitSnapshot.saleRub)) {
-    return '目标售价或汇率缺失，暂时无法判断价格竞争力。';
+    return '目标售价或汇率缺失，不能判断价格竞争力。先补目标售价、汇率和平台测算，再把当前售价放进竞品价格带比较。';
   }
 
   const min = assumptions.competitorMinPrice;
@@ -788,16 +788,16 @@ function getPriceCompetitivenessText(profitSnapshot, assumptions) {
   if (avg !== null) {
     const ratio = saleRub / avg;
     parts.push(`竞品均价约 ${rub(avg)}`);
-    if (ratio >= 1.25) parts.push('当前售价明显高于竞品均价，需要更强主图、卖点或评价信任支撑');
-    else if (ratio <= 0.85) parts.push('当前售价低于竞品均价，但不能只靠低价，需要确认利润和退货波动');
-    else parts.push('价格大致处于可比较区间');
+    if (ratio >= 1.25) parts.push('当前售价明显高于竞品均价，先调低目标售价，或把主图第一屏、材质说明和差异化卖点做到比竞品更清楚');
+    else if (ratio <= 0.85) parts.push('当前售价低于竞品均价，先回利润计算器确认低价后仍能覆盖广告、物流和退货波动');
+    else parts.push('价格落在可比较区间，下一步优先用主图、标题关键词和评价信任提高点击与加购');
   } else if (min !== null && max !== null) {
     parts.push(`竞品价格带约 ${rub(min)} - ${rub(max)}`);
-    if (saleRub > max) parts.push('当前售价高于观察到的竞品高位');
-    else if (saleRub < min) parts.push('当前售价低于观察到的竞品低位，需确认利润安全');
-    else parts.push('当前售价落在观察到的竞品价格带内');
+    if (saleRub > max) parts.push('当前售价高于观察到的竞品高位，先调整价格，或在标题和主图中明确更高价的材质、规格或套装理由');
+    else if (saleRub < min) parts.push('当前售价低于观察到的竞品低位，先确认利润安全，不要用亏利润的低价换点击');
+    else parts.push('当前售价落在观察到的竞品价格带内，上架后看有曝光无点击时优先改主图和标题');
   } else {
-    parts.push('未填写竞品价格带，价格竞争力只能做初步判断');
+    parts.push('未填写竞品价格带。先人工记录 3 个相似卡片的最低价、最高价和主卖规格，再决定是否调价');
   }
 
   return parts.join('；') + '。';
@@ -808,10 +808,10 @@ function getReviewRiskText(assumptions) {
 
   if (assumptions.topCompetitorReviews !== null) {
     parts.push(`可见评论数约 ${assumptions.topCompetitorReviews}`);
-    if (assumptions.topCompetitorReviews >= 1000) parts.push('头部评价壁垒偏高，新卡片需要更强价格或卖点');
-    else if (assumptions.topCompetitorReviews <= 50) parts.push('评价壁垒不算高，但仍要观察早期评价质量');
+    if (assumptions.topCompetitorReviews >= 1000) parts.push('头部评价壁垒偏高，新卡片不要用高广告消耗硬推，先用更清楚主图、价格和材质说明降低信任门槛');
+    else if (assumptions.topCompetitorReviews <= 50) parts.push('评价壁垒较低，上架后优先看点击到加购是否顺畅，并记录早期差评关键词');
   } else {
-    parts.push('未填写可见评论数，评价信任风险需要上架后重点观察');
+    parts.push('未填写可见评论数。先补头部竞品评论量和差评关键词，否则不要把评价信任当作优势');
   }
 
   if (assumptions.positiveReviewSignals) parts.push(`好评信号：${formatManualNotes(assumptions.positiveReviewSignals)}`);
@@ -839,17 +839,17 @@ function getDecisionFromWorkspace(type, product, assumptions, cardWeaknesses, pr
 function buildObservationActions(decision, profitSnapshot, product, assumptions, cardWeaknesses) {
   const actions = [];
 
-  actions.push('上架后观察曝光、点击率、加购、收藏、订单、退货原因和差评关键词。');
-  actions.push('继续条件：有稳定曝光和点击，价格不明显高于竞品，且利润率仍能覆盖广告、物流和退货波动。');
-  actions.push('优化条件：有曝光但点击弱时优化主图和标题；有点击无加购时优化价格、卖点、规格和详情表达。');
+  actions.push('上架后逐项记录曝光、点击、加购、收藏、订单、退货原因和差评关键词。');
+  actions.push('继续条件：有曝光、有点击、有加购或订单，且当前利润率仍能覆盖广告、物流和退货波动。');
+  actions.push('优化条件：有曝光但点击弱时改主图和标题；有点击无订单时检查价格、评价、物流时效和主图信任感。');
   actions.push('暂停条件：广告消耗快速吃掉利润、退货/差评集中在材质尺码质量，或竞品价格压到当前保本线附近。');
 
   if (decision.status === '优化后再测' && cardWeaknesses.length) {
-    actions.unshift(`上架前优先优化：${cardWeaknesses.slice(0, 3).join('、')}。`);
+    actions.unshift(`上架前优先处理：${cardWeaknesses.slice(0, 3).join('、')}；对应改标题、改主图、补材质和规格说明。`);
   }
 
   if (!profitSnapshot || !profitSnapshot.mainInputValid) {
-    actions.unshift('先补齐利润计算器售价、重量、成本和物流匹配，再决定是否上架测试。');
+    actions.unshift('先补齐利润计算器售价、重量、成本和物流匹配；未补齐前不要输出利润安全结论。');
   }
 
   if (!product.sourceCost && (!profitSnapshot || !Number.isFinite(profitSnapshot.purchaseCost) || profitSnapshot.purchaseCost <= 0)) {
@@ -857,7 +857,7 @@ function buildObservationActions(decision, profitSnapshot, product, assumptions,
   }
 
   if (assumptions.negativeReviewSignals) {
-    actions.push('详情页或标题中提前解释差评痛点，降低误解和退货风险。');
+    actions.push('详情页提前解释差评痛点，尤其是材质、尺寸、气味、易损和安装限制。');
   }
 
   return uniqueList(actions, 6);
@@ -911,34 +911,34 @@ function buildScoreDiagnosis(context) {
   const saleRub = hasCompleteProfitSnapshot && Number.isFinite(profitSnapshot.saleRub) ? profitSnapshot.saleRub : null;
 
   let profitScore = 0;
-  let profitReason = '利润数据不足，本次不输出利润安全结论。';
+  let profitReason = '利润数据不足，本次不输出利润安全结论。先补来源成本和目标售价；未补齐前只做商品卡片观察，不判断广告、退货或物流容错。';
   if (hasProfitDecisionData && hasCompleteProfitSnapshot && Number.isFinite(profitSnapshot.profitRate)) {
     profitScore = 45 + profitSnapshot.profitRate;
-    if (profitSnapshot.profitRate >= 30) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，有空间覆盖广告、退货和物流波动，但仍需按实测成本复核。`;
-    else if (profitSnapshot.profitRate >= 20) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，能测试但广告和退货容错有限。`;
-    else if (profitSnapshot.profitRate >= 10) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，广告或退货稍高就会压缩收益。`;
-    else profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，当前不适合输出积极利润判断。`;
+    if (profitSnapshot.profitRate >= 30) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，可以承受一定广告、退货和物流波动；上架后仍要记录广告消耗和退货原因，不要在没有订单信号前放大投入。`;
+    else if (profitSnapshot.profitRate >= 20) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，可以测试但容错不宽；先设广告消耗上限，若有点击无订单，优先检查价格、评价、物流时效和主图信任感。`;
+    else if (profitSnapshot.profitRate >= 10) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，广告、退货或物流稍高就会压缩利润；先调低采购成本、提高目标售价或复核重量后再测试。`;
+    else profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，当前利润承受不了广告和退货波动；先调整价格、采购价或物流条件，不要直接开高广告消耗。`;
   } else if (hasProfitDecisionData) {
     profitScore = 45;
-    profitReason = '来源成本和目标售价已填写，但利润计算器快照不完整，暂按待复核利润口径评分。';
+    profitReason = '来源成本和目标售价已填写，但利润计算器快照不完整。先补售价、采购价、重量、汇率和平台测算，再输出保本线和利润安全判断。';
   }
 
   let priceScore = 58;
-  let priceReason = '未提供可比较竞品价格，价格竞争力按中性偏保守评分。';
+  let priceReason = '未提供可比较竞品价格。先记录 3 个相似商品的低价、高价、主卖规格和主图卖点，再决定是否调整目标售价。';
   if (competitorRange && saleRub !== null) {
     if (saleRub > competitorRange.max * 1.12) {
       priceScore = 42;
-      priceReason = `当前售价约 ${rub(saleRub)}，高于${competitorRange.source}上沿 ${rub(competitorRange.max)}，需要更强主图、卖点或评价信任支撑。`;
+      priceReason = `当前售价约 ${rub(saleRub)}，高于${competitorRange.source}上沿 ${rub(competitorRange.max)}；先调整价格，或在主图和标题里明确容量、材质、套装或使用场景差异。`;
     } else if (saleRub < competitorRange.min * 0.9) {
       priceScore = 70;
-      priceReason = `当前售价约 ${rub(saleRub)}，低于${competitorRange.source}下沿 ${rub(competitorRange.min)}，先确认利润不会被低价吞掉。`;
+      priceReason = `当前售价约 ${rub(saleRub)}，低于${competitorRange.source}下沿 ${rub(competitorRange.min)}；先确认利润安全，不要用低价换来无法覆盖广告和退货的订单。`;
     } else {
       priceScore = 64;
-      priceReason = `当前售价约 ${rub(saleRub)}，落在${competitorRange.source} ${rub(competitorRange.min)} - ${rub(competitorRange.max)} 内。`;
+      priceReason = `当前售价约 ${rub(saleRub)}，落在${competitorRange.source} ${rub(competitorRange.min)} - ${rub(competitorRange.max)} 内；价格不是主要阻碍，优先改主图、标题关键词和信任说明。`;
     }
   } else if (competitorRange) {
     priceScore = 55;
-    priceReason = `${competitorRange.source}约 ${rub(competitorRange.min)} - ${rub(competitorRange.max)}，但缺少可换算目标售价，先按卡片观察判断。`;
+    priceReason = `${competitorRange.source}约 ${rub(competitorRange.min)} - ${rub(competitorRange.max)}，但缺少可换算目标售价。先补目标售价和汇率，再判断要调价还是强化差异化卖点。`;
   }
   if (assumptions.marketCrowding === 'crowded') priceScore -= 10;
   if (assumptions.marketCrowding === 'gap') priceScore += 8;
@@ -955,8 +955,8 @@ function buildScoreDiagnosis(context) {
   if (assumptions.sellingPointClarity === 'strong') cardScore += 6;
   if (assumptions.mainImageQuality === 'weak') cardScore -= 12;
   const cardReason = cardWeaknesses.length
-    ? `主要短板：${cardWeaknesses.slice(0, 3).join('、')}。`
-    : '标题、类目、材质、场景或卖点中已有可用信息，当前没有明显卡片硬伤。';
+    ? `主要短板：${cardWeaknesses.slice(0, 3).join('、')}。先改标题关键词和主图第一视觉，再补材质、规格和使用场景说明。`
+    : '标题、类目、材质、场景或卖点已有基础信息。下一步检查主图第一屏是否能直接说明用途、材质和差异点。';
 
   let trustScore = 60;
   if (assumptions.topCompetitorReviews !== null && assumptions.topCompetitorReviews >= 1000) trustScore -= 12;
@@ -966,10 +966,10 @@ function buildScoreDiagnosis(context) {
   if (assumptions.reviewTrustLevel === 'high') trustScore -= 14;
   if (assumptions.reviewTrustLevel === 'low') trustScore += 6;
   const trustReason = assumptions.negativeReviewSignals || evidence.negativeReviewRisks.length
-    ? `已看到差评或担心点：${formatList([assumptions.negativeReviewSignals].concat(evidence.negativeReviewRisks), '未提供差评文本')}。`
+    ? `已看到差评或担心点：${formatList([assumptions.negativeReviewSignals].concat(evidence.negativeReviewRisks), '未提供差评文本')}。上架前把这些点写进详情页解释，评价少时避免高广告消耗。`
     : assumptions.topCompetitorReviews !== null
-      ? `可见评论数约 ${assumptions.topCompetitorReviews}，需要用价格、主图和卖点弥补新卡片信任差距。`
-      : '未提供评论数量或评价内容，信任评分按中性偏保守处理。';
+      ? `可见评论数约 ${assumptions.topCompetitorReviews}。若竞品评价多，新卡片要用更清楚的价格、主图、材质和售后承诺降低信任差距。`
+      : '未提供评论数量或评价内容。先补竞品评论量、好评关键词和差评关键词，再判断是否能承受转化信任压力。';
 
   let logisticsScore = 68;
   if (product.estimatedWeight !== null && product.estimatedWeight >= 1000) logisticsScore -= 14;
@@ -981,10 +981,10 @@ function buildScoreDiagnosis(context) {
   if (evidence.logisticsRiskHints.length) logisticsScore -= 8;
   if (product.material) logisticsScore += 4;
   const logisticsReason = evidence.returnRiskHints.length || evidence.logisticsRiskHints.length
-    ? `证据包提到：${formatList(evidence.returnRiskHints.concat(evidence.logisticsRiskHints), '未提供物流或退货风险文本')}。`
+    ? `证据包提到：${formatList(evidence.returnRiskHints.concat(evidence.logisticsRiskHints), '未提供物流或退货风险文本')}。上架前补材质、尺寸、包装和物流时效说明，重货先复核物流成本是否吃掉利润。`
     : product.estimatedWeight !== null
-      ? `卖家估重 ${product.estimatedWeight}g，退货和物流判断仍按利润计算器口径复核。`
-      : '未提供重量、尺寸或退货痛点，物流与退货评分按中性处理。';
+      ? `卖家估重 ${product.estimatedWeight}g。上架前用利润计算器复核重量和物流费，详情页写清材质、尺寸和适用场景来减少退货。`
+      : '未提供重量、尺寸或退货痛点。先补重量、材质、尺寸和包装信息，否则不要把物流与退货风险当作低风险。';
 
   let platformScore = 58;
   if (product.targetPlatform) platformScore += 8;
@@ -994,7 +994,7 @@ function buildScoreDiagnosis(context) {
   if (assumptions.categoryFit === 'weak') platformScore -= 14;
   if (assumptions.marketCrowding === 'crowded') platformScore -= 8;
   if (assumptions.marketCrowding === 'gap') platformScore += 8;
-  const platformReason = `目标平台 ${product.targetPlatform || '未选择'}；${product.category ? `类目方向 ${product.category}` : '类目未确认'}；${product.usageScene ? `使用场景 ${product.usageScene}` : '使用场景未明确'}。`;
+  const platformReason = `目标平台 ${product.targetPlatform || '未选择'}；${product.category ? `类目方向 ${product.category}` : '类目未确认'}；${product.usageScene ? `使用场景 ${product.usageScene}` : '使用场景未明确'}。上架前确认类目、标题关键词和主图场景一致，避免引来不匹配点击。`;
 
   const scores = [
     { label: '利润安全评分', score: clampScore(profitScore), reason: profitReason },
@@ -1056,8 +1056,8 @@ function buildPositioningText(product, analysis, evidence) {
 function buildSellingPointsText(product, evidence, cardStrengths) {
   const points = uniqueList([product.sellingPoint].concat(evidence.sellingPoints, cardStrengths), 6);
   return points.length
-    ? `当前可用卖点：${points.join('、')}。标题、主图和详情页要把这些卖点放到买家第一眼能看到的位置。`
-    : '未提供明确卖点。标题需要突出容量、材质、使用场景或解决的具体问题。';
+    ? `当前可用卖点：${points.join('、')}。改标题时把核心材质、容量/规格和使用场景前置；改主图时让买家第一眼看到用途和差异点。`
+    : '未提供明确卖点。先写出一个可放进标题和主图的卖点：容量、材质、使用场景、解决的痛点或与竞品不同的规格。';
 }
 
 function buildCardProblemText(product, cardWeaknesses, assumptions, evidence) {
@@ -1067,8 +1067,8 @@ function buildCardProblemText(product, cardWeaknesses, assumptions, evidence) {
   if (!product.sellingPoint && !evidence.sellingPoints.length) problems.push('缺少可直接写进标题或主图的卖点');
 
   return uniqueList(problems, 6).length
-    ? `上架前先处理：${uniqueList(problems, 6).join('、')}。`
-    : '标题、类目、材质、场景和卖点已有基础信息；上架前仍要检查主图第一视觉、规格表达和详情页承诺。';
+    ? `上架前先处理：${uniqueList(problems, 6).join('、')}。动作顺序：先改主图第一视觉，再改标题关键词，最后补材质、规格、尺寸和使用场景说明。`
+    : '标题、类目、材质、场景和卖点已有基础信息。上架前仍要检查主图第一视觉、规格表达、材质说明和详情页承诺是否一致。';
 }
 
 function buildReviewTrustDiagnosisText(assumptions, evidence) {
@@ -1081,8 +1081,8 @@ function buildReviewTrustDiagnosisText(assumptions, evidence) {
   if (evidence.negativeReviewRisks.length) parts.push(`证据包差评/担心点：${evidence.negativeReviewRisks.slice(0, 4).join('、')}`);
 
   return parts.length
-    ? parts.join('；') + '。评价少时，不要依赖高广告消耗放量，先用主图、详情页和价格降低信任门槛。'
-    : '未提供评论数量、好评或差评文本。评价与信任风险按缺失处理，上架后要单独记录评价关键词和退货原因。';
+    ? parts.join('；') + '。评价少时，不要依赖高广告消耗放量；先用清晰主图、材质说明、价格和售后承诺降低信任门槛。'
+    : '未提供评论数量、好评或差评文本。先补头部竞品评论量和差评关键词；上架后单独记录评价关键词和退货原因。';
 }
 
 function buildLogisticsReturnDiagnosisText(profitSnapshot, product, assumptions, evidence) {
@@ -1093,7 +1093,7 @@ function buildLogisticsReturnDiagnosisText(profitSnapshot, product, assumptions,
   if (assumptions.returnRiskLevel) parts.push(`你标记的退货风险：${valueLabel(assumptions.returnRiskLevel, { low: '低', medium: '中', high: '高' })}`);
   if (evidence.returnRiskHints.length) parts.push(`退货线索：${evidence.returnRiskHints.slice(0, 4).join('、')}`);
   if (evidence.logisticsRiskHints.length) parts.push(`物流线索：${evidence.logisticsRiskHints.slice(0, 4).join('、')}`);
-  parts.push('材质不清时，详情页必须补充材质说明；重量偏高时，优先检查物流成本是否吃掉利润。');
+  parts.push('材质不清时，详情页必须补材质、尺寸和适用限制；重量偏高时，先复核物流成本是否吃掉利润，再决定是否上架测试。');
 
   return parts.join('；') + '。';
 }
@@ -1156,8 +1156,8 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const priceReviewText = hasProfitDecisionData && hasCompleteProfitSnapshot
     ? `${getPriceCompetitivenessText(profitSnapshot, manualAssumptions)} ${getReviewRiskText(manualAssumptions)}`
     : hasProfitDecisionData
-      ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}；竞品价格带可作为公开市场观察，完整价格竞争力仍需汇率、物流和平台费用快照复核。 ${getReviewRiskText(manualAssumptions)}`
-      : `利润数据不足，本次不输出利润安全结论。${manualProduct.targetSellingPrice ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}，但仍需要利润计算器快照确认汇率、物流和平台费用。` : '目标售价未形成完整利润快照，价格竞争力只能作为卡片观察。'} ${getReviewRiskText(manualAssumptions)}`;
+      ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}；先补汇率、物流和平台费用快照，再把售价换算到竞品价格带内判断是否需要调价。 ${getReviewRiskText(manualAssumptions)}`
+      : `利润数据不足，本次不输出利润安全结论。${manualProduct.targetSellingPrice ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}，但仍需要利润计算器快照确认汇率、物流和平台费用。` : '目标售价未形成完整利润快照，本次只检查卡片、竞品和评价线索。'} ${getReviewRiskText(manualAssumptions)}`;
   const reviewRiskText = buildReviewTrustDiagnosisText(manualAssumptions, evidence);
   const profitRiskText = hasProfitDecisionData
     ? `${buildProfitSafetyText(decision.type, profitSnapshot, manualProduct, source)} ${buildMinimumPriceFloorText(profitSnapshot)}`
@@ -1167,14 +1167,25 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
   const actions = buildObservationActions(decision, profitSnapshot, effectiveProduct, manualAssumptions, cardWeaknesses);
 
   if (!hasProfitDecisionData) {
-    actions.unshift('补齐利润计算器售价、采购价、重量和平台测算后，再生成完整利润安全判断。');
+    actions.unshift('补齐 AI 页面来源成本和目标售价，再到利润计算器复核售价、采购价、重量和平台测算。');
   } else if (!hasCompleteProfitSnapshot) {
-    actions.unshift('已进入测品决策报告；建议继续补齐利润计算器快照，用于复核物流、佣金和利润率。');
+    actions.unshift('已进入测品决策报告；继续补齐利润计算器快照，用于复核物流、佣金、利润率和保本价。');
   }
-  actions.unshift('标题需要突出容量、材质、使用场景或解决的具体问题。');
-  if (cardWeaknesses.length) actions.unshift(`优先优化主图第一视觉，并处理：${cardWeaknesses.slice(0, 3).join('、')}。`);
+  actions.unshift('改标题：把容量、材质、使用场景或解决的具体问题放在标题前半段。');
+  actions.unshift('改主图：第一屏直接展示用途、尺寸/容量、核心材质和与竞品不同的点。');
+  if (cardWeaknesses.length) actions.unshift(`上架前先处理：${cardWeaknesses.slice(0, 3).join('、')}。`);
+  const actionCompetitorRange = getComparableCompetitorRange(manualAssumptions, evidence);
+  const actionSaleRub = hasCompleteProfitSnapshot && Number.isFinite(profitSnapshot.saleRub) ? profitSnapshot.saleRub : null;
+  if (actionCompetitorRange && actionSaleRub !== null && actionSaleRub > actionCompetitorRange.max * 1.12) {
+    actions.unshift(`调整价格：当前售价约 ${rub(actionSaleRub)} 高于竞品上沿 ${rub(actionCompetitorRange.max)}，先降价或强化材质/规格差异后再测。`);
+  } else if (actionCompetitorRange && actionSaleRub !== null && actionSaleRub < actionCompetitorRange.min * 0.9) {
+    actions.push(`低价测试前复核利润：当前售价约 ${rub(actionSaleRub)} 低于竞品下沿 ${rub(actionCompetitorRange.min)}，不要用亏利润价格换点击。`);
+  }
   if (manualAssumptions.negativeReviewSignals || evidence.negativeReviewRisks.length) {
-    actions.push('详情页要提前解释差评痛点，减少买家误解和退货。');
+    actions.push('强化材质说明：把差评痛点对应的材质、尺寸、气味、易损或安装限制写进详情页。');
+  }
+  if (manualAssumptions.reviewTrustLevel === 'high' || manualAssumptions.topCompetitorReviews === null || manualAssumptions.topCompetitorReviews >= 1000) {
+    actions.push('避免高广告消耗：评价信任不足时，先改主图、价格和详情页承诺，再扩大广告投入。');
   }
   actions.push('有点击无订单时，优先检查价格、评价、物流时效和主图信任感。');
 
@@ -1192,7 +1203,7 @@ function buildOzonAutoReport(analysis, profitSnapshot) {
     adText: profitRiskText,
     logisticsReturnText,
     storeText: dataBoundaryText,
-    actions: uniqueList(actions, 6)
+    actions: uniqueList(actions, 8)
   };
 }
 
