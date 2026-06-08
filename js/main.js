@@ -5,9 +5,13 @@ let currentValidation = { values: {}, errors: [], warnings: [], invalidIds: [], 
 let lastProfitSnapshot = null;
 let lastOzonAutoAnalysis = null;
 let ozonTemporaryConnectionState = { status: 'not_connected', message: '未测试' };
+let currentExtractionRequestId = 0;
 let sourcePreviewState = {
   lastPreviewUrl: '',
   activeRequestUrl: '',
+  lastRequestId: 0,
+  activeRequestId: 0,
+  currentPreview: null,
   lastAutoFilledTitle: '',
   lastAutoFilledImage: '',
   lastAutoFilledSourceCost: '',
@@ -17,6 +21,7 @@ let sourcePreviewState = {
   isSourceCostAutoFilledFromPreview: false,
   isCategorySuggestedFromAssist: false
 };
+const DECISION_DATA_WARNING_TEXT = '请先填写来源成本和目标售价，或先在利润计算器中完成售价、采购价、重量和平台测算。否则只能做商品卡片观察，不能判断利润安全边际。';
 
 const apiPreparationFieldIds = [
   'ozonTestStoreName',
@@ -26,9 +31,16 @@ const apiPreparationFieldIds = [
 ];
 
 const manualProductFieldIds = [
+  'productEvidencePack',
   'manualProductTitle',
   'manualSourceCost',
   'manualProductCategory',
+  'sourcePlatformInput',
+  'targetSellingPriceInput',
+  'estimatedWeightInput',
+  'productMaterialInput',
+  'productUsageSceneInput',
+  'productSellingPointInput',
   'manualProductNotes',
   'manualProductTextHelper'
 ];
@@ -51,7 +63,19 @@ const manualTestingAssumptionFieldIds = [
   'selectionAdType',
   'storeType',
   'storeOrderRange',
-  'localPreference'
+  'localPreference',
+  'competitorCardQuality',
+  'marketCrowding',
+  'positiveReviewSignals',
+  'negativeReviewSignals',
+  'titleClarity',
+  'mainImageQuality',
+  'sellingPointClarity',
+  'categoryFit',
+  'specComplexity',
+  'visualDifferentiation',
+  'returnRiskLevel',
+  'reviewTrustLevel'
 ];
 
 const savedFieldIds = [
@@ -73,9 +97,16 @@ const savedFieldIds = [
   'subsidyAmountInput',
   'subsidyRateInput',
   'sourceProductUrl',
+  'productEvidencePack',
   'manualProductTitle',
   'manualSourceCost',
   'manualProductCategory',
+  'sourcePlatformInput',
+  'targetSellingPriceInput',
+  'estimatedWeightInput',
+  'productMaterialInput',
+  'productUsageSceneInput',
+  'productSellingPointInput',
   'manualProductNotes',
   'manualProductTextHelper',
   'estimatedExposure',
@@ -99,7 +130,19 @@ const savedFieldIds = [
   'selectionAdType',
   'storeType',
   'storeOrderRange',
-  'localPreference'
+  'localPreference',
+  'competitorCardQuality',
+  'marketCrowding',
+  'positiveReviewSignals',
+  'negativeReviewSignals',
+  'titleClarity',
+  'mainImageQuality',
+  'sellingPointClarity',
+  'categoryFit',
+  'specComplexity',
+  'visualDifferentiation',
+  'returnRiskLevel',
+  'reviewTrustLevel'
 ];
 
 const inputRules = {
@@ -424,7 +467,7 @@ function getProfitDecision(sale, profit, profitRate) {
     return {
       type: 'low',
       status: '勉强可测',
-      text: '当前利润率只是勉强可测，不适合直接放量。建议小量测试，并优先确认采购、物流、广告和退货假设。'
+      text: '当前利润率只是勉强可测，不适合直接放量。建议低风险验证，并优先确认采购、物流、广告和退货假设。'
     };
   }
 
@@ -567,7 +610,7 @@ function getNextAction(data) {
 
   return {
     type: 'healthy',
-    text: '当前利润有一定空间，但仍建议小量测试，并复核退货率、广告消耗和汇率波动。'
+    text: '当前利润有一定空间，但仍建议低风险验证，并复核退货率、广告消耗和汇率波动。'
   };
 }
 
@@ -794,8 +837,8 @@ function renderAiAnalysisStatusModel() {
 
   setText('aiProductLinkStatus', productLinkStatus);
   setText('aiStoreApiStatus', apiConnected ? 'API connected' : 'Not connected');
-  setText('aiAnalysisModeStatus', apiConnected && workerConfigured ? 'Authorized preview' : 'Preview / manual');
-  setText('aiDataSourceStatus', apiConnected ? 'API connected' : workerConfigured ? 'Manual + Worker ready' : 'Manual input');
+  setText('aiAnalysisModeStatus', '本地规则 v0.1');
+  setText('aiDataSourceStatus', workerConfigured ? 'Product card workspace + optional link helper' : 'Product card workspace + local rules');
 }
 
 function setReferenceRateStatus(message, type = '') {
@@ -849,10 +892,15 @@ function renderProductSelectionReport(report) {
   setText('productSelectionSummary', report.summary);
   setText('selectionPriceText', report.priceText);
   setText('selectionProfitText', report.profitText);
+  setText('selectionCardProblemsText', report.cardProblemsText);
   setText('selectionCompetitionText', report.competitionText);
+  setText('selectionReviewRiskText', report.reviewRiskText);
   setText('selectionAdText', report.adText);
+  setText('selectionLogisticsReturnText', report.logisticsReturnText);
   setText('selectionStoreText', report.storeText);
   setText('aiResultBox', report.summary);
+  renderTestingScoreOverview(report.scores);
+  renderEvidenceDiagnosis(report.evidenceSummary);
 
   const list = document.getElementById('selectionNextActions');
   if (!list) return;
@@ -863,6 +911,132 @@ function renderProductSelectionReport(report) {
     li.textContent = action;
     list.appendChild(li);
   });
+}
+
+function renderTestingScoreOverview(scores) {
+  const container = document.getElementById('testingScoreOverview');
+  if (!container) return;
+
+  const items = Array.isArray(scores) ? scores : [];
+  container.textContent = '';
+  container.hidden = !items.length;
+  if (!items.length) return;
+
+  items.forEach(item => {
+    const score = Number.isFinite(item.score) ? Math.max(0, Math.min(100, Math.round(item.score))) : 0;
+    const card = document.createElement('div');
+    card.className = 'score-card';
+    card.dataset.scoreBand = score >= 75 ? 'good' : score >= 55 ? 'watch' : 'risk';
+
+    const label = document.createElement('span');
+    label.textContent = item.label || '评分';
+
+    const value = document.createElement('strong');
+    value.textContent = `${score} / 100`;
+
+    const reason = document.createElement('p');
+    reason.textContent = item.reason || '未提供评分原因。';
+
+    card.append(label, value, reason);
+    container.appendChild(card);
+  });
+}
+
+function renderEvidenceDiagnosis(evidenceSummary) {
+  const container = document.getElementById('evidenceDiagnosisSummary');
+  if (!container) return;
+
+  const rows = Array.isArray(evidenceSummary) ? evidenceSummary : [];
+  container.textContent = '';
+  container.hidden = !rows.length;
+  if (!rows.length) return;
+
+  rows.forEach(row => {
+    const item = document.createElement('div');
+    const label = document.createElement('span');
+    const text = document.createElement('p');
+
+    label.textContent = row.label || '证据';
+    text.textContent = row.text || '未提供。';
+    item.append(label, text);
+    container.appendChild(item);
+  });
+}
+
+function scrollToWorkspaceElement(id) {
+  const el = document.getElementById(id);
+  if (!el || typeof el.scrollIntoView !== 'function') return;
+  el.scrollIntoView({ behavior: 'auto', block: 'center' });
+}
+
+function hasValidProfitDecisionSnapshot(profitSnapshot = lastProfitSnapshot) {
+  const sale = readNumber('salePrice');
+  const purchaseCost = readNumber('purchaseCost');
+  const weight = readNumber('weight');
+  const rubRate = readNumber('rubRate');
+
+  return Boolean(
+    profitSnapshot &&
+    profitSnapshot.mainInputValid &&
+    !sale.empty &&
+    !purchaseCost.empty &&
+    !weight.empty &&
+    !rubRate.empty &&
+    sale.value > 0 &&
+    purchaseCost.value > 0 &&
+    weight.value > 0 &&
+    rubRate.value > 0
+  );
+}
+
+function getDecisionDataValidation(profitSnapshot = lastProfitSnapshot) {
+  const manualProduct = getManualProductInput();
+  const hasSourceCost = Number.isFinite(manualProduct.sourceCost) && manualProduct.sourceCost > 0;
+  const hasTargetSellingPrice = Number.isFinite(manualProduct.targetSellingPrice) && manualProduct.targetSellingPrice > 0;
+  const hasProfitSnapshot = hasValidProfitDecisionSnapshot(profitSnapshot);
+  const hasManualCoreProfitInputs = hasSourceCost && hasTargetSellingPrice;
+  const hasFullDecisionData = hasManualCoreProfitInputs;
+  const shouldWarn = !hasFullDecisionData;
+
+  return {
+    hasSourceCost,
+    hasTargetSellingPrice,
+    hasProfitSnapshot,
+    hasManualCoreProfitInputs,
+    hasFullDecisionData,
+    shouldWarn,
+    message: shouldWarn ? DECISION_DATA_WARNING_TEXT : ''
+  };
+}
+
+function renderDecisionDataValidation(validation) {
+  const warning = document.getElementById('decisionValidationWarning');
+  const sourceCostInput = document.getElementById('manualSourceCost');
+  const targetPriceInput = document.getElementById('targetSellingPriceInput');
+
+  [sourceCostInput, targetPriceInput].forEach(input => {
+    if (input) input.classList.remove('input-warning');
+  });
+
+  if (!warning) return;
+
+  if (!validation || !validation.shouldWarn) {
+    warning.hidden = true;
+    warning.textContent = '';
+    return;
+  }
+
+  warning.hidden = false;
+  warning.textContent = validation.message;
+
+  if (!validation.hasSourceCost && sourceCostInput) sourceCostInput.classList.add('input-warning');
+  if (!validation.hasTargetSellingPrice && targetPriceInput) targetPriceInput.classList.add('input-warning');
+}
+
+function refreshDecisionDataValidationIfVisible() {
+  const warning = document.getElementById('decisionValidationWarning');
+  if (!warning || warning.hidden) return;
+  renderDecisionDataValidation(getDecisionDataValidation(lastProfitSnapshot));
 }
 
 function setAutoAnalysisStatus(message, type = '') {
@@ -876,10 +1050,9 @@ function setAutoAnalysisStatus(message, type = '') {
 
 function setProductLinkPreviewStatus() {
   const sourceUrl = fieldValue('sourceProductUrl');
-  const manualTitle = fieldValue('manualProductTitle');
 
   if (!sourceUrl) {
-    setAutoAnalysisStatus('等待粘贴来源商品链接。当前为手动/预览分析模式。');
+    setAutoAnalysisStatus('来源链接为空；你仍可以直接填写商品信息并生成测品决策报告。');
     renderAiAnalysisStatusModel();
     return;
   }
@@ -888,11 +1061,9 @@ function setProductLinkPreviewStatus() {
     const parsed = new URL(sourceUrl);
     if (!['http:', 'https:'].includes(parsed.protocol)) throw new Error('invalid');
     const workerConfigured = hasConfiguredWorkerUrl();
-    setAutoAnalysisStatus(manualTitle
-      ? '已识别来源链接。当前会基于商品信息和利润测算生成预览，手动字段仍可编辑。'
-      : workerConfigured
-        ? '已识别来源链接。点击生成时会尝试读取公开页面元数据；如果读取失败，请手动填写商品标题、采购价和类目信息。'
-        : '已识别来源链接，但当前未配置 Worker 公开元数据预览。请手动填写商品标题、采购价和类目信息后继续分析。');
+    setAutoAnalysisStatus(workerConfigured
+      ? '已接收可选链接。点击提取按钮后会尝试读取公开商品信息。'
+      : '已接收可选链接。当前未配置 Worker，报告仍会基于商品卡片、公开观察和利润快照生成。');
   } catch (error) {
     setAutoAnalysisStatus('商品链接格式不正确，请填写 http 或 https URL。', 'is-error');
   }
@@ -955,6 +1126,10 @@ function sourceInputStillMatches(sourceUrl) {
   return normalizeSourcePreviewUrl(fieldValue('sourceProductUrl')) === normalizeSourcePreviewUrl(sourceUrl);
 }
 
+function sourceRequestStillCurrent(sourceUrl, requestId) {
+  return sourceInputStillMatches(sourceUrl) && sourcePreviewState.activeRequestId === requestId;
+}
+
 function formatExtractedSourcePrice(source) {
   if (!source || source.price === null || source.price === undefined || source.price === '') return '未识别价格';
 
@@ -963,9 +1138,21 @@ function formatExtractedSourcePrice(source) {
   return `${source.currency || '未识别币种'} ${priceText}`;
 }
 
+function formatMoneyField(field, fallbackCurrency = '') {
+  if (!field || field.value === null || field.value === undefined || field.value === '') return '未识别';
+  const value = Number(field.value);
+  const valueText = Number.isFinite(value) ? value.toFixed(2) : String(field.value);
+  return `${field.currency || fallbackCurrency || '未识别币种'} ${valueText}`;
+}
+
+function formatConfidenceField(field) {
+  if (!field || !field.value) return '未识别';
+  return `${field.value}（${field.confidence || 'low'}）`;
+}
+
 function getSourcePriceRoleNotice(source) {
-  if (!source) return '未能自动识别价格，请手动填写或确认。';
-  if (source.price === null || source.price === undefined || source.price === '') return '未能自动识别价格，请手动填写或确认。';
+  if (!source) return '未能自动识别价格，请手动确认或补充。';
+  if (source.price === null || source.price === undefined || source.price === '') return '未能自动识别价格，请手动确认或补充。';
   if (source.priceRole === 'candidate_source_cost') return '识别到的是候选采购价，请确认是否为真实拿货成本。';
   if (source.priceRole === 'market_reference_price') return '识别到的是平台销售参考价，不等于你的采购成本。';
   return '识别到公开页面价格，但用途未知，请人工确认它是采购价还是销售参考价。';
@@ -993,7 +1180,7 @@ function renderSourceExtractionDetails(preview) {
   el.classList.remove('is-warning', 'is-error');
 
   if (!preview || !preview.source) {
-    el.textContent = '公开商品信息识别结果会显示在这里。';
+    el.textContent = '自动识别商品信息会显示在这里。';
     return;
   }
 
@@ -1002,7 +1189,22 @@ function renderSourceExtractionDetails(preview) {
   const platformText = `${source.platform || source.host || '未知平台'} / ${source.platformType || 'unknown'}`;
   const priceText = formatExtractedSourcePrice(source);
   const categoryText = source.categorySuggestion ? `类目建议：${source.categorySuggestion}` : '类目建议：未识别';
-  const statusText = preview.ok ? '识别成功' : (preview.message || '识别失败，请手动填写。');
+  const statusText = preview.ok ? '识别成功' : (preview.message || '识别失败');
+  const shippingText = source.shippingFee && source.shippingFee.value !== null
+    ? formatMoneyField(source.shippingFee, source.currency)
+    : '运费未能自动识别，请后续确认。';
+  const totalText = source.totalCandidateSourceCost && source.totalCandidateSourceCost.value !== null
+    ? formatMoneyField(source.totalCandidateSourceCost, source.currency)
+    : source.platformType === 'supplier'
+      ? '价格或运费缺失，未计算总候选采购成本。'
+      : '仅供应商/货源页在价格和运费都可见时计算。';
+  const specs = Array.isArray(source.specifications) ? source.specifications.slice(0, 6) : [];
+  const details = Array.isArray(source.productDetails) ? source.productDetails.slice(0, 6) : [];
+  const manualNeeded = Array.isArray(source.manualConfirmationNeeded)
+    ? source.manualConfirmationNeeded
+    : preview.analysis && Array.isArray(preview.analysis.manualConfirmationNeeded)
+      ? preview.analysis.manualConfirmationNeeded
+      : [];
 
   if (!preview.ok) {
     el.classList.add('is-error');
@@ -1010,12 +1212,98 @@ function renderSourceExtractionDetails(preview) {
     el.classList.add('is-warning');
   }
 
-  el.textContent = `${statusText}。平台：${platformText}。价格：${priceText}。${priceNotice}。${categoryText}。置信度：${formatExtractionConfidence(source)}。${formatExtractionSources(source)}。`;
+  el.textContent = '';
+
+  const title = document.createElement('div');
+  title.className = 'extraction-panel-title';
+  title.textContent = statusText;
+  el.appendChild(title);
+
+  const grid = document.createElement('div');
+  grid.className = 'extraction-result-grid';
+  const items = [
+    ['平台', platformText],
+    ['平台类型', source.platformType || 'unknown'],
+    ['商品标题', source.title || '未识别标题'],
+    ['价格', priceText],
+    ['价格角色', `${source.priceRole || 'unknown'}。${priceNotice}`],
+    ['运费', shippingText],
+    ['总候选采购成本', totalText],
+    ['币种', source.currency || (source.shippingFee && source.shippingFee.currency) || '未识别'],
+    ['类目建议', source.categorySuggestion || '未识别'],
+    ['材质', formatConfidenceField(source.material) === '未识别' ? '材质未能自动识别。' : formatConfidenceField(source.material)],
+    ['用途', formatConfidenceField(source.usage)],
+    ['场景', formatConfidenceField(source.scene)],
+    ['提取置信度', source.extractionConfidence || formatExtractionConfidence(source)],
+    ['提取来源', source.extractionSource || formatExtractionSources(source)]
+  ];
+
+  items.forEach(([label, value]) => {
+    const cell = document.createElement('div');
+    const labelEl = document.createElement('span');
+    const valueEl = document.createElement('strong');
+    labelEl.textContent = label;
+    valueEl.textContent = value;
+    cell.appendChild(labelEl);
+    cell.appendChild(valueEl);
+    grid.appendChild(cell);
+  });
+
+  const specsCell = document.createElement('div');
+  specsCell.className = 'extraction-wide';
+  const specsLabel = document.createElement('span');
+  specsLabel.textContent = '基础商品细节 / 规格';
+  specsCell.appendChild(specsLabel);
+
+  if (specs.length || details.length) {
+    const list = document.createElement('ul');
+    list.className = 'extraction-spec-list';
+    (specs.length ? specs.map(item => `${item.name}: ${item.value}`) : details).forEach(text => {
+      const li = document.createElement('li');
+      li.textContent = text;
+      list.appendChild(li);
+    });
+    specsCell.appendChild(list);
+  } else {
+    const p = document.createElement('p');
+    p.textContent = '公开页面未返回可用规格。';
+    specsCell.appendChild(p);
+  }
+  grid.appendChild(specsCell);
+
+  if (!preview.ok || source.failureReason) {
+    const failureCell = document.createElement('div');
+    failureCell.className = 'extraction-wide';
+    const failureLabel = document.createElement('span');
+    const failureText = document.createElement('p');
+    failureLabel.textContent = '失败原因 / 读取限制';
+    failureText.textContent = source.failureReason || preview.message || '该平台可能限制自动读取。你可以补充截图文字、商品描述或运营疑问，系统会基于已识别内容继续分析。';
+    failureCell.appendChild(failureLabel);
+    failureCell.appendChild(failureText);
+    grid.appendChild(failureCell);
+  }
+
+  if (manualNeeded.length) {
+    const needCell = document.createElement('div');
+    needCell.className = 'extraction-wide';
+    const needLabel = document.createElement('span');
+    const needText = document.createElement('p');
+    needLabel.textContent = '需要人工确认';
+    needText.textContent = manualNeeded.join('、');
+    needCell.appendChild(needLabel);
+    needCell.appendChild(needText);
+    grid.appendChild(needCell);
+  }
+
+  el.appendChild(grid);
 }
 
 function resetSourcePreviewTracking() {
   sourcePreviewState.lastPreviewUrl = '';
   sourcePreviewState.activeRequestUrl = '';
+  sourcePreviewState.lastRequestId = 0;
+  sourcePreviewState.activeRequestId = 0;
+  sourcePreviewState.currentPreview = null;
   sourcePreviewState.lastAutoFilledTitle = '';
   sourcePreviewState.lastAutoFilledImage = '';
   sourcePreviewState.lastAutoFilledSourceCost = '';
@@ -1024,6 +1312,20 @@ function resetSourcePreviewTracking() {
   sourcePreviewState.isImageAutoFilledFromPreview = false;
   sourcePreviewState.isSourceCostAutoFilledFromPreview = false;
   sourcePreviewState.isCategorySuggestedFromAssist = false;
+}
+
+function renderWaitingProductSelectionReport(message) {
+  renderProductSelectionReport({
+    type: 'waiting',
+    status: '等待商品信息',
+    summary: message || '填写商品基础信息、公开市场观察和产品卡片质量后，可以直接生成测品决策报告；来源链接只是可选辅助。',
+    priceText: '等待目标平台、类目、使用场景和竞品价格带。',
+    profitText: '等待标题、主图、卖点、材质和类目匹配判断。',
+    competitionText: '等待公开市场和评价信任观察。',
+    adText: '等待利润计算器快照、采购成本和物流风险输入。',
+    storeText: '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。',
+    actions: ['先填写商品基础信息、采购成本、类目和利润计算器基础数据。']
+  });
 }
 
 function clearAutoFilledSourcePreviewFields() {
@@ -1060,18 +1362,19 @@ function clearAutoFilledSourcePreviewFields() {
 }
 
 function clearSourcePreviewDisplay() {
-  setText('sourceProductInsight', '等待分析来源链接。');
-  setText('sourceKeywordInsight', '等待提取关键词和主题标签。');
+  setText('sourceProductInsight', '来源链接提取未使用或已清空；可直接用商品卡片信息生成报告。');
+  setText('sourceKeywordInsight', '关键词和主题标签等待可选链接提取或手动补充。');
   setText('ozonApiInsight', '可选 Ozon 店铺商品摘要未连接，不影响本次测品建议。');
-  setText('analysisLimitInsight', '未开始分析。');
+  setText('analysisLimitInsight', '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。');
   renderSourceExtractionDetails(null);
-  renderProductImagePreview(fieldValue('imageUrl'));
+  renderProductImagePreview('');
 }
 
 function handleSourceUrlChanged() {
   const currentUrl = normalizeSourcePreviewUrl(fieldValue('sourceProductUrl'));
   const trackedUrl = normalizeSourcePreviewUrl(sourcePreviewState.lastPreviewUrl || sourcePreviewState.activeRequestUrl);
   const urlChanged = trackedUrl && trackedUrl !== currentUrl;
+  currentExtractionRequestId += 1;
 
   if (urlChanged) {
     clearAutoFilledSourcePreviewFields();
@@ -1081,6 +1384,7 @@ function handleSourceUrlChanged() {
 
   lastOzonAutoAnalysis = null;
   clearSourcePreviewDisplay();
+  renderProductSelection(lastProfitSnapshot);
   setProductLinkPreviewStatus();
   setAutoAnalysisProgress('', []);
 }
@@ -1165,6 +1469,7 @@ function suggestCategoryFromText(value) {
 
 function getProductAssistSourceText() {
   const parts = [
+    fieldValue('productEvidencePack'),
     fieldValue('manualProductTitle'),
     fieldValue('manualProductTextHelper'),
     fieldValue('manualProductNotes'),
@@ -1179,7 +1484,7 @@ function setManualProductAssistStatus(message) {
 }
 
 function applyManualProductTextAssistance(options = {}) {
-  const helperText = fieldValue('manualProductTextHelper');
+  const helperText = [fieldValue('manualProductTextHelper'), fieldValue('productEvidencePack')].filter(Boolean).join('\n');
   const extractedTitle = extractTitleFromPastedProductText(helperText);
   const actions = [];
   const titleEmpty = !fieldValue('manualProductTitle');
@@ -1230,8 +1535,8 @@ function renderOzonAnalysisDetails(analysis) {
     : '';
   const manualGuidance = typeof MANUAL_PRODUCT_GUIDANCE === 'string'
     ? MANUAL_PRODUCT_GUIDANCE
-    : '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
-  const titleText = source.title || (source.url ? manualGuidance : '未识别标题');
+    : '来源链接只是可选辅助；标题、采购成本、类目和卖点以当前商品卡片输入为准。';
+  const titleText = source.title || (source.url ? manualGuidance : '未使用来源链接，可直接填写商品卡片信息');
   const platformText = source.platform ? ` · ${source.platform}` : '';
   const priceNotice = source.priceRole ? ` · ${getSourcePriceRoleNotice(source)}` : '';
   const sourceAnalysisText = analysis && analysis.sourceAnalysis && analysis.sourceAnalysis.summary
@@ -1245,7 +1550,7 @@ function renderOzonAnalysisDetails(analysis) {
     : '可选 Ozon 店铺商品摘要未连接，不影响本次测品建议。');
   setText('analysisLimitInsight', (analysis && analysis.limitations && analysis.limitations.length)
     ? analysis.limitations.join('；')
-    : 'Phase 4A 不生成未经验证的全平台竞品数据；官方 API 不支持的数据会明确标注。');
+    : '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。');
   renderProductImagePreview(source.image || fieldValue('imageUrl'));
   renderSourceExtractionDetails(analysis && analysis.sourcePreview ? analysis.sourcePreview : null);
   renderAiAnalysisStatusModel();
@@ -1267,6 +1572,7 @@ function applySourcePreviewToForm(preview, sourceUrl) {
   const actions = [];
   sourcePreviewState.lastPreviewUrl = normalizeSourcePreviewUrl(sourceUrl);
   sourcePreviewState.activeRequestUrl = '';
+  sourcePreviewState.currentPreview = preview;
   renderSourceExtractionDetails(preview);
 
   if (preview.ok && source.title && !fieldValue('manualProductTitle')) {
@@ -1302,21 +1608,13 @@ function applySourcePreviewToForm(preview, sourceUrl) {
   const extractedPrice = Number(source.price);
 
   if (hasExtractedPrice && source.priceRole === 'candidate_source_cost') {
-    if (!fieldValue('manualSourceCost') && Number.isFinite(extractedPrice)) {
-      const priceText = String(extractedPrice);
-      setInput('manualSourceCost', priceText);
-      sourcePreviewState.lastAutoFilledSourceCost = priceText;
-      sourcePreviewState.isSourceCostAutoFilledFromPreview = true;
-      actions.push('已把候选采购价填入采购价字段，请确认是否为真实拿货成本');
-    } else {
-      actions.push('识别到候选采购价，但当前采购价已填写，请人工复核');
-    }
+    if (Number.isFinite(extractedPrice)) actions.push('识别到候选采购价，请确认是否为真实拿货成本');
     setManualProductAssistStatus('识别到的是候选采购价，请确认是否为真实拿货成本。');
   } else if (hasExtractedPrice && source.priceRole === 'market_reference_price') {
     actions.push('识别到平台销售参考价，不会自动写入采购价');
     setManualProductAssistStatus('识别到的是平台销售参考价，不等于你的采购成本。请手动填写真实采购价。');
   } else if (preview.ok) {
-    actions.push('未能自动识别价格，请手动填写或确认');
+    actions.push('未能自动识别价格，请手动确认或补充');
   }
 
   if (preview.ok) {
@@ -1329,7 +1627,7 @@ function applySourcePreviewToForm(preview, sourceUrl) {
 
   return preview.message || (typeof getSourcePreviewFallbackMessage === 'function'
     ? getSourcePreviewFallbackMessage()
-    : '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。');
+    : '该平台可能限制自动读取。你可以补充截图文字、商品描述或运营疑问，系统会基于已识别内容继续分析。');
 }
 
 function mergeSourcePreviewIntoAnalysis(analysis, preview, sourceUrl) {
@@ -1350,7 +1648,19 @@ function mergeSourcePreviewIntoAnalysis(analysis, preview, sourceUrl) {
   analysis.source.price = preview.ok ? source.price : null;
   analysis.source.currency = preview.ok ? source.currency || '' : '';
   analysis.source.priceRole = source.priceRole || analysis.source.priceRole || 'unknown';
+  analysis.source.shippingFee = preview.ok ? source.shippingFee || { value: null, currency: '', confidence: 'none', source: '' } : { value: null, currency: '', confidence: 'none', source: '' };
+  analysis.source.totalCandidateSourceCost = preview.ok ? source.totalCandidateSourceCost || { value: null, currency: '', confidence: 'none', source: '' } : { value: null, currency: '', confidence: 'none', source: '' };
   analysis.source.categorySuggestion = preview.ok ? source.categorySuggestion || '' : '';
+  analysis.source.material = preview.ok ? source.material || { value: '', confidence: 'none', source: '' } : { value: '', confidence: 'none', source: '' };
+  analysis.source.usage = preview.ok ? source.usage || { value: '', confidence: 'none', source: '' } : { value: '', confidence: 'none', source: '' };
+  analysis.source.scene = preview.ok ? source.scene || { value: '', confidence: 'none', source: '' } : { value: '', confidence: 'none', source: '' };
+  analysis.source.specifications = preview.ok && Array.isArray(source.specifications) ? source.specifications : [];
+  analysis.source.productDetails = preview.ok && Array.isArray(source.productDetails) ? source.productDetails : [];
+  analysis.source.modelDisclosure = source.modelDisclosure || analysis.source.modelDisclosure || '';
+  analysis.source.extractionConfidence = source.extractionConfidence || analysis.source.extractionConfidence || 'none';
+  analysis.source.extractionSource = source.extractionSource || analysis.source.extractionSource || '';
+  analysis.source.failureReason = preview.ok ? '' : source.failureReason || preview.message || '';
+  analysis.source.manualConfirmationNeeded = Array.isArray(source.manualConfirmationNeeded) ? source.manualConfirmationNeeded : [];
   analysis.source.confidence = source.confidence || analysis.source.confidence || {};
   analysis.source.extractionSources = source.extractionSources || analysis.source.extractionSources || {};
   analysis.insights = analysis.insights || {};
@@ -1404,9 +1714,17 @@ function getOzonProductSummaryCredentials() {
 
 function getManualProductInput() {
   return {
+    evidencePack: fieldValue('productEvidencePack'),
     title: fieldValue('manualProductTitle'),
     sourceCost: readOptionalNumber('manualSourceCost'),
     category: fieldValue('manualProductCategory'),
+    sourcePlatform: fieldValue('sourcePlatformInput'),
+    targetPlatform: fieldValue('productSelectionPlatform') || platform,
+    targetSellingPrice: readOptionalNumber('targetSellingPriceInput'),
+    estimatedWeight: readOptionalNumber('estimatedWeightInput'),
+    material: fieldValue('productMaterialInput'),
+    usageScene: fieldValue('productUsageSceneInput'),
+    sellingPoint: fieldValue('productSellingPointInput'),
     notes: fieldValue('manualProductNotes')
   };
 }
@@ -1430,12 +1748,28 @@ function getManualTestingAssumptions() {
     adType: fieldValue('selectionAdType'),
     storeType: fieldValue('storeType'),
     storeOrderRange: fieldValue('storeOrderRange'),
-    localPreference: fieldValue('localPreference')
+    localPreference: fieldValue('localPreference'),
+    competitorCardQuality: fieldValue('competitorCardQuality'),
+    marketCrowding: fieldValue('marketCrowding'),
+    positiveReviewSignals: fieldValue('positiveReviewSignals'),
+    negativeReviewSignals: fieldValue('negativeReviewSignals'),
+    titleClarity: fieldValue('titleClarity'),
+    mainImageQuality: fieldValue('mainImageQuality'),
+    sellingPointClarity: fieldValue('sellingPointClarity'),
+    categoryFit: fieldValue('categoryFit'),
+    specComplexity: fieldValue('specComplexity'),
+    visualDifferentiation: fieldValue('visualDifferentiation'),
+    returnRiskLevel: fieldValue('returnRiskLevel'),
+    reviewTrustLevel: fieldValue('reviewTrustLevel')
   };
 }
 
 function applyCurrentManualAnalysisContext(analysis, profitSnapshot = lastProfitSnapshot) {
   if (!analysis) return analysis;
+
+  analysis.activePlatform = platform;
+  analysis.targetPlatform = fieldValue('productSelectionPlatform') || platform;
+  analysis.profitDecisionDataAvailable = getDecisionDataValidation(profitSnapshot).hasFullDecisionData;
 
   if (typeof applyManualProductContext === 'function') {
     applyManualProductContext(analysis, getManualProductInput(), fieldValue('sourceProductUrl'));
@@ -1452,6 +1786,68 @@ function applyCurrentManualAnalysisContext(analysis, profitSnapshot = lastProfit
   return analysis;
 }
 
+function buildWorkspaceAnalysisFromCurrentInputs(profitSnapshot = lastProfitSnapshot) {
+  const sourceUrl = fieldValue('sourceProductUrl');
+  const preview = sourcePreviewState.currentPreview && sourcePreviewBelongsToUrl(sourcePreviewState.currentPreview, sourceUrl)
+    ? sourcePreviewState.currentPreview
+    : null;
+  const source = typeof defaultNormalizedSource === 'function'
+    ? defaultNormalizedSource(sourceUrl)
+    : {
+      url: sourceUrl,
+      finalUrl: sourceUrl,
+      host: sourceUrl ? normalizeHost(sourceUrl) : '未使用来源链接',
+      platform: fieldValue('sourcePlatformInput'),
+      platformType: 'unknown',
+      title: '',
+      image: '',
+      price: null,
+      currency: '',
+      priceRole: 'unknown'
+    };
+  const analysis = {
+    ok: true,
+    activePlatform: platform,
+    targetPlatform: fieldValue('productSelectionPlatform') || platform,
+    source,
+    insights: {
+      category: '',
+      keywords: [],
+      tags: [],
+      sellingPoints: [],
+      painPoints: []
+    },
+    ozon: {
+      status: 'not_required',
+      message: '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。'
+    },
+    limitations: ['链接提取只是可选辅助；报告可完全基于商品卡片信息、公开市场观察和利润测算生成。']
+  };
+
+  mergeSourcePreviewIntoAnalysis(analysis, preview, sourceUrl);
+  applyCurrentManualAnalysisContext(analysis, profitSnapshot);
+  return analysis;
+}
+
+function generateProductCardDecisionReport() {
+  applyManualProductTextAssistance({ replaceAutoTitle: false });
+  const validation = getDecisionDataValidation(lastProfitSnapshot);
+  renderDecisionDataValidation(validation);
+  const analysis = buildWorkspaceAnalysisFromCurrentInputs(lastProfitSnapshot);
+
+  renderOzonAutoAnalysis(analysis);
+  setAutoAnalysisStatus(validation.hasFullDecisionData
+    ? '测品决策报告已生成。链接提取只是可选辅助；后台数据不是必填。'
+    : '商品卡片观察报告已生成。利润数据不足，本次不输出利润安全结论。');
+  setAutoAnalysisProgress('', ['report']);
+  persistFormState();
+
+  const scrollTargetId = validation.shouldWarn ? 'decisionValidationWarning' : 'productSelectionReport';
+  window.requestAnimationFrame(() => {
+    scrollToWorkspaceElement(scrollTargetId);
+  });
+}
+
 function getAnalysisPayload() {
   const selectedStoreId = fieldValue('analysisStoreProfile');
   const storeState = typeof loadStoreApiState === 'function' ? loadStoreApiState() : { stores: [] };
@@ -1465,19 +1861,14 @@ function getAnalysisPayload() {
     apiKey: productSummaryCredentials.apiKey,
     limit: productSummaryCredentials.limit,
     manualProduct: getManualProductInput(),
+    targetPlatform: fieldValue('productSelectionPlatform') || platform,
     selectedStore: selectedStore ? {
       platform: selectedStore.platform,
       credentialRef: selectedStore.credentialRef,
       name: selectedStore.name
     } : null,
     profitSnapshot: lastProfitSnapshot,
-    assumptions: {
-      adShare: readOptionalNumber('selectionAdShare'),
-      adType: fieldValue('selectionAdType') || 'Ozon 搜索与推荐',
-      storeType: fieldValue('storeType'),
-      storeOrderRange: fieldValue('storeOrderRange'),
-      localPreference: fieldValue('localPreference')
-    }
+    assumptions: getManualTestingAssumptions()
   };
 }
 
@@ -1494,9 +1885,11 @@ function syncOzonTemporaryConnectionStateFromAnalysis(analysis) {
 async function runOzonAutoAnalysis() {
   const sourceUrl = fieldValue('sourceProductUrl');
   const button = document.getElementById('autoAnalysisButton');
+  const requestId = currentExtractionRequestId + 1;
+  currentExtractionRequestId = requestId;
 
   if (!sourceUrl) {
-    setAutoAnalysisStatus('请先粘贴来源商品链接。', 'is-error');
+    setAutoAnalysisStatus('来源链接为空；可直接点击“生成测品决策报告”，链接提取不是必填。');
     setAutoAnalysisProgress('', []);
     setInput('ozonTestApiKey', '');
     return;
@@ -1525,13 +1918,21 @@ async function runOzonAutoAnalysis() {
   }
 
   sourcePreviewState.activeRequestUrl = normalizeSourcePreviewUrl(sourceUrl);
+  sourcePreviewState.activeRequestId = requestId;
+  sourcePreviewState.currentPreview = null;
   lastOzonAutoAnalysis = null;
   clearSourcePreviewDisplay();
-  setAutoAnalysisStatus('已接收来源链接。正在尝试读取公开页面元数据；如已配置 Worker，仅会请求安全预览和可选授权店铺摘要。', 'is-loading');
+  renderProductSelection(lastProfitSnapshot);
+  setAutoAnalysisStatus('正在尝试提取可选链接信息……', 'is-loading');
   setAutoAnalysisProgress('link', []);
 
   try {
     await new Promise(resolve => setTimeout(resolve, 180));
+    if (!sourceRequestStillCurrent(sourceUrl, requestId)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接分析已忽略。');
+      setAutoAnalysisProgress('', []);
+      return;
+    }
     setAutoAnalysisProgress('identify', ['link']);
 
     let sourcePreview = null;
@@ -1540,8 +1941,8 @@ async function runOzonAutoAnalysis() {
     if (typeof requestSourcePreview === 'function') {
       try {
         sourcePreview = await requestSourcePreview(sourceUrl);
-        if (!sourceInputStillMatches(sourceUrl)) {
-          setAutoAnalysisStatus('来源链接已变化。旧链接预览已忽略，请重新点击生成测品建议。');
+        if (!sourceRequestStillCurrent(sourceUrl, requestId)) {
+          setAutoAnalysisStatus('来源链接已变化。旧链接预览已忽略。');
           setAutoAnalysisProgress('', []);
           return;
         }
@@ -1561,9 +1962,20 @@ async function runOzonAutoAnalysis() {
             canonicalUrl: '',
             price: null,
             currency: '',
-            priceRole: 'unknown'
+            priceRole: 'unknown',
+            shippingFee: { value: null, currency: '', confidence: 'none', source: '' },
+            totalCandidateSourceCost: { value: null, currency: '', confidence: 'none', source: '' },
+            material: { value: '', confidence: 'none', source: '' },
+            usage: { value: '', confidence: 'none', source: '' },
+            scene: { value: '', confidence: 'none', source: '' },
+            specifications: [],
+            productDetails: [],
+            extractionConfidence: 'none',
+            extractionSource: '',
+            failureReason: error.message || 'source preview 请求失败。',
+            manualConfirmationNeeded: []
           },
-          message: '公开页面元数据预览暂不可用，请继续手动填写商品信息。',
+          message: '公开页面元数据预览暂不可用。你可以补充截图文字、商品描述或运营疑问继续分析。',
           limitations: [error.message || 'source preview 请求失败。']
         };
         renderSourceExtractionDetails(sourcePreview);
@@ -1571,16 +1983,16 @@ async function runOzonAutoAnalysis() {
       }
     }
 
-    if (!sourceInputStillMatches(sourceUrl)) {
-      setAutoAnalysisStatus('来源链接已变化。旧链接分析已忽略，请重新点击生成测品建议。');
+    if (!sourceRequestStillCurrent(sourceUrl, requestId)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接分析已忽略。');
       setAutoAnalysisProgress('', []);
       return;
     }
 
     applyManualProductTextAssistance({ replaceAutoTitle: false });
     let analysis = await requestOzonProductAnalysis(getAnalysisPayload());
-    if (!sourceInputStillMatches(sourceUrl)) {
-      setAutoAnalysisStatus('来源链接已变化。旧链接报告已忽略，请重新点击生成测品建议。');
+    if (!sourceRequestStillCurrent(sourceUrl, requestId)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接报告已忽略。');
       setAutoAnalysisProgress('', []);
       return;
     }
@@ -1588,18 +2000,25 @@ async function runOzonAutoAnalysis() {
     analysis = mergeSourcePreviewIntoAnalysis(analysis, sourcePreview, sourceUrl);
     applyCurrentManualAnalysisContext(analysis);
     syncOzonTemporaryConnectionStateFromAnalysis(analysis);
+    sourcePreviewState.lastRequestId = requestId;
+    sourcePreviewState.activeRequestId = 0;
     setAutoAnalysisProgress('report', ['link', 'identify', 'ozon']);
     renderOzonAutoAnalysis(analysis);
     const ozonConnected = analysis.ozon && analysis.ozon.status === 'connected';
     setAutoAnalysisStatus(
       ozonConnected
         ? '测品建议已生成。请复核利润、手动假设和 Ozon 可选上下文状态。'
-        : sourcePreviewStatus || '测品建议已生成。请查看报告中的数据边界说明。',
+        : sourcePreviewStatus || '测品建议已生成。链接提取只是辅助，请查看报告中的数据边界说明。',
       ''
     );
     setAutoAnalysisProgress('', ['link', 'identify', 'ozon', 'report']);
     persistFormState();
   } catch (error) {
+    if (!sourceRequestStillCurrent(sourceUrl, requestId)) {
+      setAutoAnalysisStatus('来源链接已变化。旧链接错误已忽略。');
+      setAutoAnalysisProgress('', []);
+      return;
+    }
     const fallback = buildApiDisconnectedAnalysis(sourceUrl, lastProfitSnapshot, getManualProductInput());
     fallback.ozon.status = 'api_error';
     fallback.ozon.message = error.message || 'Worker 产品摘要暂不可用。';
@@ -1608,10 +2027,14 @@ async function runOzonAutoAnalysis() {
     setAutoAnalysisStatus('测品建议已生成。可选店铺摘要暂不可用，请查看报告中的数据边界说明。');
     setAutoAnalysisProgress('', ['link']);
   } finally {
+    if (sourcePreviewState.activeRequestId === requestId) {
+      sourcePreviewState.activeRequestId = 0;
+      sourcePreviewState.activeRequestUrl = '';
+    }
     setInput('ozonTestApiKey', '');
     if (button) {
       button.disabled = false;
-      button.textContent = '生成测品建议';
+      button.textContent = '尝试提取链接信息';
     }
   }
 }
@@ -1632,6 +2055,13 @@ function renderProductSelection(profitSnapshot) {
   }
 
   renderProductImagePreview(fieldValue('imageUrl'));
+
+  if (typeof buildOzonAutoReport === 'function') {
+    const analysis = buildWorkspaceAnalysisFromCurrentInputs(profitSnapshot);
+    renderOzonAnalysisDetails(analysis);
+    renderProductSelectionReport(analysis.report);
+    return;
+  }
 
   if (typeof analyzeProductSelection !== 'function') return;
 
@@ -1703,11 +2133,18 @@ function bindExchangeRateHelper() {
 
 function bindOzonAnalysisControls() {
   const analyzeButton = document.getElementById('autoAnalysisButton');
+  const decisionButton = document.getElementById('generateDecisionReportButton');
   const demoButton = document.getElementById('loadDemoAnalysisButton');
 
   if (analyzeButton) {
     analyzeButton.addEventListener('click', () => {
       runOzonAutoAnalysis();
+    });
+  }
+
+  if (decisionButton) {
+    decisionButton.addEventListener('click', () => {
+      generateProductCardDecisionReport();
     });
   }
 
@@ -2191,6 +2628,7 @@ function calc() {
 
   if (currentValidation.errors.length) {
     renderInvalidInputState();
+    refreshDecisionDataValidationIfVisible();
     return;
   }
 
@@ -2275,6 +2713,7 @@ function calc() {
   };
   renderAiCompactSummary();
   renderProductSelection(lastProfitSnapshot);
+  refreshDecisionDataValidationIfVisible();
 
   if (r) {
     setText('matchedChannel', r.c);
@@ -2348,7 +2787,7 @@ document.querySelectorAll('input,select,textarea').forEach(e => {
       if (e.id === 'imageUrl') handleManualImageChanged();
       if (e.id === 'manualProductCategory') handleManualCategoryChanged();
       if (e.id === 'manualSourceCost') handleManualSourceCostChanged();
-      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost'].includes(e.id)) {
+      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost', 'productEvidencePack'].includes(e.id)) {
         applyManualProductTextAssistance({ replaceAutoTitle: e.id === 'manualProductTextHelper' });
       }
     }
@@ -2383,7 +2822,7 @@ document.querySelectorAll('input,select,textarea').forEach(e => {
       if (e.id === 'imageUrl') handleManualImageChanged();
       if (e.id === 'manualProductCategory') handleManualCategoryChanged();
       if (e.id === 'manualSourceCost') handleManualSourceCostChanged();
-      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost'].includes(e.id)) {
+      if (['manualProductTitle', 'manualProductTextHelper', 'manualProductNotes', 'manualSourceCost', 'productEvidencePack'].includes(e.id)) {
         applyManualProductTextAssistance({ replaceAutoTitle: e.id === 'manualProductTextHelper' });
       }
     }

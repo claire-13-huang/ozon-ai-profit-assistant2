@@ -1,287 +1,287 @@
-Goal
+# ACTIVE_GOAL.md
 
-Refactor the AI Analysis page into a URL-first automatic product extraction workflow.
+## Goal
 
-The user’s product requirement is clear:
+Upgrade the AI Analysis page from a manual Product Card Testing Decision Workspace into an Evidence Pack + Product Testing Score Diagnosis system.
 
-The user should paste a product link, and the app should automatically try to identify and extract the product title, product price, shipping fee when publicly available, total candidate source cost, image, platform, category, material, usage, scene, basic product details, and first-pass product analysis.
+The current page workflow is usable, but the analysis is still too weak and too manual.
 
-Manual product title / purchase cost / category input boxes should no longer be the main workflow.
+The new goal is:
 
-Instead, the page should have:
+The seller can paste one block of product evidence, competitor observations, review signals, and personal doubts. The system should structure that evidence, score the product across key dimensions, and output a stronger seller-facing testing decision.
 
-1. A product URL input.
-2. An automatic extraction result area.
-3. A user notes / questions area where the user can add their own understanding, doubts, or business context after extraction.
-4. A clear analysis model disclosure.
-5. A seller-facing product testing report.
+Do not build a new page from scratch.
 
-Do not stop after only inspecting. Continue implementing, testing, diagnosing failures, fixing failures, and rerunning checks until all Done when conditions pass or a real blocker is reached.
+Improve the existing AI Analysis page.
 
-Context
+Do not add large model API integration in this task.
 
-Project path:
-`/Users/claireclinton/Documents/ozon项目_副本`
+Use local rule-based analysis only for now.
 
-Current product problem:
+## Product Direction
 
-The current AI Analysis page still feels like manual form filling. The user enters a link, but if extraction fails, the app asks the user to manually fill product title, purchase cost, and category. This is not acceptable for the product direction.
+The product should help beginner Ozon / Wildberries / Yandex sellers answer:
 
-The target product experience is:
+* Is this product worth listing and testing?
+* What is the product positioning?
+* What are the main selling points?
+* What are the product card weaknesses?
+* Is the price competitive?
+* Is the profit margin safe?
+* Are reviews or trust signals weak?
+* Is logistics or return risk high?
+* What should the seller fix before listing?
+* What should the seller observe after listing?
+* Should the seller continue, optimize, or pause?
 
-User pastes product link
-→ app automatically detects platform
-→ app automatically extracts product information when possible
-→ app displays extracted title, price, shipping, image, material, specs, usage, scene, category, and confidence
-→ app generates first-pass product analysis
-→ user can add extra notes/questions after extraction
-→ report uses extracted data plus profit calculator snapshot
-→ if extraction fails, app explains exactly why and keeps the workflow clear
+The page should feel less like a form and more like a decision assistant.
 
-Important:
-Manual filling should become fallback/editing/confirmation after extraction, not the visible primary workflow.
+## Core UX Change
 
-Main platforms to support through platform-aware detection and best-effort public extraction:
+Add a new primary input area:
 
-* 1688
-* Taobao
-* Tmall
-* Pinduoduo
-* JD
-* AliExpress
-* Amazon
-* Ozon
-* Wildberries
-* Yandex Market
-* generic ecommerce product pages
+`商品证据包 / 竞品观察 / 我的疑问`
 
-Current architecture:
+This should be a large textarea where the seller can paste natural language evidence, for example:
 
-* Frontend: HTML/CSS/Vanilla JavaScript
-* Backend: Cloudflare Worker
-* No React/Vue/TypeScript
-* No database
-* No login
-* No payment
-* No new npm dependency unless explicitly approved
-* Cloudflare Worker currently handles `/api/source/preview`
-* Current extraction can read public HTML/metadata/JSON-LD/meta/itemprop/visible price patterns when available
-
-Tasks
-
-1. Inspect first:
-
-   * `AGENTS.md`
-   * `ACTIVE_GOAL.md` if present
-   * `worker/index.js`
-   * `index.html`
-   * `css/style.css`
-   * `js/main.js`
-   * `js/product-selection.js`
-   * `docs/API_INTEGRATION_PLAN.md`
-   * `docs/manual-test-cases.md`
-   * `docs/PHASE_2_5_LIVE_CHECKPOINT.md`
-   * `docs/DEVELOPMENT_LOG.md`
-
-2. Summarize current AI Analysis workflow and current source extraction behavior before changing files.
-
-3. Refactor AI Analysis UI into a URL-first workflow.
-
-The main visible flow should be:
-
-* `1. 粘贴商品链接`
-* `2. 自动识别商品信息`
-* `3. 补充你的理解 / 疑问 / 运营观察`
-* `4. 生成测品决策报告`
-
-4. Remove or hide the old primary manual input boxes from the main workflow:
-
-   * manual product title
-   * manual source cost
-   * manual product category
-   * manual product notes
-
-They should not appear as the main required form fields before extraction.
-
-5. Replace them with an extraction result panel.
-
-The extraction panel should display:
-
-* platform
-* platform type: supplier / marketplace / unknown
 * product title
-* product image
-* product price
-* shipping fee if publicly available
-* total candidate source cost if price + shipping are both available
-* currency
-* price role
-* category suggestion
-* material
-* usage
-* scene
-* basic product details / specs if publicly available
-* extraction confidence
-* extraction source
-* failure reason if extraction fails
+* source product description
+* competitor titles
+* competitor price range
+* competitor review observations
+* visible negative review points
+* product material
+* usage scenario
+* worries about returns
+* doubts about price
+* doubts about category
+* seller’s own operating judgment
 
-6. Add a user note/question area after extraction:
+The existing structured fields can remain, but the evidence pack should become the main analysis input.
 
-Label:
-`你的补充理解 / 疑问 / 运营观察`
+## Keep Existing Workflow
 
-Purpose:
-The user can add things like:
+Keep the current sections:
 
-* 是否担心材质
-* 是否担心退货
-* 是否适合夏季
-* 是否适合俄罗斯市场
-* 是否有竞品
-* 是否想测试某个卖点
-* 任何人工经验判断
+* 商品基础信息
+* 公开市场与竞品观察
+* 产品卡片质量判断
+* 利润与风险判断
+* 测品决策报告
 
-This field should enrich the analysis, but it must not replace automatic extraction.
+But improve them so the evidence pack can enrich the report.
 
-7. Add analysis model disclosure.
+Do not require a product URL.
 
-The UI must clearly show what model is currently used.
+Do not depend on successful link extraction.
 
-Current model disclosure should say something like:
-`当前分析模型：本地规则分析模型 v0.1 + 当前利润计算快照。暂未接入大模型 API；不会自动同步真实平台曝光、点击、转化、广告、订单或财务数据。`
+Do not require backend store data.
 
-If no LLM API is used, do not imply that ChatGPT/OpenAI/Claude is powering the live analysis.
+## Evidence Pack Parsing
 
-8. Strengthen `/api/source/preview` output if needed, but stay within the existing Worker architecture.
+Add local rule-based parsing from the evidence pack.
 
-Extend extraction fields if safely possible:
+The system should attempt to identify:
 
-* `shippingFee`
-* `totalCandidateSourceCost`
-* `material`
-* `usage`
-* `scene`
-* `specifications`
-* `productDetails`
-* `modelDisclosure`
-* `confidence`
+* product title
+* product type
+* category hints
+* material hints
+* usage / scene hints
+* selling points
+* competitor price signals
+* review trust signals
+* negative review risks
+* return risk hints
+* logistics risk hints
+* seller doubts or concerns
 
-9. Product price and shipping rules:
+Do not invent facts.
 
-   * Extract only public visible price data.
-   * Extract shipping fee only if clearly public and visible in returned HTML/metadata.
-   * If product price is found but shipping fee is not found, do not invent shipping.
-   * If shipping is unknown, show `运费未能自动识别，请后续确认。`
-   * If price + shipping are both found on a supplier/source platform, show total candidate source cost.
-   * If platform is marketplace such as Amazon/Ozon/Wildberries/Yandex Market, visible price is market reference price, not purchase cost.
-   * Never silently treat marketplace price as purchase cost.
+If the evidence is missing, say it is missing.
 
-10. Platform price role:
+If confidence is low, mark it as low confidence.
 
-* 1688 / Taobao / Tmall / Pinduoduo / JD / AliExpress as source platforms:
-  `candidate_source_cost`
-  Warning:
-  `识别到的是候选采购价，请确认是否为真实拿货成本。`
+## Scoring System
 
-* Amazon / Ozon / Wildberries / Yandex Market:
-  `market_reference_price`
-  Warning:
-  `识别到的是平台销售参考价，不等于你的采购成本。`
+Add a product testing score diagnosis.
 
-11. Material / usage / scene extraction:
+Use 0-100 scores for:
 
-* Extract from title, description, JSON-LD, meta description, itemprop, and simple visible public text only.
-* Use conservative keyword/rule logic.
-* Examples:
+1. `利润安全评分`
+2. `价格竞争力评分`
+3. `产品卡片质量评分`
+4. `评价与信任评分`
+5. `物流与退货风险评分`
+6. `平台匹配度评分`
 
-  * cotton / 棉 / polyester / 涤纶 / linen / 亚麻 -> material
-  * home / outdoor / beach / office / kitchen / travel / baby / sports -> usage/scene
-* Do not invent hidden details.
-* If material is not found, show `材质未能自动识别。`
-* If usage/scene is not found, infer only low-confidence hints from title/category and clearly mark as low confidence.
+Also calculate an overall decision:
 
-12. Frontend state lifecycle must be fixed at the same time.
+* `建议上架测试`
+* `优化后再测`
+* `谨慎测试`
+* `暂不建议测试`
 
-When the user enters a new link:
+Scoring should be rule-based and explainable.
 
-* immediately clear previous extraction result
-* clear previous image
-* clear previous price
-* clear previous shipping
-* clear previous material/specs/use-case/scene
-* clear previous analysis report
-* clear previous extraction details
-* show `正在识别当前链接……`
-* if the new link fails, show only the current link failure reason
-* old Amazon/Ozon/1688/other product data must never appear under a new URL
+Do not use fake precision.
 
-13. Async stale-response protection:
+Show short explanations for each score.
 
-* every extraction request must carry a request ID or URL token
-* if the URL changes while request is in flight, ignore old response
-* stale responses must not update UI or report
+Example:
 
-14. Report behavior:
+* `价格竞争力评分：62 / 100`
+* `原因：目标售价接近竞品价格区间上沿，若没有更强主图或卖点，转化压力较大。`
 
-* The report must use current extraction data only.
-* If price is missing, do not produce a fake profit conclusion.
-* If profit calculator snapshot exists, combine it with extraction data.
-* If extraction has product title/material/usage/scene, include them in product positioning and risk notes.
-* If user notes/questions exist, include them in the analysis as seller context.
-* Keep profit calculation formulas unchanged.
+## Report Upgrade
 
-15. Failure behavior:
-    If a platform blocks extraction, requires dynamic rendering, returns empty metadata, redirects too much, or returns non-HTML:
+The report should include:
 
-* show exact failure reason
-* do not show old data
-* do not say extraction succeeded
-* do not force old manual product input boxes as the main workflow
-* provide a small fallback message:
-  `该平台可能限制自动读取。你可以补充截图文字、商品描述或运营疑问，系统会基于已识别内容继续分析。`
+* 测品结论
+* 关键评分总览
+* 商品定位
+* 核心卖点
+* 产品卡片问题
+* 价格竞争判断
+* 评价与信任风险
+* 利润安全边际
+* 物流与退货风险
+* 上架前优化建议
+* 上架后观察指标
+* 继续 / 优化 / 暂停条件
+* 数据边界
 
-16. Do not implement Playwright/Puppeteer/dynamic renderer in this task.
-    If dynamic rendering is required for blocked platforms, stop and document it as a future requirement. Do not add it automatically.
+The report should be more specific and action-oriented.
 
-17. Update docs:
+Avoid vague phrases such as:
 
-* `docs/API_INTEGRATION_PLAN.md`
-* `docs/manual-test-cases.md`
-* `docs/PHASE_2_5_LIVE_CHECKPOINT.md`
-* `docs/DEVELOPMENT_LOG.md`
+* 需要进一步观察
+* 建议综合判断
+* 可以适当优化
+* 存在一定风险
 
-18. Update manual test cases:
+Use concrete seller actions:
 
-* URL-only workflow loads
-* old manual fields are no longer primary required fields
-* extraction success fills product result panel
-* extraction failure shows failure reason
-* user can add notes/questions after extraction
-* analysis model disclosure is visible
-* Amazon link then blocked link does not keep Amazon data
-* supplier candidate price warning appears
-* marketplace reference price warning appears
-* missing shipping does not invent total cost
-* missing price does not fake profit conclusion
-* Worker behavior stays safe
+* 优先优化主图第一视觉
+* 标题需要突出容量 / 材质 / 使用场景
+* 目标售价高于竞品区间时，需要强化差异化卖点
+* 评价少时，不要依赖高广告消耗放量
+* 材质不清时，详情页必须补充材质说明
+* 重量偏高时，优先检查物流成本是否吃掉利润
+* 有点击无订单时，优先检查价格、评价、物流时效和主图信任感
 
-Constraints
+## One-Piece Fulfillment Logic
 
-Do not use real Ozon credentials.
+Keep one-piece fulfillment / dropshipping testing logic.
 
-Do not call Ozon Seller API for public source link extraction.
+Do not recommend stock quantity.
 
-Do not add new Ozon Seller API endpoints.
+Do not use:
 
-Do not add write/update/delete/create endpoints.
+* 首批备货
+* 第一批货备多少
+* 批量进货
+* 备货数量
+* 5-10 件测试数量
 
-Do not implement Playwright, Puppeteer, dynamic renderer, browser automation, proxy scraping, login scraping, cookie scraping, captcha bypass, anti-bot bypass, or external parser.
+Use:
+
+* 是否值得上架测试
+* 是否需要优化后再测
+* 是否谨慎测试
+* 是否暂不建议测试
+* 上架后观察哪些指标
+* 什么情况下继续 / 优化 / 暂停
+
+## Profit Data Logic
+
+Use the existing profit calculator snapshot and structured fields.
+
+Do not modify profit formulas.
+
+If source cost or target selling price is missing:
+
+* still generate a limited product card observation report
+* do not output a full profit safety conclusion
+* show:
+  `利润数据不足，本次不输出利润安全结论。`
+
+If source cost and target selling price exist:
+
+* include profit safety score
+* include minimum safe price reference if available
+* explain whether the product has enough margin for ads, returns, and logistics pressure
+
+## Backend Data Logic
+
+The user currently may not have store backend data.
+
+Therefore:
+
+* do not require impressions
+* do not require clicks
+* do not require add-to-cart
+* do not require orders
+* do not require ad spend
+* do not require conversion rate
+* do not require store API authorization
+
+If backend data is missing, show:
+
+`后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。`
+
+## Link Extraction Role
+
+Link extraction remains optional helper only.
+
+Do not make link extraction the core workflow.
+
+If link extraction succeeds, it can prefill information.
+
+If it fails, the report must still work from evidence pack and structured fields.
+
+Do not continue trying to make arbitrary ecommerce links fully extractable through Cloudflare Worker.
+
+## UI Requirements
+
+Improve the AI Analysis page so that:
+
+1. Evidence pack textarea is visually prominent.
+2. Structured fields are still available but not overwhelming.
+3. Score cards appear near the top of the report.
+4. The final decision label is visually clear.
+5. Missing data is shown as a data boundary, not as a silent failure.
+6. The report feels like a seller decision coach, not a plain form summary.
+
+## Do Not Implement
+
+Do not implement:
+
+* OpenAI API
+* Claude API
+* large model API
+* Playwright
+* Puppeteer
+* dynamic renderer
+* crawler
+* proxy scraping
+* login scraping
+* cookie scraping
+* captcha bypass
+* anti-bot bypass
+* external parser
+* database
+* login system
+* payment system
+* new backend service
+* browser extension
+* new npm dependency
 
 Do not bypass platform access controls.
 
-Do not extract private, hidden, login-only, or seller-private data.
+Do not use real credentials.
 
-Do not extract stock, SKU, reviews, sales count, orders, or hidden fields.
+Do not call Ozon Seller API.
 
 Do not modify profit formulas.
 
@@ -289,93 +289,169 @@ Do not modify logistics matching logic.
 
 Do not modify platform presets.
 
-Do not deploy.
-
 Do not push.
 
-Do not commit unless explicitly approved after review.
+Do not deploy.
 
-Autonomous execution rule
+Do not commit unless explicitly approved.
 
-Do not stop after the first error.
+## Tasks
 
-If a check fails:
+### 1. Inspect current files
 
-1. read the error
-2. identify the likely cause
-3. make the smallest safe fix
-4. rerun the check
+Inspect:
 
-Continue until all Done when conditions pass or a real blocker is reached.
+* `AGENTS.md`
+* `ACTIVE_GOAL.md`
+* `index.html`
+* `css/style.css`
+* `js/main.js`
+* `js/product-selection.js`
+* `js/store-api.js`
+* `worker/index.js`
+* `docs/manual-test-cases.md`
+* `docs/DEVELOPMENT_LOG.md`
 
-Stop only for real blockers:
+### 2. Summarize current workflow
 
-* real credentials are required
-* deployment is required
-* git push is required
-* new backend service is required
-* dynamic renderer / Playwright / Puppeteer is required
-* destructive file deletion is required
-* safety boundary would be violated
+Before changing files, summarize:
 
-Done when
+* current AI Analysis workflow
+* current report generation logic
+* why the analysis feels weak
+* where the UI still feels too manual
 
-* AI Analysis page is URL-first, not manual-form-first.
-* Old manual title/cost/category boxes are removed or hidden from the main workflow.
-* User has a notes/questions field after extraction.
-* The app attempts automatic extraction from the pasted URL.
-* Extracted title, price, shipping, image, material, usage, scene, category, and confidence are displayed when available.
-* Missing fields are clearly marked instead of invented.
-* Analysis model disclosure is visible.
-* Changing link clears old extraction data and old report content.
-* Stale async responses are ignored.
-* Report uses only current URL extraction, current user notes, and current profit snapshot.
-* Profit formulas remain unchanged.
-* Logistics logic remains unchanged.
-* Worker security boundaries remain intact.
-* Static checks pass.
-* Documentation is updated.
-* No push or deployment is performed.
+### 3. Add evidence pack input
 
-Required checks
+Add a large textarea labeled:
+
+`商品证据包 / 竞品观察 / 我的疑问`
+
+Helper text:
+
+`可以粘贴商品标题、竞品价格、评论痛点、材质描述、使用场景、你的担心点。系统会先结构化这些证据，再生成测品判断。`
+
+### 4. Add evidence parsing logic
+
+Add local rule-based parsing for:
+
+* material
+* usage / scene
+* selling points
+* competitor pressure
+* review trust
+* return risk
+* logistics risk
+* seller concerns
+
+### 5. Add scoring engine
+
+Add 0-100 scoring for:
+
+* profit safety
+* price competitiveness
+* product card quality
+* review / trust
+* logistics / return risk
+* platform fit
+
+Each score must include a short explanation.
+
+### 6. Upgrade report
+
+Make the report more specific, more action-oriented, and less generic.
+
+The report should use evidence pack content, structured fields, and profit snapshot together.
+
+### 7. Keep current safety and business boundaries
+
+Do not change Worker behavior unless strictly necessary.
+
+Do not change formulas.
+
+Do not change logistics logic.
+
+Do not change platform presets.
+
+### 8. Update docs
+
+Update:
+
+* `docs/manual-test-cases.md`
+* `docs/DEVELOPMENT_LOG.md`
+
+## Required Checks
 
 Run:
 
-`node --check worker/index.js`
-
-`node --check js/main.js`
-
-`node --check js/product-selection.js`
-
-`node --check js/store-api.js`
-
-`git diff --check`
+```bash
+node --check worker/index.js
+node --check js/main.js
+node --check js/product-selection.js
+node --check js/store-api.js
+git diff --check
+git status --short
+```
 
 Confirm browser-side files do not directly call:
 
-`https://api-seller.ozon.ru`
+```bash
+grep -R "api-seller.ozon.ru" index.html js css
+```
 
-Final response
+## Manual Browser Checks
+
+Run the app locally and verify:
+
+* Evidence pack textarea is visible.
+* User can generate a report from evidence pack + minimal structured fields.
+* Score cards appear in the report.
+* Missing source cost / target price generates limited report.
+* Filled source cost / target price generates stronger report.
+* No stock quantity recommendation appears.
+* Link extraction failure does not block the workflow.
+* Existing profit calculator still works.
+* Existing API Settings still works.
+* No browser console JavaScript errors.
+
+## Done When
+
+* Evidence pack input exists.
+* Evidence pack can enrich the report.
+* Local rule-based parsing extracts useful hints.
+* Score cards are shown.
+* Report is more specific and action-oriented.
+* Missing data is clearly marked.
+* One-piece fulfillment testing logic remains.
+* No stocking quantity logic appears.
+* Link extraction is optional helper only.
+* Profit formulas are unchanged.
+* Logistics logic is unchanged.
+* Platform presets are unchanged.
+* No new scraper / dynamic renderer / parser is added.
+* No real credentials are used.
+* Static checks pass.
+* Browser smoke test passes as much as possible.
+* Documentation is updated.
+* No push, deploy, or commit is performed.
+
+## Final Response
 
 Report back with:
 
 * Files inspected
 * Files changed
-* Current workflow summary before change
-* New URL-first workflow
-* What manual fields were removed/hidden
-* New extraction result fields
-* User notes/questions behavior
-* Analysis model disclosure text
-* How price + shipping are handled
-* How material/usage/scene are extracted or marked missing
-* How URL-change reset works
-* How stale async responses are ignored
-* How report data is tied to current URL
-* Browser smoke test result
+* Old analysis weakness summary
+* New evidence pack workflow
+* Evidence parsing logic
+* Scoring dimensions and rules
+* Report improvements
+* How missing profit data is handled
+* How link extraction is treated
 * Static check results
+* Browser smoke test result
 * Whether Worker behavior changed
-* Whether any new dynamic renderer/crawler/parser was added
-* Whether any real credentials were used
-* Whether deployment or push was performed
+* Whether any new API / crawler / parser / dynamic renderer was added
+* Whether real credentials were used
+* Whether push / deploy / commit was performed
 * Remaining risks

@@ -5,10 +5,11 @@ const STORE_TYPE_TEXT = {
   new: '新店',
   mature: '成熟店'
 };
-const OZON_STORE_CONTEXT_WARNING = 'Ozon 店铺商品摘要暂不可用，本次先基于来源链接、手动商品信息和利润测算进行分析。';
+const OZON_STORE_CONTEXT_WARNING = '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。';
 const OZON_MARKETPLACE_LINK_NOTICE = '当前识别到的是 Ozon 商品页面链接。Seller API 只能读取已授权店铺的商品摘要，不能直接读取任意 Ozon 页面或其他卖家的商品数据。';
-const MANUAL_PRODUCT_GUIDANCE = '已识别来源链接，但当前不会自动抓取商品标题。请手动填写商品标题、采购价和类目信息后继续分析。';
+const MANUAL_PRODUCT_GUIDANCE = '链接提取只是可选辅助；标题、采购成本、类目和卖点以当前商品卡片输入为准。';
 const SOURCE_COST_CONFIRMATION_NOTICE = '采购价会直接影响利润判断，请手动填写或确认。';
+const ANALYSIS_MODEL_DISCLOSURE_TEXT = '当前分析模型：本地规则分析模型 v0.1 + 当前利润计算快照。暂未接入大模型 API；不会自动同步真实平台曝光、点击、转化、广告、订单或财务数据。';
 
 function getProductSelectionApiBaseUrl() {
   const inputUrl = ['backendWorkerUrl', 'ozonWorkerUrl']
@@ -25,7 +26,7 @@ function getProductSelectionApiBaseUrl() {
 }
 
 function getSourcePreviewFallbackMessage() {
-  return '无法自动读取该链接的公开页面信息，请手动填写商品标题、采购价和类目信息。';
+  return '该平台可能限制自动读取。你可以补充截图文字、商品描述或运营疑问，系统会基于已识别内容继续分析。';
 }
 
 function isBlank(value) {
@@ -53,8 +54,11 @@ function buildWaitingSelectionReport(missing, blockingMessage) {
     summary: reason + ' 当前页面不会自动抓取任意网站、平台竞品或店铺经营数据。',
     priceText: '等待来源链接和当前折合售价；竞品价格为可选人工观察，不是必填项。',
     profitText: '等待有效售价、成本和利润测算。',
+    cardProblemsText: '等待商品卡片标题、主图、卖点、类目和材质信息。',
     competitionText: '人工曝光、点击、转化和竞品观察是可选估算，留空不会阻止测品报告。',
+    reviewRiskText: '等待可见评论数、好评信号或差评痛点。',
     adText: '等待利润计算器基础数据；广告占比是可选人工假设。',
+    logisticsReturnText: '等待重量、材质、规格复杂度和退货风险判断。',
     storeText: '等待手动商品类目、卖点和利润快照。',
     actions: ['先补齐来源链接和利润计算器基础输入。', '人工曝光、点击、转化参数可以留空，不代表 API 未同步失败。']
   };
@@ -69,6 +73,148 @@ function uniqueList(items, maxItems = 8) {
 function formatList(items, fallback) {
   const clean = uniqueList(items);
   return clean.length ? clean.join('、') : fallback;
+}
+
+function clampScore(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function getEvidenceLines(text) {
+  return String(text || '')
+    .split(/\r?\n|[。；;]+/)
+    .map(line => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 80);
+}
+
+function pickEvidenceMatches(lines, rules, maxItems = 6) {
+  const matches = [];
+
+  lines.forEach(line => {
+    rules.forEach(rule => {
+      if (rule.pattern.test(line)) matches.push(rule.label || line);
+    });
+  });
+
+  return uniqueList(matches, maxItems);
+}
+
+function extractEvidenceTitle(lines) {
+  for (const line of lines) {
+    const title = line.replace(/^(商品标题|标题|品名|产品名称|product title|title)\s*[:：-]\s*/i, '').trim();
+    if (!title || /^https?:\/\//i.test(title)) continue;
+    if (/^(价格|售价|采购价|竞品|评论|差评|担心|疑问|材质|场景)\s*[:：-]/.test(line)) continue;
+    if (/^[¥$€₽\d\s.,~\-到至价格price]+$/i.test(title)) continue;
+    if (title.length >= 3) return title.slice(0, 120);
+  }
+
+  return '';
+}
+
+function extractEvidencePrices(text) {
+  const prices = [];
+  const source = String(text || '');
+  const rangePattern = /(\d+(?:\.\d+)?)\s*(?:-|~|到|至)\s*(\d+(?:\.\d+)?)\s*(?:₽|卢布|rub|руб)?/gi;
+  const singlePattern = /(?:竞品|售价|价格|均价|price)[^\d]{0,12}(\d+(?:\.\d+)?)\s*(?:₽|卢布|rub|руб)?/gi;
+  let match = rangePattern.exec(source);
+
+  while (match) {
+    const min = Number(match[1]);
+    const max = Number(match[2]);
+    if (Number.isFinite(min) && Number.isFinite(max) && min > 0 && max > 0) {
+      prices.push({ type: 'range', min: Math.min(min, max), max: Math.max(min, max) });
+    }
+    match = rangePattern.exec(source);
+  }
+
+  match = singlePattern.exec(source);
+  while (match) {
+    const value = Number(match[1]);
+    if (Number.isFinite(value) && value > 0) prices.push({ type: 'single', value });
+    match = singlePattern.exec(source);
+  }
+
+  return prices.slice(0, 6);
+}
+
+function parseEvidencePack(text) {
+  const lines = getEvidenceLines(text);
+  const joined = lines.join(' ');
+  const materialRules = [
+    { pattern: /棉|cotton/i, label: '棉' },
+    { pattern: /涤纶|聚酯|polyester/i, label: '涤纶 / 聚酯' },
+    { pattern: /硅胶|silicone/i, label: '硅胶' },
+    { pattern: /不锈钢|stainless/i, label: '不锈钢' },
+    { pattern: /塑料|pp|abs|plastic/i, label: '塑料 / PP / ABS' },
+    { pattern: /皮革|真皮|pu\b|leather/i, label: '皮革 / PU' },
+    { pattern: /木|wood/i, label: '木质' },
+    { pattern: /玻璃|glass/i, label: '玻璃' },
+    { pattern: /陶瓷|ceramic/i, label: '陶瓷' }
+  ];
+  const sceneRules = [
+    { pattern: /厨房|烹饪|kitchen/i, label: '厨房' },
+    { pattern: /旅行|出行|便携|travel/i, label: '旅行 / 出行' },
+    { pattern: /户外|露营|outdoor|camp/i, label: '户外 / 露营' },
+    { pattern: /办公|office/i, label: '办公' },
+    { pattern: /浴室|卫生间|bathroom/i, label: '浴室' },
+    { pattern: /收纳|整理|storage|organizer/i, label: '收纳整理' },
+    { pattern: /母婴|儿童|宝宝|baby|kids/i, label: '母婴 / 儿童' },
+    { pattern: /车载|汽车|car/i, label: '车载' },
+    { pattern: /运动|健身|sport|fitness/i, label: '运动健身' }
+  ];
+  const riskRules = [
+    { pattern: /差评|退货|质量|异味|色差|尺码|易坏|破损|廉价|漏|开裂|变形|不耐用/i },
+    { pattern: /担心|顾虑|疑问|不确定|怕|风险/i }
+  ];
+  const returnRules = [
+    { pattern: /退货|尺码|色差|材质不清|异味|过敏|易坏|破损/i }
+  ];
+  const logisticsRules = [
+    { pattern: /重|重量|体积|尺寸|易碎|破损|包装|物流|运费|抛重/i }
+  ];
+  const trustRules = [
+    { pattern: /评论|评价|评分|review|rating|好评|差评/i }
+  ];
+  const concernRules = [
+    { pattern: /担心|顾虑|疑问|不确定|怕|能不能|是否|会不会/i }
+  ];
+  const sellingPointLines = lines.filter(line =>
+    /卖点|优势|特点|亮点|适合|方便|便携|防水|大容量|可折叠|多功能|耐用|轻便|省空间|安装简单|易清洁/i.test(line)
+  );
+  const categoryHints = pickEvidenceMatches(lines, [
+    { pattern: /收纳|整理|organizer/i, label: '收纳整理' },
+    { pattern: /服饰|衣|裤|鞋|帽|apparel/i, label: '服饰配件' },
+    { pattern: /厨房|厨具|餐具/i, label: '厨房用品' },
+    { pattern: /车载|汽车/i, label: '车品' },
+    { pattern: /宠物|猫|狗|pet/i, label: '宠物用品' },
+    { pattern: /母婴|儿童|宝宝/i, label: '母婴儿童' },
+    { pattern: /户外|露营|运动|健身/i, label: '户外运动' },
+    { pattern: /数码|手机|电脑|配件/i, label: '数码配件' },
+    { pattern: /家居|家用|清洁/i, label: '家居日用' }
+  ], 5);
+  const negativeLines = lines.filter(line => riskRules.some(rule => rule.pattern.test(line)));
+  const concernLines = lines.filter(line => concernRules.some(rule => rule.pattern.test(line)));
+  const reviewLines = lines.filter(line => trustRules.some(rule => rule.pattern.test(line)));
+  const returnLines = lines.filter(line => returnRules.some(rule => rule.pattern.test(line)));
+  const logisticsLines = lines.filter(line => logisticsRules.some(rule => rule.pattern.test(line)));
+
+  return {
+    rawText: String(text || '').trim(),
+    lines,
+    title: extractEvidenceTitle(lines),
+    categoryHints,
+    materials: pickEvidenceMatches(lines, materialRules, 5),
+    usageScenes: pickEvidenceMatches(lines, sceneRules, 5),
+    sellingPoints: uniqueList(sellingPointLines, 6),
+    competitorPrices: extractEvidencePrices(joined),
+    reviewTrustSignals: uniqueList(reviewLines, 5),
+    negativeReviewRisks: uniqueList(negativeLines, 6),
+    returnRiskHints: uniqueList(returnLines, 5),
+    logisticsRiskHints: uniqueList(logisticsLines, 5),
+    concerns: uniqueList(concernLines, 6),
+    confidence: lines.length >= 3 ? 'medium' : lines.length ? 'low' : 'none'
+  };
 }
 
 function normalizeHost(url) {
@@ -103,18 +249,32 @@ function normalizeManualProduct(manualProduct) {
   const product = manualProduct || {};
   const hasCost = product.sourceCost !== null && product.sourceCost !== undefined && String(product.sourceCost).trim() !== '';
   const cost = hasCost ? Number(product.sourceCost) : null;
+  const targetSellingPrice = product.targetSellingPrice !== null && product.targetSellingPrice !== undefined && String(product.targetSellingPrice).trim() !== ''
+    ? Number(product.targetSellingPrice)
+    : null;
+  const estimatedWeight = product.estimatedWeight !== null && product.estimatedWeight !== undefined && String(product.estimatedWeight).trim() !== ''
+    ? Number(product.estimatedWeight)
+    : null;
 
   return {
+    evidencePack: String(product.evidencePack || '').trim(),
     title: String(product.title || '').trim(),
-    sourceCost: Number.isFinite(cost) && cost >= 0 ? cost : null,
+    sourceCost: Number.isFinite(cost) && cost > 0 ? cost : null,
     category: String(product.category || '').trim(),
+    sourcePlatform: String(product.sourcePlatform || '').trim(),
+    targetPlatform: String(product.targetPlatform || '').trim(),
+    targetSellingPrice: Number.isFinite(targetSellingPrice) && targetSellingPrice > 0 ? targetSellingPrice : null,
+    estimatedWeight: Number.isFinite(estimatedWeight) && estimatedWeight > 0 ? estimatedWeight : null,
+    material: String(product.material || '').trim(),
+    usageScene: String(product.usageScene || '').trim(),
+    sellingPoint: String(product.sellingPoint || '').trim(),
     notes: String(product.notes || '').trim()
   };
 }
 
 function hasManualProductData(manualProduct) {
   const product = normalizeManualProduct(manualProduct);
-  return Boolean(product.title || product.sourceCost !== null || product.category || product.notes);
+  return Boolean(product.evidencePack || product.title || product.sourceCost !== null || product.category || product.sourcePlatform || product.material || product.usageScene || product.sellingPoint || product.notes);
 }
 
 function formatManualCost(value) {
@@ -156,7 +316,19 @@ function normalizeManualTestingAssumptions(assumptions) {
     adType: String(input.adType || '').trim(),
     storeType: String(input.storeType || '').trim(),
     storeOrderRange: String(input.storeOrderRange || '').trim(),
-    localPreference: String(input.localPreference || '').trim()
+    localPreference: String(input.localPreference || '').trim(),
+    competitorCardQuality: String(input.competitorCardQuality || '').trim(),
+    marketCrowding: String(input.marketCrowding || '').trim(),
+    positiveReviewSignals: String(input.positiveReviewSignals || '').trim(),
+    negativeReviewSignals: String(input.negativeReviewSignals || '').trim(),
+    titleClarity: String(input.titleClarity || '').trim(),
+    mainImageQuality: String(input.mainImageQuality || '').trim(),
+    sellingPointClarity: String(input.sellingPointClarity || '').trim(),
+    categoryFit: String(input.categoryFit || '').trim(),
+    specComplexity: String(input.specComplexity || '').trim(),
+    visualDifferentiation: String(input.visualDifferentiation || '').trim(),
+    returnRiskLevel: String(input.returnRiskLevel || '').trim(),
+    reviewTrustLevel: String(input.reviewTrustLevel || '').trim()
   };
 }
 
@@ -235,7 +407,7 @@ function buildManualAssumptionText(assumptions) {
   if (input.marketObservationNotes) parts.push(`市场观察：${formatManualNotes(input.marketObservationNotes)}`);
 
   if (!parts.length) {
-    return '未填写人工曝光、点击、转化或竞品参数；本次报告不会因此显示失败，先基于商品信息和利润测算判断是否值得小量测试。';
+    return '未填写人工曝光、点击、转化或竞品参数；本次报告不会因此显示失败，先基于商品卡片信息、公开观察和利润测算判断是否值得上架测试。';
   }
 
   return `以下为人工预估，不代表平台 API 自动同步数据：${parts.join('；')}。`;
@@ -249,25 +421,27 @@ function buildTestingSuggestionText(type, profitSnapshot, assumptions) {
   const preference = input.localPreference ? ` 本地偏好：${input.localPreference}。` : '';
 
   if (type === 'risk') {
-    return `${adText}。当前利润或成本压力偏高，暂不建议直接开广告或放大库存，先调整采购、物流、售价或规格。${preference}`;
+    return `${adText}。当前利润或成本压力偏高，暂不建议直接开广告或扩大投入，先调整采购、物流、售价或规格。${preference}`;
   }
 
   if (type === 'warning') {
-    return `${adText}。当前只适合谨慎测品：小预算、小库存，重点记录点击、加购、订单和退货，但这些记录需要人工复盘。${preference}`;
+    return `${adText}。当前只适合谨慎测品：低预算、一件代发验证，重点记录点击、加购、订单和退货，但这些记录需要人工复盘。${preference}`;
   }
 
   if (!profitSnapshot || !profitSnapshot.mainInputValid) {
     return '请先补齐利润计算器基础数据；人工曝光、点击、转化为空不会阻止报告，但利润快照是测品判断的核心。';
   }
 
-  return `${adText}。当前可进入小量测试，但仍要人工记录广告消耗、点击、加购、订单和退货，不视为平台 API 已同步。${preference}`;
+  return `${adText}。当前可进入低风险上架测试，但仍要人工记录广告消耗、点击、加购、订单和退货，不视为平台 API 已同步。${preference}`;
 }
 
 function applyManualProductContext(analysis, manualProduct, sourceUrl) {
   if (!analysis) return analysis;
 
   const product = normalizeManualProduct(manualProduct);
+  const evidence = parseEvidencePack(product.evidencePack);
   analysis.manualProduct = product;
+  analysis.evidencePack = evidence;
   analysis.source = analysis.source || {};
   analysis.source.url = analysis.source.url || sourceUrl;
   analysis.source.host = analysis.source.host || normalizeHost(analysis.source.url);
@@ -278,10 +452,21 @@ function applyManualProductContext(analysis, manualProduct, sourceUrl) {
     sellingPoints: Array.isArray(analysis.insights.sellingPoints) ? analysis.insights.sellingPoints.slice() : []
   };
 
-  analysis.source.title = product.title || analysis.manualBaseContext.sourceTitle;
-  analysis.insights.category = product.category || analysis.manualBaseContext.category;
-  analysis.insights.sellingPoints = product.notes
-    ? uniqueList([product.notes].concat(analysis.manualBaseContext.sellingPoints), 5)
+  analysis.source.title = product.title || evidence.title || analysis.manualBaseContext.sourceTitle;
+  analysis.insights.category = product.category || evidence.categoryHints[0] || analysis.manualBaseContext.category;
+  analysis.source.platform = product.sourcePlatform || analysis.source.platform;
+  analysis.source.material = product.material
+    ? { value: product.material, confidence: 'manual', source: 'product basics' }
+    : evidence.materials[0]
+      ? { value: evidence.materials[0], confidence: evidence.confidence, source: 'evidence pack' }
+      : analysis.source.material;
+  analysis.source.usage = product.usageScene
+    ? { value: product.usageScene, confidence: 'manual', source: 'product basics' }
+    : evidence.usageScenes[0]
+      ? { value: evidence.usageScenes[0], confidence: evidence.confidence, source: 'evidence pack' }
+      : analysis.source.usage;
+  analysis.insights.sellingPoints = product.sellingPoint || product.notes || evidence.sellingPoints.length
+    ? uniqueList([product.sellingPoint, product.notes].concat(evidence.sellingPoints, analysis.manualBaseContext.sellingPoints), 6)
     : analysis.manualBaseContext.sellingPoints.slice();
 
   return analysis;
@@ -307,7 +492,7 @@ function buildProfitReportText(profitSnapshot) {
   const base = `当前利润约 ¥${profitSnapshot.profit.toFixed(2)}，利润率约 ${percent(profitSnapshot.profitRate)}。`;
 
   if (profitSnapshot.profit < 0 || profitSnapshot.profitRate < 10) {
-    return base + ' 利润空间过低，暂不建议直接开广告或放大库存。';
+    return base + ' 利润空间过低，暂不建议直接开广告或扩大投入。';
   }
 
   if (profitSnapshot.profitRate < 20) {
@@ -321,48 +506,92 @@ function getDecisionStatusLabel(type) {
   if (type === 'risk') return '暂不建议测试';
   if (type === 'warning') return '谨慎测试';
   if (type === 'waiting') return '等待利润测算';
-  return '建议小量测试';
+  return '建议上架测试';
 }
 
 function buildDecisionConclusionText(type, profitSnapshot, hasTitle) {
   if (!hasTitle) {
-    return MANUAL_PRODUCT_GUIDANCE;
+    return '优化后再测。当前没有可靠商品标题，产品卡片无法形成清晰搜索和点击判断。';
   }
 
   if (type === 'waiting') {
-    return '等待利润测算。先补齐售价、重量、采购成本和物流输入，再判断是否值得测品。';
+    return '等待利润测算。先补齐售价、重量、采购成本和物流输入，再判断是否值得上架测试。';
   }
 
   if (type === 'risk') {
-    return '暂不建议测试。当前利润安全边际不足，先改善售价、采购价、物流成本或广告假设。';
+    return '暂不建议测试。当前采购、售价、物流或竞品压力过高，先调整关键条件。';
   }
 
   if (type === 'warning') {
-    return '谨慎测试。只适合低数量验证，不适合直接备货或放大广告。';
+    return '谨慎测试。可以考虑一件代发低风险上架，但要先控制广告和重点观察点击、加购、评价信号。';
   }
 
   if (profitSnapshot && Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
-    return '建议小量测试。当前利润率较好，但仍要用小批量验证点击、转化、退货和广告消耗。';
+    return '建议上架测试。当前利润率较好，但仍要用一件代发方式验证真实点击、加购、订单和退货。';
   }
 
-  return '建议小量测试。利润具备测试空间，先用小批量验证真实转化，不要直接放大库存。';
+  return '建议上架测试。利润具备测试空间，先低风险上架观察真实前台信号。';
 }
 
-function buildProfitSafetyText(type, profitSnapshot, manualProduct) {
-  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
-    return '等待利润计算器快照。报告可以先填写商品信息，但最终测品结论需要有效利润数据。';
+function getAnalysisSourceCostContext(manualProduct, source) {
+  if (Number.isFinite(manualProduct.sourceCost)) {
+    return {
+      value: manualProduct.sourceCost,
+      label: `已确认采购价 ${formatManualCost(manualProduct.sourceCost)}`,
+      isCandidate: false,
+      missing: false
+    };
   }
 
-  const needsSourceCost = !Number.isFinite(manualProduct.sourceCost);
-  const purchaseText = Number.isFinite(manualProduct.sourceCost)
-    ? `手动采购价 ${formatManualCost(manualProduct.sourceCost)}`
-    : `采购成本 ${yuan(profitSnapshot.purchaseCost)}`;
+  if (source && source.priceRole === 'candidate_source_cost' && source.totalCandidateSourceCost && Number.isFinite(Number(source.totalCandidateSourceCost.value))) {
+    return {
+      value: Number(source.totalCandidateSourceCost.value),
+      label: `公开页面候选总成本 ${formatManualCost(Number(source.totalCandidateSourceCost.value))}`,
+      isCandidate: true,
+      missing: false
+    };
+  }
+
+  if (source && source.priceRole === 'candidate_source_cost' && Number.isFinite(Number(source.price))) {
+    return {
+      value: Number(source.price),
+      label: `公开页面候选采购价 ${formatManualCost(Number(source.price))}`,
+      isCandidate: true,
+      missing: false
+    };
+  }
+
+  return {
+    value: null,
+    label: '采购成本未确认',
+    isCandidate: false,
+    missing: true
+  };
+}
+
+function buildProfitSafetyText(type, profitSnapshot, manualProduct, source) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    if (Number.isFinite(manualProduct.sourceCost) && Number.isFinite(manualProduct.targetSellingPrice)) {
+      return `已填写来源成本 ${formatManualCost(manualProduct.sourceCost)} 和目标售价 ${formatManualCost(manualProduct.targetSellingPrice)}；完整利润率、物流费和平台费用仍需利润计算器快照复核。`;
+    }
+
+    return '利润数据不足，本次不输出利润安全结论。请先在利润计算器中完成售价、采购价、重量和平台测算。';
+  }
+
+  const sourceCost = getAnalysisSourceCostContext(manualProduct, source);
+  const purchaseText = sourceCost.missing
+    ? `利润计算器采购成本 ${yuan(profitSnapshot.purchaseCost)}`
+    : sourceCost.label;
   const base = `当前单件利润约 ${yuan(profitSnapshot.profit)}，利润率约 ${percent(profitSnapshot.profitRate)}，${purchaseText}。`;
-  const costNotice = needsSourceCost ? ` ${SOURCE_COST_CONFIRMATION_NOTICE}` : '';
+  const costNotice = sourceCost.isCandidate
+    ? ' 这是候选采购成本，仍需确认是否为真实拿货成本。'
+    : sourceCost.missing
+      ? ` ${SOURCE_COST_CONFIRMATION_NOTICE}`
+      : '';
 
   if (type === 'risk') return base + ' 安全边际偏弱，价格、采购或物流任一项波动都可能吞掉利润。' + costNotice;
-  if (type === 'warning') return base + ' 安全边际一般，只能低数量验证。' + costNotice;
-  return base + ' 安全边际可用于小量测试，但仍需要记录真实广告和退货成本。' + costNotice;
+  if (type === 'warning') return base + ' 安全边际一般，只能用一件代发低风险验证。' + costNotice;
+  return base + ' 安全边际可用于上架测试，但仍需要记录真实广告和退货成本。' + costNotice;
 }
 
 function buildSuggestedTestQuantityText(type, profitSnapshot, assumptions) {
@@ -370,22 +599,22 @@ function buildSuggestedTestQuantityText(type, profitSnapshot, assumptions) {
   const preference = input.localPreference ? ` 本地偏好：${input.localPreference}。` : '';
 
   if (!profitSnapshot || !profitSnapshot.mainInputValid || type === 'waiting') {
-    return '暂不建议给出测试数量。先补齐利润计算器基础数据，人工曝光/点击/转化为空不会阻止报告生成。' + preference;
+    return '暂不建议给出上架测试判断。先补齐利润计算器基础数据；后台曝光/点击/转化为空不会阻止报告生成。' + preference;
   }
 
   if (type === 'risk') {
-    return '建议 0 件，先不备货。除非售价、采购价、物流成本或广告假设明显改善，否则不要进入实测。' + preference;
+    return '暂不建议上架测试。除非售价、采购价、物流成本或广告假设明显改善，否则不要进入实测。' + preference;
   }
 
   if (type === 'warning') {
-    return '建议首轮 1-3 件，只验证是否有点击、加购和订单信号，不做批量库存。' + preference;
+    return '谨慎上架测试：只适合一件代发低风险验证，重点看曝光、点击、加购、订单和退货信号。' + preference;
   }
 
   if (Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
-    return '建议首轮 5-10 件，配合小预算广告或自然流量观察，不要跳过人工复盘。' + preference;
+    return '建议上架测试：用一件代发方式验证真实前台信号，避免在没有数据前扩大广告或运营投入。' + preference;
   }
 
-  return '建议首轮 3-5 件，先确认点击、加购、订单、退货和广告消耗。' + preference;
+  return '建议低风险上架测试：先确认点击、加购、订单、退货和广告消耗。' + preference;
 }
 
 function buildMinimumPriceFloorText(profitSnapshot) {
@@ -410,16 +639,21 @@ function buildMinimumPriceFloorText(profitSnapshot) {
   return `按当前一次利润快照，售价低于约 ${yuan(breakEvenPrice)}${rubText} 会接近无利润。实际改价前请把目标售价重新输入利润计算器复核。`;
 }
 
-function buildMainRiskText(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
+function buildMainRiskText(type, profitSnapshot, manualProduct, assumptions, hasCategory, source) {
   const input = normalizeManualTestingAssumptions(assumptions);
   const risks = [];
+  const sourceCost = getAnalysisSourceCostContext(manualProduct, source);
 
   if (!manualProduct.title) risks.push('商品标题未补齐，无法判断具体规格和卖点');
-  if (!Number.isFinite(manualProduct.sourceCost)) risks.push(SOURCE_COST_CONFIRMATION_NOTICE);
+  if (sourceCost.missing) risks.push(SOURCE_COST_CONFIRMATION_NOTICE);
+  if (sourceCost.isCandidate) risks.push('公开页面价格只是候选采购成本，需确认起批价、规格价、运费和真实拿货成本');
   if (!hasCategory) risks.push('类目或产品类型未补齐，上架类目和佣金口径需人工复核');
+  if (source && source.priceRole === 'market_reference_price') risks.push('当前链接价格是平台销售参考价，不能当作采购成本');
+  if (!source || !source.shippingFee || source.shippingFee.value === null) risks.push('运费未能自动识别，请后续确认');
+  if (!source || !source.material || !source.material.value) risks.push('材质未能自动识别，退货和差评风险需要人工复核');
 
   if (type === 'risk') {
-    risks.push('利润率偏低，暂不适合广告放量或备货');
+    risks.push('利润率偏低，暂不适合广告放量或扩大运营投入');
   } else if (type === 'warning') {
     risks.push('利润率处于谨慎区间，广告、退货或汇率波动可能压缩利润');
   }
@@ -452,7 +686,7 @@ function buildDataBoundaryText(ozon, assumptions) {
 
 function buildSourcePriceRoleText(source) {
   if (!source || source.price === null || source.price === undefined || source.price === '') {
-    return '未能自动识别价格，请手动填写或确认。';
+    return '未能自动识别价格，请手动确认或补充。';
   }
 
   const price = Number(source.price);
@@ -470,26 +704,31 @@ function buildSourcePriceRoleText(source) {
   return `公开页面价格 ${display} 的用途未知，请人工确认。`;
 }
 
-function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, hasCategory) {
+function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, hasCategory, source) {
   const input = normalizeManualTestingAssumptions(assumptions);
   const actions = [];
+  const sourceCost = getAnalysisSourceCostContext(manualProduct, source);
 
-  if (!manualProduct.title || !Number.isFinite(manualProduct.sourceCost) || !hasCategory) {
-    actions.push('先补齐商品标题、采购价和类目或产品类型，再复核一次利润快照。');
+  if (!manualProduct.title || sourceCost.missing || !hasCategory) {
+    actions.push('先补齐缺失的标题、真实采购成本或类目信息，再复核一次利润快照。');
+  }
+
+  if (sourceCost.isCandidate) {
+    actions.push('确认候选采购价是否包含起批、规格差价和运费，不要直接按页面最低价做成本判断。');
   }
 
   if (type === 'risk') {
-    actions.push('暂不备货，先把售价、采购价、物流成本或广告假设调整到可接受区间。');
+    actions.push('暂不建议上架测试，先把售价、采购价、物流成本或广告假设调整到可接受区间。');
   } else if (type === 'warning') {
-    actions.push('只做 1-3 件低数量测试，验证有无点击、加购和订单信号。');
+    actions.push('如要测试，只用一件代发低风险上架，验证有无曝光、点击、加购和订单信号。');
   } else if (type === 'test' && profitSnapshot && Number.isFinite(profitSnapshot.profitRate) && profitSnapshot.profitRate >= 30) {
-    actions.push('首轮按 5-10 件小批量测试，先验证真实转化，不直接放大库存。');
+    actions.push('可上架测试，但先观察真实转化，不要在没有信号前放大广告或运营投入。');
   } else if (type === 'test') {
-    actions.push('首轮按 3-5 件小批量测试，观察转化后再决定是否补货。');
+    actions.push('可低风险上架测试，观察转化后再决定是否继续优化或暂停。');
   }
 
   actions.push('测试期人工记录点击、加购、订单、退货和广告花费。');
-  actions.push('验证前不要批量备货，尤其是重货、易损或规格复杂商品。');
+  actions.push('验证前保持一件代发低风险模式，尤其是重货、易损或规格复杂商品。');
 
   if (input.competitorAvgPrice !== null) {
     actions.push(`用手动记录的竞品均价 ${rub(input.competitorAvgPrice)} 对照当前售价，避免明显脱离价格带。`);
@@ -498,35 +737,462 @@ function buildNextActionList(type, profitSnapshot, manualProduct, assumptions, h
   return uniqueList(actions, 5);
 }
 
+function valueLabel(value, labels) {
+  return labels[value] || '未判断';
+}
+
+function countValues(input, values) {
+  return values.reduce((count, value) => count + (input === value ? 1 : 0), 0);
+}
+
+function getProductCardWeaknesses(product, assumptions, hasCategory) {
+  const weak = [];
+
+  if (!product.title) weak.push('标题缺失，搜索和点击判断不足');
+  if (assumptions.titleClarity === 'weak') weak.push('标题不清晰');
+  if (assumptions.mainImageQuality === 'weak') weak.push('主图吸引力弱');
+  if (assumptions.sellingPointClarity === 'weak' && !product.sellingPoint) weak.push('卖点不清晰');
+  if (!hasCategory || assumptions.categoryFit === 'weak') weak.push('类目匹配需要复核');
+  if (!product.material && assumptions.returnRiskLevel !== 'low') weak.push('材质不清晰，容易带来退货或差评');
+  if (assumptions.specComplexity === 'high') weak.push('规格复杂，买家理解和售后风险偏高');
+  if (assumptions.visualDifferentiation === 'weak') weak.push('同质化明显，主图和卖点需要差异化');
+  if (assumptions.reviewTrustLevel === 'high') weak.push('评价信任风险偏高');
+
+  return uniqueList(weak, 6);
+}
+
+function getProductCardStrengths(product, assumptions) {
+  const strengths = [];
+
+  if (product.title && assumptions.titleClarity !== 'weak') strengths.push('标题具备基础表达');
+  if (assumptions.mainImageQuality === 'strong') strengths.push('主图有点击吸引力');
+  if (product.sellingPoint || assumptions.sellingPointClarity === 'strong') strengths.push('卖点较明确');
+  if (product.material) strengths.push('材质信息较清楚');
+  if (product.usageScene) strengths.push('使用场景明确');
+  if (assumptions.visualDifferentiation === 'strong') strengths.push('视觉差异化较好');
+
+  return uniqueList(strengths, 5);
+}
+
+function getPriceCompetitivenessText(profitSnapshot, assumptions) {
+  if (!profitSnapshot || !profitSnapshot.mainInputValid || !Number.isFinite(profitSnapshot.saleRub)) {
+    return '目标售价或汇率缺失，暂时无法判断价格竞争力。';
+  }
+
+  const min = assumptions.competitorMinPrice;
+  const max = assumptions.competitorMaxPrice;
+  const avg = assumptions.competitorAvgPrice;
+  const saleRub = profitSnapshot.saleRub;
+  const parts = [`当前售价约 ${rub(saleRub)}`];
+
+  if (avg !== null) {
+    const ratio = saleRub / avg;
+    parts.push(`竞品均价约 ${rub(avg)}`);
+    if (ratio >= 1.25) parts.push('当前售价明显高于竞品均价，需要更强主图、卖点或评价信任支撑');
+    else if (ratio <= 0.85) parts.push('当前售价低于竞品均价，但不能只靠低价，需要确认利润和退货波动');
+    else parts.push('价格大致处于可比较区间');
+  } else if (min !== null && max !== null) {
+    parts.push(`竞品价格带约 ${rub(min)} - ${rub(max)}`);
+    if (saleRub > max) parts.push('当前售价高于观察到的竞品高位');
+    else if (saleRub < min) parts.push('当前售价低于观察到的竞品低位，需确认利润安全');
+    else parts.push('当前售价落在观察到的竞品价格带内');
+  } else {
+    parts.push('未填写竞品价格带，价格竞争力只能做初步判断');
+  }
+
+  return parts.join('；') + '。';
+}
+
+function getReviewRiskText(assumptions) {
+  const parts = [];
+
+  if (assumptions.topCompetitorReviews !== null) {
+    parts.push(`可见评论数约 ${assumptions.topCompetitorReviews}`);
+    if (assumptions.topCompetitorReviews >= 1000) parts.push('头部评价壁垒偏高，新卡片需要更强价格或卖点');
+    else if (assumptions.topCompetitorReviews <= 50) parts.push('评价壁垒不算高，但仍要观察早期评价质量');
+  } else {
+    parts.push('未填写可见评论数，评价信任风险需要上架后重点观察');
+  }
+
+  if (assumptions.positiveReviewSignals) parts.push(`好评信号：${formatManualNotes(assumptions.positiveReviewSignals)}`);
+  if (assumptions.negativeReviewSignals) parts.push(`差评痛点：${formatManualNotes(assumptions.negativeReviewSignals)}`);
+  if (assumptions.reviewTrustLevel === 'high') parts.push('你标记的评价信任风险较高');
+
+  return parts.join('；') + '。';
+}
+
+function getDecisionFromWorkspace(type, product, assumptions, cardWeaknesses, profitSnapshot, sourceCost) {
+  if (!product.title || !product.category) return { type: 'warning', status: '优化后再测' };
+  if (sourceCost.missing && (!profitSnapshot || !Number.isFinite(profitSnapshot.purchaseCost) || profitSnapshot.purchaseCost <= 0)) {
+    return { type: 'risk', status: '暂不建议测试' };
+  }
+  if (type === 'risk') return { type: 'risk', status: '暂不建议测试' };
+  if (cardWeaknesses.length >= 3 || assumptions.mainImageQuality === 'weak' || assumptions.sellingPointClarity === 'weak') {
+    return { type: 'warning', status: '优化后再测' };
+  }
+  if (type === 'warning' || assumptions.marketCrowding === 'crowded' || assumptions.returnRiskLevel === 'high' || assumptions.reviewTrustLevel === 'high') {
+    return { type: 'warning', status: '谨慎测试' };
+  }
+  return { type: 'test', status: '建议上架测试' };
+}
+
+function buildObservationActions(decision, profitSnapshot, product, assumptions, cardWeaknesses) {
+  const actions = [];
+
+  actions.push('上架后观察曝光、点击率、加购、收藏、订单、退货原因和差评关键词。');
+  actions.push('继续条件：有稳定曝光和点击，价格不明显高于竞品，且利润率仍能覆盖广告、物流和退货波动。');
+  actions.push('优化条件：有曝光但点击弱时优化主图和标题；有点击无加购时优化价格、卖点、规格和详情表达。');
+  actions.push('暂停条件：广告消耗快速吃掉利润、退货/差评集中在材质尺码质量，或竞品价格压到当前保本线附近。');
+
+  if (decision.status === '优化后再测' && cardWeaknesses.length) {
+    actions.unshift(`上架前优先优化：${cardWeaknesses.slice(0, 3).join('、')}。`);
+  }
+
+  if (!profitSnapshot || !profitSnapshot.mainInputValid) {
+    actions.unshift('先补齐利润计算器售价、重量、成本和物流匹配，再决定是否上架测试。');
+  }
+
+  if (!product.sourceCost && (!profitSnapshot || !Number.isFinite(profitSnapshot.purchaseCost) || profitSnapshot.purchaseCost <= 0)) {
+    actions.unshift('先确认真实采购成本；缺少来源成本时不要做利润安全结论。');
+  }
+
+  if (assumptions.negativeReviewSignals) {
+    actions.push('详情页或标题中提前解释差评痛点，降低误解和退货风险。');
+  }
+
+  return uniqueList(actions, 6);
+}
+
+function getEvidencePriceRange(evidence) {
+  const prices = evidence && Array.isArray(evidence.competitorPrices) ? evidence.competitorPrices : [];
+  const range = prices.find(item => item.type === 'range');
+  if (range) return { min: range.min, max: range.max };
+
+  const singles = prices
+    .filter(item => item.type === 'single' && Number.isFinite(item.value))
+    .map(item => item.value);
+
+  if (!singles.length) return null;
+  return { min: Math.min(...singles), max: Math.max(...singles) };
+}
+
+function getComparableCompetitorRange(assumptions, evidence) {
+  if (assumptions.competitorMinPrice !== null && assumptions.competitorMaxPrice !== null) {
+    return {
+      min: Math.min(assumptions.competitorMinPrice, assumptions.competitorMaxPrice),
+      max: Math.max(assumptions.competitorMinPrice, assumptions.competitorMaxPrice),
+      source: '结构化竞品价格'
+    };
+  }
+
+  if (assumptions.competitorAvgPrice !== null) {
+    return {
+      min: assumptions.competitorAvgPrice,
+      max: assumptions.competitorAvgPrice,
+      source: '结构化竞品均价'
+    };
+  }
+
+  const evidenceRange = getEvidencePriceRange(evidence);
+  if (evidenceRange) return { ...evidenceRange, source: '证据包价格线索' };
+
+  return null;
+}
+
+function buildScoreDiagnosis(context) {
+  const product = context.product;
+  const assumptions = context.assumptions;
+  const evidence = context.evidence || parseEvidencePack('');
+  const profitSnapshot = context.profitSnapshot;
+  const cardWeaknesses = context.cardWeaknesses || [];
+  const hasProfitDecisionData = context.hasProfitDecisionData;
+  const hasCompleteProfitSnapshot = context.hasCompleteProfitSnapshot;
+  const competitorRange = getComparableCompetitorRange(assumptions, evidence);
+  const saleRub = hasCompleteProfitSnapshot && Number.isFinite(profitSnapshot.saleRub) ? profitSnapshot.saleRub : null;
+
+  let profitScore = 0;
+  let profitReason = '利润数据不足，本次不输出利润安全结论。';
+  if (hasProfitDecisionData && hasCompleteProfitSnapshot && Number.isFinite(profitSnapshot.profitRate)) {
+    profitScore = 45 + profitSnapshot.profitRate;
+    if (profitSnapshot.profitRate >= 30) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，有空间覆盖广告、退货和物流波动，但仍需按实测成本复核。`;
+    else if (profitSnapshot.profitRate >= 20) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，能测试但广告和退货容错有限。`;
+    else if (profitSnapshot.profitRate >= 10) profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，广告或退货稍高就会压缩收益。`;
+    else profitReason = `利润率约 ${percent(profitSnapshot.profitRate)}，当前不适合输出积极利润判断。`;
+  } else if (hasProfitDecisionData) {
+    profitScore = 45;
+    profitReason = '来源成本和目标售价已填写，但利润计算器快照不完整，暂按待复核利润口径评分。';
+  }
+
+  let priceScore = 58;
+  let priceReason = '未提供可比较竞品价格，价格竞争力按中性偏保守评分。';
+  if (competitorRange && saleRub !== null) {
+    if (saleRub > competitorRange.max * 1.12) {
+      priceScore = 42;
+      priceReason = `当前售价约 ${rub(saleRub)}，高于${competitorRange.source}上沿 ${rub(competitorRange.max)}，需要更强主图、卖点或评价信任支撑。`;
+    } else if (saleRub < competitorRange.min * 0.9) {
+      priceScore = 70;
+      priceReason = `当前售价约 ${rub(saleRub)}，低于${competitorRange.source}下沿 ${rub(competitorRange.min)}，先确认利润不会被低价吞掉。`;
+    } else {
+      priceScore = 64;
+      priceReason = `当前售价约 ${rub(saleRub)}，落在${competitorRange.source} ${rub(competitorRange.min)} - ${rub(competitorRange.max)} 内。`;
+    }
+  } else if (competitorRange) {
+    priceScore = 55;
+    priceReason = `${competitorRange.source}约 ${rub(competitorRange.min)} - ${rub(competitorRange.max)}，但缺少可换算目标售价，先按卡片观察判断。`;
+  }
+  if (assumptions.marketCrowding === 'crowded') priceScore -= 10;
+  if (assumptions.marketCrowding === 'gap') priceScore += 8;
+
+  let cardScore = 58;
+  if (product.title) cardScore += 8;
+  if (product.category) cardScore += 6;
+  if (product.material) cardScore += 6;
+  if (product.usageScene) cardScore += 6;
+  if (product.sellingPoint) cardScore += 8;
+  cardScore -= cardWeaknesses.length * 8;
+  if (assumptions.titleClarity === 'strong') cardScore += 6;
+  if (assumptions.mainImageQuality === 'strong') cardScore += 8;
+  if (assumptions.sellingPointClarity === 'strong') cardScore += 6;
+  if (assumptions.mainImageQuality === 'weak') cardScore -= 12;
+  const cardReason = cardWeaknesses.length
+    ? `主要短板：${cardWeaknesses.slice(0, 3).join('、')}。`
+    : '标题、类目、材质、场景或卖点中已有可用信息，当前没有明显卡片硬伤。';
+
+  let trustScore = 60;
+  if (assumptions.topCompetitorReviews !== null && assumptions.topCompetitorReviews >= 1000) trustScore -= 12;
+  if (assumptions.topCompetitorReviews !== null && assumptions.topCompetitorReviews <= 50) trustScore += 6;
+  if (assumptions.positiveReviewSignals || evidence.reviewTrustSignals.length) trustScore += 6;
+  if (assumptions.negativeReviewSignals || evidence.negativeReviewRisks.length) trustScore -= 12;
+  if (assumptions.reviewTrustLevel === 'high') trustScore -= 14;
+  if (assumptions.reviewTrustLevel === 'low') trustScore += 6;
+  const trustReason = assumptions.negativeReviewSignals || evidence.negativeReviewRisks.length
+    ? `已看到差评或担心点：${formatList([assumptions.negativeReviewSignals].concat(evidence.negativeReviewRisks), '未提供差评文本')}。`
+    : assumptions.topCompetitorReviews !== null
+      ? `可见评论数约 ${assumptions.topCompetitorReviews}，需要用价格、主图和卖点弥补新卡片信任差距。`
+      : '未提供评论数量或评价内容，信任评分按中性偏保守处理。';
+
+  let logisticsScore = 68;
+  if (product.estimatedWeight !== null && product.estimatedWeight >= 1000) logisticsScore -= 14;
+  if (product.estimatedWeight !== null && product.estimatedWeight <= 300) logisticsScore += 5;
+  if (assumptions.specComplexity === 'high') logisticsScore -= 10;
+  if (assumptions.returnRiskLevel === 'high') logisticsScore -= 18;
+  if (assumptions.returnRiskLevel === 'low') logisticsScore += 6;
+  if (evidence.returnRiskHints.length) logisticsScore -= 10;
+  if (evidence.logisticsRiskHints.length) logisticsScore -= 8;
+  if (product.material) logisticsScore += 4;
+  const logisticsReason = evidence.returnRiskHints.length || evidence.logisticsRiskHints.length
+    ? `证据包提到：${formatList(evidence.returnRiskHints.concat(evidence.logisticsRiskHints), '未提供物流或退货风险文本')}。`
+    : product.estimatedWeight !== null
+      ? `卖家估重 ${product.estimatedWeight}g，退货和物流判断仍按利润计算器口径复核。`
+      : '未提供重量、尺寸或退货痛点，物流与退货评分按中性处理。';
+
+  let platformScore = 58;
+  if (product.targetPlatform) platformScore += 8;
+  if (product.category) platformScore += 8;
+  if (product.usageScene) platformScore += 6;
+  if (assumptions.categoryFit === 'strong') platformScore += 8;
+  if (assumptions.categoryFit === 'weak') platformScore -= 14;
+  if (assumptions.marketCrowding === 'crowded') platformScore -= 8;
+  if (assumptions.marketCrowding === 'gap') platformScore += 8;
+  const platformReason = `目标平台 ${product.targetPlatform || '未选择'}；${product.category ? `类目方向 ${product.category}` : '类目未确认'}；${product.usageScene ? `使用场景 ${product.usageScene}` : '使用场景未明确'}。`;
+
+  const scores = [
+    { label: '利润安全评分', score: clampScore(profitScore), reason: profitReason },
+    { label: '价格竞争力评分', score: clampScore(priceScore), reason: priceReason },
+    { label: '产品卡片质量评分', score: clampScore(cardScore), reason: cardReason },
+    { label: '评价与信任评分', score: clampScore(trustScore), reason: trustReason },
+    { label: '物流与退货风险评分', score: clampScore(logisticsScore), reason: logisticsReason },
+    { label: '平台匹配度评分', score: clampScore(platformScore), reason: platformReason }
+  ];
+  const scorableScores = hasProfitDecisionData ? scores : scores.filter(item => item.label !== '利润安全评分');
+  const average = scorableScores.reduce((sum, item) => sum + item.score, 0) / Math.max(1, scorableScores.length);
+  let status = '谨慎测试';
+  let type = 'warning';
+
+  if (!hasProfitDecisionData) {
+    status = '商品卡片观察报告';
+    type = 'warning';
+  } else if (scores[0].score < 45 || cardScore < 45 || logisticsScore < 40) {
+    status = '暂不建议测试';
+    type = 'risk';
+  } else if (average >= 75 && cardWeaknesses.length <= 1) {
+    status = '建议上架测试';
+    type = 'test';
+  } else if (average >= 62) {
+    status = '谨慎测试';
+    type = 'warning';
+  } else {
+    status = '优化后再测';
+    type = 'warning';
+  }
+
+  return { scores, average: clampScore(average), decision: { type, status } };
+}
+
+function buildEvidenceSummaryRows(evidence) {
+  if (!evidence || !evidence.rawText) {
+    return [
+      { label: '证据包结构化结果', text: '未粘贴商品证据包；本次只使用结构化字段、公开观察和利润测算。' },
+      { label: '证据可信度', text: '未提供自然语言证据，相关信号按缺失处理。' }
+    ];
+  }
+
+  return [
+    { label: '证据包结构化结果', text: `标题线索：${evidence.title || '未提供'}；类目线索：${formatList(evidence.categoryHints, '未提供')}；材质线索：${formatList(evidence.materials, '未提供')}；场景线索：${formatList(evidence.usageScenes, '未提供')}。` },
+    { label: '竞品与评价线索', text: `竞品价格：${evidence.competitorPrices.length ? evidence.competitorPrices.map(item => item.type === 'range' ? `${rub(item.min)} - ${rub(item.max)}` : rub(item.value)).join('、') : '未提供'}；评价/信任：${formatList(evidence.reviewTrustSignals, '未提供')}。` },
+    { label: '担心点与风险线索', text: `差评/退货/物流/疑问：${formatList(evidence.negativeReviewRisks.concat(evidence.returnRiskHints, evidence.logisticsRiskHints, evidence.concerns), '未提供')}。` }
+  ];
+}
+
+function buildPositioningText(product, analysis, evidence) {
+  return [
+    `目标平台：${analysis.targetPlatform || product.targetPlatform || '未选择'}`,
+    product.sourcePlatform ? `来源平台：${product.sourcePlatform}` : '来源平台未确认',
+    product.category ? `类目/类型：${product.category}` : evidence.categoryHints.length ? `类目线索：${evidence.categoryHints.join('、')}` : '类目/类型未提供',
+    product.usageScene ? `使用场景：${product.usageScene}` : evidence.usageScenes.length ? `场景线索：${evidence.usageScenes.join('、')}` : '使用场景未提供'
+  ].join('；') + '。';
+}
+
+function buildSellingPointsText(product, evidence, cardStrengths) {
+  const points = uniqueList([product.sellingPoint].concat(evidence.sellingPoints, cardStrengths), 6);
+  return points.length
+    ? `当前可用卖点：${points.join('、')}。标题、主图和详情页要把这些卖点放到买家第一眼能看到的位置。`
+    : '未提供明确卖点。标题需要突出容量、材质、使用场景或解决的具体问题。';
+}
+
+function buildCardProblemText(product, cardWeaknesses, assumptions, evidence) {
+  const problems = cardWeaknesses.slice();
+  if (!evidence.rawText) problems.push('证据包缺失，报告无法结构化竞品和评价线索');
+  if (assumptions.competitorCardQuality === 'strong') problems.push('头部竞品卡片专业，新卡片需要更清晰主图和差异化卖点');
+  if (!product.sellingPoint && !evidence.sellingPoints.length) problems.push('缺少可直接写进标题或主图的卖点');
+
+  return uniqueList(problems, 6).length
+    ? `上架前先处理：${uniqueList(problems, 6).join('、')}。`
+    : '标题、类目、材质、场景和卖点已有基础信息；上架前仍要检查主图第一视觉、规格表达和详情页承诺。';
+}
+
+function buildReviewTrustDiagnosisText(assumptions, evidence) {
+  const parts = [];
+
+  if (assumptions.topCompetitorReviews !== null) parts.push(`头部可见评论数约 ${assumptions.topCompetitorReviews}`);
+  if (assumptions.positiveReviewSignals) parts.push(`好评信号：${formatManualNotes(assumptions.positiveReviewSignals)}`);
+  if (assumptions.negativeReviewSignals) parts.push(`差评痛点：${formatManualNotes(assumptions.negativeReviewSignals)}`);
+  if (evidence.reviewTrustSignals.length) parts.push(`证据包评价线索：${evidence.reviewTrustSignals.join('、')}`);
+  if (evidence.negativeReviewRisks.length) parts.push(`证据包差评/担心点：${evidence.negativeReviewRisks.slice(0, 4).join('、')}`);
+
+  return parts.length
+    ? parts.join('；') + '。评价少时，不要依赖高广告消耗放量，先用主图、详情页和价格降低信任门槛。'
+    : '未提供评论数量、好评或差评文本。评价与信任风险按缺失处理，上架后要单独记录评价关键词和退货原因。';
+}
+
+function buildLogisticsReturnDiagnosisText(profitSnapshot, product, assumptions, evidence) {
+  const parts = [buildLogisticsRiskText(profitSnapshot)];
+
+  if (product.estimatedWeight !== null) parts.push(`卖家估重 ${product.estimatedWeight}g`);
+  if (product.material) parts.push(`材质：${product.material}`);
+  if (assumptions.returnRiskLevel) parts.push(`你标记的退货风险：${valueLabel(assumptions.returnRiskLevel, { low: '低', medium: '中', high: '高' })}`);
+  if (evidence.returnRiskHints.length) parts.push(`退货线索：${evidence.returnRiskHints.slice(0, 4).join('、')}`);
+  if (evidence.logisticsRiskHints.length) parts.push(`物流线索：${evidence.logisticsRiskHints.slice(0, 4).join('、')}`);
+  parts.push('材质不清时，详情页必须补充材质说明；重量偏高时，优先检查物流成本是否吃掉利润。');
+
+  return parts.join('；') + '。';
+}
+
 function buildOzonAutoReport(analysis, profitSnapshot) {
   const source = analysis.source || {};
   const ozon = analysis.ozon || {};
   const insights = analysis.insights || {};
   const manualProduct = normalizeManualProduct(analysis.manualProduct);
   const manualAssumptions = normalizeManualTestingAssumptions(analysis.manualAssumptions);
-  const type = getProfitReportType(profitSnapshot);
-  const displayTitle = manualProduct.title || source.title || '';
-  const displayCategory = manualProduct.category || insights.category || '';
+  const evidence = analysis.evidencePack || parseEvidencePack(manualProduct.evidencePack);
+  const hasCompleteProfitSnapshot = Boolean(profitSnapshot && profitSnapshot.mainInputValid);
+  const hasProfitDecisionData = analysis.profitDecisionDataAvailable === true;
+  const type = hasCompleteProfitSnapshot ? getProfitReportType(profitSnapshot) : 'warning';
+  const displayTitle = manualProduct.title || evidence.title || source.title || '';
+  const displayCategory = manualProduct.category || insights.category || evidence.categoryHints[0] || '';
   const hasTitle = !isBlank(displayTitle);
   const hasCategory = !isBlank(displayCategory);
-  const status = getDecisionStatusLabel(type);
+  const effectiveProduct = {
+    ...manualProduct,
+    title: displayTitle,
+    category: displayCategory,
+    material: manualProduct.material || (source.material && source.material.value) || evidence.materials[0] || '',
+    usageScene: manualProduct.usageScene || (source.usage && source.usage.value) || (source.scene && source.scene.value) || evidence.usageScenes[0] || '',
+    sellingPoint: manualProduct.sellingPoint || evidence.sellingPoints[0] || (Array.isArray(insights.sellingPoints) ? insights.sellingPoints[0] : '') || ''
+  };
+  const sourceCost = getAnalysisSourceCostContext(manualProduct, source);
+  const cardWeaknesses = getProductCardWeaknesses(effectiveProduct, manualAssumptions, hasCategory);
+  const cardStrengths = getProductCardStrengths(effectiveProduct, manualAssumptions);
+  const scoreDiagnosis = buildScoreDiagnosis({
+    product: effectiveProduct,
+    assumptions: manualAssumptions,
+    evidence,
+    profitSnapshot,
+    cardWeaknesses,
+    hasProfitDecisionData,
+    hasCompleteProfitSnapshot
+  });
+  const baseDecision = hasProfitDecisionData
+    ? getDecisionFromWorkspace(type, effectiveProduct, manualAssumptions, cardWeaknesses, profitSnapshot, sourceCost)
+    : { type: 'warning', status: '商品卡片观察报告' };
+  const decision = hasProfitDecisionData
+    ? scoreDiagnosis.decision
+    : baseDecision;
+  const status = decision.status;
   const sourceHost = source.host || normalizeHost(source.url);
   const marketplaceNotice = getOzonMarketplaceLinkNotice(source.url);
   const titleText = hasTitle ? `商品：${displayTitle}。` : '';
   const categoryText = hasCategory ? `类目/类型：${displayCategory}。` : '';
-  const sourceText = sourceHost ? `已识别来源：${sourceHost}。` : '';
-  const summary = `${buildDecisionConclusionText(type, profitSnapshot, hasTitle)} ${sourceText}${titleText}${categoryText}${marketplaceNotice}`.trim();
+  const sourceText = sourceHost && source.url ? `来源链接辅助：${sourceHost}。` : '未使用来源链接也可以生成判断。';
+  const backendText = ozon && ozon.status === 'connected'
+    ? '已提供可选店铺样本上下文。'
+    : '后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。';
+  const summary = hasProfitDecisionData
+    ? `${status}：${buildDecisionConclusionText(decision.type, profitSnapshot, hasTitle)} 关键评分均值约 ${scoreDiagnosis.average} / 100。${titleText}${categoryText}${sourceText}${marketplaceNotice}`.trim()
+    : `商品卡片观察报告：利润数据不足，本次不输出利润安全结论。${titleText}${categoryText}${sourceText}${marketplaceNotice}`.trim();
+  const positioningText = buildPositioningText(effectiveProduct, analysis, evidence);
+  const sellingPointsText = buildSellingPointsText(effectiveProduct, evidence, cardStrengths);
+  const cardProblemsText = buildCardProblemText(effectiveProduct, cardWeaknesses, manualAssumptions, evidence);
+  const priceReviewText = hasProfitDecisionData && hasCompleteProfitSnapshot
+    ? `${getPriceCompetitivenessText(profitSnapshot, manualAssumptions)} ${getReviewRiskText(manualAssumptions)}`
+    : hasProfitDecisionData
+      ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}；竞品价格带可作为公开市场观察，完整价格竞争力仍需汇率、物流和平台费用快照复核。 ${getReviewRiskText(manualAssumptions)}`
+      : `利润数据不足，本次不输出利润安全结论。${manualProduct.targetSellingPrice ? `已填写目标售价 ${yuan(manualProduct.targetSellingPrice)}，但仍需要利润计算器快照确认汇率、物流和平台费用。` : '目标售价未形成完整利润快照，价格竞争力只能作为卡片观察。'} ${getReviewRiskText(manualAssumptions)}`;
+  const reviewRiskText = buildReviewTrustDiagnosisText(manualAssumptions, evidence);
+  const profitRiskText = hasProfitDecisionData
+    ? `${buildProfitSafetyText(decision.type, profitSnapshot, manualProduct, source)} ${buildMinimumPriceFloorText(profitSnapshot)}`
+    : `利润数据不足，本次不输出利润安全结论。请先填写来源成本和目标售价。${manualProduct.estimatedWeight ? `卖家估重 ${manualProduct.estimatedWeight}g；物流风险仍需利润计算器复核。` : '如利润计算器毛重缺失，物流风险无法完整判断。'}`;
+  const logisticsReturnText = buildLogisticsReturnDiagnosisText(profitSnapshot, effectiveProduct, manualAssumptions, evidence);
+  const dataBoundaryText = `${backendText} ${hasProfitDecisionData ? '' : '利润数据不足，本次不输出利润安全结论。'} ${buildManualAssumptionText(manualAssumptions)} 链接提取只是辅助预填，失败不代表工作流失败；不读取库存、SKU、评论明细、销量、隐藏数据或登录后数据，也不调用外部商品解析 API。${source.price ? ' ' + buildSourcePriceRoleText(source) : ''}`;
+  const actions = buildObservationActions(decision, profitSnapshot, effectiveProduct, manualAssumptions, cardWeaknesses);
+
+  if (!hasProfitDecisionData) {
+    actions.unshift('补齐利润计算器售价、采购价、重量和平台测算后，再生成完整利润安全判断。');
+  } else if (!hasCompleteProfitSnapshot) {
+    actions.unshift('已进入测品决策报告；建议继续补齐利润计算器快照，用于复核物流、佣金和利润率。');
+  }
+  actions.unshift('标题需要突出容量、材质、使用场景或解决的具体问题。');
+  if (cardWeaknesses.length) actions.unshift(`优先优化主图第一视觉，并处理：${cardWeaknesses.slice(0, 3).join('、')}。`);
+  if (manualAssumptions.negativeReviewSignals || evidence.negativeReviewRisks.length) {
+    actions.push('详情页要提前解释差评痛点，减少买家误解和退货。');
+  }
+  actions.push('有点击无订单时，优先检查价格、评价、物流时效和主图信任感。');
 
   return {
-    type,
+    type: decision.type,
     status,
     summary,
-    priceText: buildProfitSafetyText(type, profitSnapshot, manualProduct),
-    profitText: buildSuggestedTestQuantityText(type, profitSnapshot, manualAssumptions),
-    competitionText: buildMinimumPriceFloorText(profitSnapshot),
-    adText: buildMainRiskText(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory),
-    storeText: `${buildDataBoundaryText(ozon, manualAssumptions)} ${buildSourcePriceRoleText(source)}`,
-    actions: buildNextActionList(type, profitSnapshot, manualProduct, manualAssumptions, hasCategory)
+    scores: scoreDiagnosis.scores,
+    evidenceSummary: buildEvidenceSummaryRows(evidence),
+    priceText: positioningText,
+    profitText: sellingPointsText,
+    cardProblemsText,
+    competitionText: priceReviewText,
+    reviewRiskText,
+    adText: profitRiskText,
+    logisticsReturnText,
+    storeText: dataBoundaryText,
+    actions: uniqueList(actions, 6)
   };
 }
 
@@ -547,7 +1213,19 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct) 
       price: null,
       currency: '',
       priceRole: 'unknown',
+      shippingFee: { value: null, currency: '', confidence: 'none', source: '' },
+      totalCandidateSourceCost: { value: null, currency: '', confidence: 'none', source: '' },
       categorySuggestion: '',
+      material: { value: '', confidence: 'none', source: '' },
+      usage: { value: '', confidence: 'none', source: '' },
+      scene: { value: '', confidence: 'none', source: '' },
+      specifications: [],
+      productDetails: [],
+      modelDisclosure: ANALYSIS_MODEL_DISCLOSURE_TEXT,
+      extractionConfidence: 'none',
+      extractionSource: '',
+      failureReason: '',
+      manualConfirmationNeeded: [],
       confidence: { title: 'none', price: 'none', category: 'none' },
       extractionSources: { title: '', price: '', image: '', category: '' }
     },
@@ -565,13 +1243,13 @@ function buildApiDisconnectedAnalysis(sourceUrl, profitSnapshot, manualProduct) 
     report: {
       type: getProfitReportType(profitSnapshot),
       status: 'Preview / manual',
-      summary: `Product link received（${host}）。${marketplaceNotice} 当前模式为手动测品预览：系统不会从浏览器直接读取商品页或 Ozon 卖家数据。人工曝光、点击、转化参数只用于模拟测品，不代表平台 API 同步。`,
+      summary: `可选链接已接收（${host}）。${marketplaceNotice} 当前模式为产品卡片测品决策工作台：未配置 Worker 时不会从浏览器直接读取商品页或 Ozon 卖家数据。人工曝光、点击、转化参数只用于模拟测品，不代表平台 API 同步。`,
       priceText: `当前售价折合约 ${rub(profitSnapshot && profitSnapshot.saleRub)}。价格带和竞品数据需要授权后端或人工补充，当前不生成实时平台结论。`,
       profitText: buildProfitReportText(profitSnapshot),
       competitionText: 'Store API 尚未连接，当前不会自动读取 Ozon 竞品数量、均价、评分或评论。请先以人工观察和后续授权数据作为输入。',
       adText: '广告判断暂时只基于当前利润测算和人工预估，不代表已同步真实广告、曝光、点击或转化数据。',
       storeText: '商品类目、关键词和主题标签当前处于人工预览状态；后续 Worker 端点可返回经过授权的数据摘要。',
-      actions: ['先补齐商品信息和利润测算，再决定是否小量测试。', '人工曝光、点击、转化参数是可选估算，不能当作平台同步数据。', '正式测试只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
+      actions: ['先补齐商品信息和利润测算，再决定是否上架测试。', '人工曝光、点击、转化参数是可选估算，不能当作平台同步数据。', '可选店铺摘要只能通过 Worker 调用官方 Seller API，不要把 API Key 放进前端代码或 localStorage。']
     }
   };
 
@@ -624,8 +1302,40 @@ function buildDemoOzonAnalysis(profitSnapshot) {
   };
 
   analysis.report = buildOzonAutoReport(analysis, profitSnapshot);
-  analysis.report.summary = '这是示例报告，用于确认页面结果形态。真实报告需要部署 Worker 并配置 Ozon API 凭证。';
+  analysis.report.summary = '这是示例报告，用于确认页面结果形态。真实测品决策可以直接基于商品卡片信息、公开市场观察和利润快照生成；可选店铺摘要需要部署 Worker 并配置 Ozon API 凭证。';
   return analysis;
+}
+
+function defaultNormalizedSource(sourceUrl) {
+  return {
+    url: sourceUrl,
+    finalUrl: sourceUrl,
+    host: normalizeHost(sourceUrl),
+    platform: normalizeHost(sourceUrl),
+    platformType: 'unknown',
+    title: '',
+    image: '',
+    description: '',
+    canonicalUrl: '',
+    price: null,
+    currency: '',
+    priceRole: 'unknown',
+    shippingFee: { value: null, currency: '', confidence: 'none', source: '' },
+    totalCandidateSourceCost: { value: null, currency: '', confidence: 'none', source: '' },
+    categorySuggestion: '',
+    material: { value: '', confidence: 'none', source: '' },
+    usage: { value: '', confidence: 'none', source: '' },
+    scene: { value: '', confidence: 'none', source: '' },
+    specifications: [],
+    productDetails: [],
+    modelDisclosure: ANALYSIS_MODEL_DISCLOSURE_TEXT,
+    extractionConfidence: 'none',
+    extractionSource: '',
+    failureReason: '',
+    manualConfirmationNeeded: [],
+    confidence: { title: 'none', price: 'none', category: 'none' },
+    extractionSources: { title: '', price: '', image: '', category: '' }
+  };
 }
 
 async function requestOzonProductAnalysis(payload) {
@@ -686,56 +1396,37 @@ async function requestSourcePreview(sourceUrl) {
     return {
       ok: false,
       requestedUrl: sourceUrl,
-      source: {
-        url: sourceUrl,
-        finalUrl: sourceUrl,
-        host: normalizeHost(sourceUrl),
-        platform: normalizeHost(sourceUrl),
-        platformType: 'unknown',
-        title: '',
-        image: '',
-        description: '',
-        canonicalUrl: '',
-        price: null,
-        currency: '',
-        priceRole: 'unknown',
-        categorySuggestion: '',
-        confidence: { title: 'none', price: 'none', category: 'none' },
-        extractionSources: { title: '', price: '', image: '', category: '' }
-      },
+      source: defaultNormalizedSource(sourceUrl),
       message: getSourcePreviewFallbackMessage(),
       limitations: ['source preview 返回了不可读取的响应。']
     };
   }
 
   if (!data.source) {
-    data.source = {
-      url: sourceUrl,
-      finalUrl: sourceUrl,
-      host: normalizeHost(sourceUrl),
-      platform: normalizeHost(sourceUrl),
-      platformType: 'unknown',
-      title: '',
-      image: '',
-      description: '',
-      canonicalUrl: '',
-      price: null,
-      currency: '',
-      priceRole: 'unknown',
-      categorySuggestion: '',
-      confidence: { title: 'none', price: 'none', category: 'none' },
-      extractionSources: { title: '', price: '', image: '', category: '' }
-    };
+    data.source = defaultNormalizedSource(sourceUrl);
   }
 
   data.source = {
+    ...defaultNormalizedSource(sourceUrl),
     ...data.source,
     finalUrl: data.source.finalUrl || data.finalUrl || data.source.url || sourceUrl,
     platformType: data.source.platformType || 'unknown',
     price: data.source.price === undefined ? null : data.source.price,
     currency: data.source.currency || '',
     priceRole: data.source.priceRole || 'unknown',
+    shippingFee: data.source.shippingFee || { value: null, currency: '', confidence: 'none', source: '' },
+    totalCandidateSourceCost: data.source.totalCandidateSourceCost || { value: null, currency: '', confidence: 'none', source: '' },
     categorySuggestion: data.source.categorySuggestion || '',
+    material: data.source.material || { value: '', confidence: 'none', source: '' },
+    usage: data.source.usage || { value: '', confidence: 'none', source: '' },
+    scene: data.source.scene || { value: '', confidence: 'none', source: '' },
+    specifications: Array.isArray(data.source.specifications) ? data.source.specifications : [],
+    productDetails: Array.isArray(data.source.productDetails) ? data.source.productDetails : [],
+    modelDisclosure: data.source.modelDisclosure || ANALYSIS_MODEL_DISCLOSURE_TEXT,
+    extractionConfidence: data.source.extractionConfidence || 'none',
+    extractionSource: data.source.extractionSource || '',
+    failureReason: data.source.failureReason || '',
+    manualConfirmationNeeded: Array.isArray(data.source.manualConfirmationNeeded) ? data.source.manualConfirmationNeeded : [],
     confidence: data.source.confidence || { title: 'none', price: 'none', category: 'none' },
     extractionSources: data.source.extractionSources || { title: '', price: '', image: '', category: '' }
   };
@@ -830,7 +1521,7 @@ function analyzeProductSelection(input) {
     actions.push('先降低采购、物流或广告假设，或重新测算售价。');
   } else if (input.profitRate < 20) {
     if (type !== 'risk') type = 'warning';
-    profitText += ' 利润率只是勉强可测，适合小量验证，不适合直接放量。';
+    profitText += ' 利润率只是勉强可测，适合一件代发低风险验证，不适合直接放大投入。';
     actions.push('只做小预算测试，并优先复核采购、物流、广告和退货假设。');
   } else if (input.profitRate < 30) {
     profitText += ' 利润有一定测试空间，但仍需要真实广告和退货数据验证。';
@@ -882,8 +1573,8 @@ function analyzeProductSelection(input) {
     storeText += ' 垂直店更适合围绕类目沉淀关键词、评价和复购。';
   } else if (input.storeType === 'mixed') {
     if (type !== 'risk') type = 'warning';
-    storeText += ' 杂货店更适合轻量测试，库存和广告投入要更保守。';
-    actions.push('先小批量上架验证，不要为单个新品压太多库存。');
+    storeText += ' 杂货店更适合轻量测试，广告投入要更保守。';
+    actions.push('先低风险上架验证，不要为单个新品过早扩大投入。');
   } else if (input.storeType === 'new') {
     if (type !== 'risk') type = 'warning';
     storeText += ' 新店缺少基础权重和评价，价格、图片和广告测试要更谨慎。';
@@ -893,15 +1584,15 @@ function analyzeProductSelection(input) {
   }
 
   if (!actions.length) {
-    actions.push('可以进入小量测试，但需要记录广告消耗、点击、加购、订单和退货。');
+    actions.push('可以进入上架测试，但需要记录广告消耗、点击、加购、订单和退货。');
   }
 
-  const status = type === 'risk' ? '暂不建议' : type === 'warning' ? '谨慎测试' : '建议小量测试';
+  const status = type === 'risk' ? '暂不建议测试' : type === 'warning' ? '谨慎测试' : '建议上架测试';
   const summary = type === 'risk'
-    ? '当前组合风险较高，暂不建议直接开广告或放大库存。'
+    ? '当前组合风险较高，暂不建议直接开广告或扩大投入。'
     : type === 'warning'
       ? '当前产品可以继续观察，但只适合谨慎、小预算验证。'
-      : '当前数据支持小量测试，但仍需人工记录曝光、点击、广告和退货表现。';
+      : '当前数据支持上架测试，但仍需人工记录曝光、点击、广告和退货表现。';
 
   return {
     type,

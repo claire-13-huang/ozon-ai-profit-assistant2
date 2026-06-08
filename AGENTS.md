@@ -1,567 +1,536 @@
 # AGENTS.md
 
-## Project Overview
+## Project Identity
 
-This project is a static front-end seller decision assistant for Ozon / Wildberries / Yandex cross-border ecommerce sellers.
+This project is an AI-assisted cross-border ecommerce product extraction and profit decision assistant.
 
-The product focuses on:
+The product serves sellers working with platforms and sources such as:
 
-- profit calculation
-- cost visibility
-- logistics and fee awareness
-- seller-facing decision support
-- future AI-assisted product and market analysis, only when explicitly approved
+* Ozon
+* Wildberries
+* Yandex Market
+* Amazon
+* AliExpress
+* 1688
+* Taobao
+* Tmall
+* Pinduoduo
+* JD
+* generic ecommerce product pages
+
+The product goal is:
+
+A seller pastes a product link. The app automatically identifies the platform, extracts public product information when available, normalizes the fields, and generates a seller-facing product-testing decision report.
+
+The app should help sellers answer:
+
+* What is this product?
+* Which platform/source does it come from?
+* What title, image, visible price, shipping fee, currency, category, material, usage, scene, and basic product details can be safely extracted?
+* Is the visible price a supplier candidate cost or a marketplace reference price?
+* What information still needs manual confirmation?
+* Is this product worth a small test?
+* What are the profit, logistics, advertising, return, and testing risks?
+* What should the seller do next?
 
 This project is a decision assistant, not a full ERP system.
 
-## Current Phase
+## Current Product Direction
 
-The default working phase for future Codex tasks is Phase 2: product stability, UI clarity, and user experience improvement.
+The current product direction is URL-first automatic product extraction plus profit-based product testing decision support.
 
-Phase 2 priorities:
+Manual input should not be the primary workflow.
 
-- preserve calculation correctness
-- improve layout clarity
-- improve seller-facing user flow
-- keep AI/API features as conservative placeholders unless explicitly instructed
-- record changes in `docs/DEVELOPMENT_LOG.md`
+The target workflow is:
 
-## Technology Constraints
+1. User pastes a product URL.
+2. The app identifies the platform.
+3. The app attempts safe public product extraction.
+4. The app extracts title, image, visible price, shipping fee when available, currency, category suggestion, material, usage, scene, basic product details, and confidence when available.
+5. The app clearly labels price role:
+
+   * supplier/source platform price = `candidate_source_cost`
+   * marketplace page price = `market_reference_price`
+   * unknown price role = `unknown`
+6. The user may add notes, questions, doubts, or business context after extraction.
+7. The app generates a seller-facing product-testing decision report.
+8. Manual input remains fallback, editing, or confirmation only.
+
+## Current Technical Stack
 
 Use only:
-
-- HTML
-- CSS
-- vanilla JavaScript
-
-Do not introduce:
-
-- React
-- Vue
-- TypeScript
-- backend services
-- database
-- login system
-- payment system
-- real API integration unless explicitly approved
-- new npm dependencies unless explicitly approved
-
-## Protected Business Logic
-
-Do not change the following unless explicitly instructed:
-
-- core profit formulas
-- logistics fee logic
-- platform preset values or platform defaults
-- existing JavaScript-bound element IDs
-- Ozon / Wildberries / Yandex platform switching
-
-If an existing ID must be renamed, update every binding safely in the same change and verify the page behavior.
-
-## UI Development Rules
-
-- Reduce visual clutter.
-- Use clear section hierarchy.
-- Keep one main user task visible at a time when possible.
-- Preserve all existing features unless explicitly told to remove them.
-- Prefer relocating and restructuring sections over deleting them.
-- Keep AI Analysis and API Connection conservative placeholders during Phase 2.
-- Do not claim real AI analysis, real-time market data, or real API integration unless it is actually implemented and verified.
-
-## Safety Rules
-
-- Do not run `git push`.
-- Do not run deployment commands.
-- Do not delete files without explicit instruction.
-- Do not modify `.env` or secret-related files.
-- Do not store real API keys.
-- Do not make real external API requests.
-- Do not introduce paid or production behavior without explicit approval.
-
-## Documentation Rules
-
-- Update `docs/DEVELOPMENT_LOG.md` after every meaningful change.
-- If adding future planning, place it under `docs/`.
-- Clearly distinguish implemented features from future placeholders.
-- Use conservative wording.
-- Avoid claiming real AI analysis, real-time market data, or real API integration unless actually implemented.
-
----
-
-## Project Overview
-
-This project is an AI-driven cross-border ecommerce decision system for Ozon/Wildberries sellers.
-
-Current stage:
-MVP profit analysis system.
-
-The goal is NOT to build a full ERP yet.
-
-The current priority is:
-
-* profit calculation
-* cost visualization
-* seller decision assistance
-* stable frontend structure
-
-The long-term direction is:
-AI-assisted ecommerce operations and decision making.
-
----
-
-## Current Tech Stack
-
-Current stack:
 
 * HTML
 * CSS
 * Vanilla JavaScript
+* Cloudflare Pages for frontend
+* Cloudflare Worker for backend proxy and lightweight public product extraction
 
-Do NOT:
+Do not introduce the following unless explicitly approved by the user:
 
-* introduce React
-* introduce Vue
-* introduce TypeScript
-* over-engineer the project
+* React
+* Vue
+* TypeScript
+* database
+* login system
+* payment system
+* large framework
+* new npm dependency
+* separate backend service
+* Playwright
+* Puppeteer
+* browser automation
+* proxy scraping
+* captcha solving
+* external product parser
 
-This project is maintained by a beginner developer using AI-assisted coding.
+The user is a beginner developer using AI-assisted coding. Keep the code understandable, incremental, and reversible.
 
-Keep the structure simple and understandable.
+## Current Live URLs
 
----
+Frontend:
 
-## Development Principles
+`https://ozon-ai-profit-assistant2.pages.dev/`
 
-Priority order:
+Worker:
 
-1. MVP first
-2. Simplicity first
-3. Readability first
-4. Small iterations
-5. Do not rebuild the whole project unless necessary
+`https://ozon-ai-profit-assistant.ozon-ai-profit-assistant-claire.workers.dev`
 
-Always prefer:
+## Active Files
 
-* small modifications
-* modular improvements
-* incremental refactoring
+Primary execution files:
 
-Avoid:
+* `AGENTS.md`
+* `ACTIVE_GOAL.md`
 
-* massive rewrites
-* unnecessary abstractions
-* adding too many dependencies
+Core app files:
 
----
+* `index.html`
+* `css/style.css`
+* `js/main.js`
+* `js/product-selection.js`
+* `js/store-api.js`
+* `worker/index.js`
 
-## Current Focus
+Active docs:
 
-Current focus:
-Profit analysis calculator.
+* `docs/DEVELOPMENT_LOG.md`
+* `docs/manual-test-cases.md`
 
-Important features:
+Archive folders are historical memory only. Do not treat them as active task files unless explicitly requested.
 
-* selling price
-* logistics fee
-* commission fee
-* advertising fee
-* purchase cost
-* profit
-* profit margin
-* subsidy calculation
+Archive folders:
 
-The UI should emphasize:
-left-side cost structure
-right-side financial results
+* `docs/archive-old-docs/`
+* `docs/archive-root-docs/`
+* `docs/archive-agent-setup/`
 
-This is a decision tool, not just a calculator.
+Local run logs:
 
----
+* `docs/codex-runs/`
 
-## File Structure Rules
+`docs/codex-runs/` should stay ignored by Git.
 
-Keep:
+## Source Extraction Rules
 
-* CSS separated
-* JS separated
-* reusable logic modularized gradually
+The source extraction system must be platform-aware.
 
-Avoid:
+Required platform detection should cover at least:
 
-* large inline JavaScript inside HTML
-* duplicated calculation logic
-* mixing unrelated features into one file
+* 1688
+* Taobao
+* Tmall
+* Pinduoduo
+* JD
+* AliExpress
+* Amazon
+* Ozon
+* Wildberries
+* Yandex Market
+* generic ecommerce sites
 
----
+The extractor may attempt, in order:
 
-## AI Collaboration Rules
+1. safe redirect resolution
+2. JSON-LD Product data
+3. Open Graph metadata
+4. Twitter card metadata
+5. itemprop fields
+6. common product meta tags
+7. HTML title
+8. conservative visible price/title patterns
+9. platform-specific static adapters when safe
 
-Before implementing large features:
+Never invent product data.
 
-1. analyze current structure first
-2. explain risks first
-3. propose a step-by-step plan first
+If price is not found, return `price: null`.
 
-Complex tasks should be split into small milestones.
+If shipping fee is not found, do not invent shipping.
 
-Always explain:
+If title is not found, return empty title and a clear fallback reason.
 
+If platform blocks extraction, return a clear fallback message and keep the workflow available.
+
+## Price Role Rules
+
+Supplier/source platforms:
+
+* 1688
+* Taobao
+* Tmall
+* Pinduoduo
+* JD
+* AliExpress when used as a source platform
+
+Visible price may be treated as:
+
+`candidate_source_cost`
+
+Frontend warning:
+
+`识别到的是候选采购价，请确认是否为真实拿货成本。`
+
+Marketplace platforms:
+
+* Amazon
+* Ozon
+* Wildberries
+* Yandex Market
+
+Visible price must be treated as:
+
+`market_reference_price`
+
+Frontend warning:
+
+`识别到的是平台销售参考价，不等于你的采购成本。`
+
+If price is missing:
+
+`未能自动识别价格，请手动确认或补充。`
+
+If shipping is missing:
+
+`运费未能自动识别，请后续确认。`
+
+Marketplace reference price must never silently fill purchase cost.
+
+## Product Field Rules
+
+Extraction should move toward this normalized product model:
+
+```json
+{
+  "sourceUrl": "",
+  "finalUrl": "",
+  "platform": "",
+  "platformType": "supplier|marketplace|unknown",
+  "title": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "price": {
+    "value": null,
+    "currency": "",
+    "role": "candidate_source_cost|market_reference_price|unknown",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "shippingFee": {
+    "value": null,
+    "currency": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "totalCandidateSourceCost": {
+    "value": null,
+    "currency": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "images": [
+    {
+      "url": "",
+      "confidence": "high|medium|low|none",
+      "source": ""
+    }
+  ],
+  "material": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "usage": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "scene": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "specifications": [
+    {
+      "name": "",
+      "value": "",
+      "confidence": "high|medium|low|none",
+      "source": ""
+    }
+  ],
+  "categorySuggestion": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "description": {
+    "value": "",
+    "confidence": "high|medium|low|none",
+    "source": ""
+  },
+  "extractionConfidence": "high|medium|low|none",
+  "extractionSource": "static_html|json_ld|meta|itemprop|visible_text|platform_adapter|manual|user_notes",
+  "failureReason": "",
+  "manualConfirmationNeeded": []
+}
+```
+
+## Frontend State Rules
+
+Changing the source URL must always start a new product extraction session.
+
+When URL changes:
+
+* clear old extraction result
+* clear old preview image
+* clear old extracted title
+* clear old extracted price
+* clear old shipping fee
+* clear old material
+* clear old usage
+* clear old scene
+* clear old specifications
+* clear old category suggestion
+* clear old extraction details
+* clear old analysis report
+* show a loading or waiting state for the current URL
+* never show previous URL extraction details under the new URL
+
+Every extraction request must carry a request id or URL token.
+
+If an async response returns after the URL changed, ignore that stale response.
+
+Reports must use only:
+
+* current URL
+* current extraction result
+* current user notes/questions
+* current profit snapshot
+
+Old product data must never appear in a new product report.
+
+## Analysis Model Disclosure
+
+The app must clearly disclose the current analysis model.
+
+If no LLM API is used, the UI must not imply ChatGPT, OpenAI, Claude, or another large model is powering the live analysis.
+
+Recommended disclosure:
+
+`当前分析模型：本地规则分析模型 v0.1 + 当前利润计算快照。暂未接入大模型 API；不会自动同步真实平台曝光、点击、转化、广告、订单或财务数据。`
+
+## Product Analysis Rules
+
+The report should be seller-facing, not a technical diagnostic.
+
+Preferred report sections:
+
+* 测品结论
+* 利润安全边际
+* 建议测试数量
+* 最低售价底线
+* 主要风险
+* 下一步动作
+* 数据边界
+
+Decision labels:
+
+* 建议小量测试
+* 谨慎测试
+* 暂不建议测试
+
+The report should explain:
+
+* why the product is or is not worth testing
+* first test quantity
+* price floor reference
+* profit risk
+* logistics/weight risk
+* advertising risk
+* return risk
+* what data is missing
+* what the seller should confirm next
+
+Do not produce fake profit conclusions when source cost or profit snapshot is missing.
+
+## Protected Business Logic
+
+Do not change the following unless the user explicitly requests it:
+
+* core profit formulas
+* logistics fee logic
+* platform preset values
+* platform defaults
+* Ozon / Wildberries / Yandex platform switching logic
+
+If an existing element ID must be renamed, update every related binding safely in the same change and verify page behavior.
+
+## Safety Boundaries
+
+Do not:
+
+* use real Ozon credentials unless explicitly requested
+* ask the user to paste real credentials into chat
+* print, save, commit, or log API keys
+* call Ozon Seller API for arbitrary public product links
+* add new Ozon Seller API endpoints without explicit approval
+* add write/update/delete/create endpoints
+* update product data, prices, stock, orders, warehouse, logistics, ads, or finance
+* implement batch crawling
+* implement hidden-data extraction
+* bypass anti-bot systems
+* bypass captcha
+* use login cookies
+* use session scraping
+* use proxy scraping
+* scrape private or login-only data
+* extract seller-private data
+* extract stock, SKU, reviews, sales count, orders, or hidden fields
+* add Playwright, Puppeteer, browser automation, dynamic rendering, external parsers, or new backend services without explicit user approval
+* modify profit formulas unless explicitly requested
+* modify logistics matching logic unless explicitly requested
+* modify platform presets unless explicitly requested
+
+## Git Rules
+
+Do not run `git push` unless explicitly requested.
+
+Do not deploy unless explicitly requested.
+
+Do not commit unless explicitly requested or the user has approved the exact change.
+
+Do not commit unrelated files.
+
+Do not commit:
+
+* real credentials
+* `.env`
+* local cache
+* `worker/.wrangler/`
+* `docs/codex-runs/`
+* generated secrets
+* screenshots containing credentials
+
+## Deployment Rules
+
+Do not deploy unless the user explicitly asks.
+
+If only frontend files changed:
+
+* push to `origin/main` only after approval
+* Cloudflare Pages should auto-deploy
+
+If `worker/index.js` changed:
+
+* push to `origin/main` only after approval
+* deploy Worker explicitly with `npx wrangler deploy` only after approval
+* report Worker Version ID
+
+## Documentation Rules
+
+Meaningful product, API, safety, or UI changes must update:
+
+* `docs/DEVELOPMENT_LOG.md`
+* `docs/manual-test-cases.md`
+
+Do not write new active planning documents unless explicitly requested.
+
+Historical documents should stay in archive folders.
+
+## Codex Working Rules
+
+For every task:
+
+1. read `AGENTS.md`
+2. read `ACTIVE_GOAL.md`
+3. inspect relevant code before changing files
+4. summarize current behavior
+5. make a minimal implementation plan
+6. modify only necessary files
+7. do not push unless explicitly requested
+8. do not deploy unless explicitly requested
+9. do not use real credentials
+10. update documentation for meaningful changes
+11. run static checks
+12. report risks clearly
+
+If a check fails:
+
+1. read the error
+2. identify the likely cause
+3. make the smallest safe fix
+4. rerun the check
+
+Continue until all Done when conditions in `ACTIVE_GOAL.md` pass or a real blocker is reached.
+
+Stop only for real blockers:
+
+* real credentials are required
+* deployment is required
+* git push is required
+* new backend service is required
+* dynamic renderer / Playwright / Puppeteer is required
+* destructive file deletion is required
+* safety boundary would be violated
+
+## Required Check Commands
+
+Run relevant checks before reporting success:
+
+```bash
+node --check worker/index.js
+node --check js/main.js
+node --check js/product-selection.js
+node --check js/store-api.js
+git diff --check
+git status --short
+```
+
+If Worker is not meant to change, confirm:
+
+```bash
+git diff -- worker/index.js
+```
+
+If frontend is changed, verify no direct browser-side Ozon Seller API call exists:
+
+```bash
+grep -R "api-seller.ozon.ru" index.html js css
+```
+
+Browser-side files must not call Ozon Seller API directly.
+
+## Final Response Format
+
+Every final response must include:
+
+* files inspected
+* files changed
 * what changed
-* which files changed
-* how to test
-* possible risks
-
-Development log path:
-
-* Always read and update `docs/DEVELOPMENT_LOG.md`
-* Do not use the root `DEVELOPMENT_LOG.md` for new records
-
----
-
-## Important Constraints
-
-The developer is still learning programming fundamentals.
-
-Code should:
-
-* remain understandable
-* avoid advanced abstractions
-* prioritize maintainability
-
-When suggesting improvements:
-
-* explain the reason clearly
-* connect technical choices to real business goals
----
-
-## Phase 2 Development Plan
-
-Current phase:
-Phase 2 — Profit Decision MVP Improvement.
-
-The project has completed Phase 1 cleanup:
-- AGENTS.md created
-- old standalone HTML files archived
-- active MVP files formatted
-- JavaScript responsibilities separated
-- business diagnosis panel added
-- current MVP can run as a static frontend app
-
-Phase 2 goal:
-Turn the current profit calculator into a seller-facing profit decision assistant.
-
-The goal is NOT to build a full AI platform yet.
-The goal is to make the existing MVP more useful for real Ozon/Wildberries sellers by improving:
-- business clarity
-- input reliability
-- diagnosis usefulness
-- decision guidance
-- testing stability
-
----
-
-## Phase 2 Product Direction
-
-The current MVP should evolve from:
-
-"利润计算器"
-
-into:
-
-"利润决策助手"
-
-The system should help sellers answer:
-
-1. Can this product be sold profitably?
-2. Which cost item is causing pressure?
-3. Is logistics cost too high?
-4. Is advertising cost eating profit?
-5. Is purchase cost leaving enough margin?
-6. Does subsidy improve the result?
-7. Should the seller test this product carefully?
-
-The product should focus on reducing seller decision cost, not just displaying numbers.
-
----
-
-## Phase 2 Allowed Work
-
-Allowed in Phase 2:
-
-1. Business rule documentation
-2. Manual test case documentation
-3. Better input validation
-4. Better empty/error states
-5. Better cost/result explanation
-6. Rule-based diagnosis improvement
-7. Small UI improvements for decision-making
-8. LocalStorage save/load if simple
-9. Manual exchange rate explanation
-10. Development log updates
-
-All changes must stay lightweight and beginner-maintainable.
-
----
-
-## Phase 2 Not Allowed
-
-Do NOT build the following in Phase 2:
-
-- real AI API integration
-- OpenAI API calls
-- backend
-- database
-- login system
-- user accounts
-- crawler
-- automatic product link scraping
-- ERP features
-- inventory management
-- order management
-- React
-- Vue
-- TypeScript
-- npm build tools
-- complex multi-page navigation
-- large UI redesign
-
-Reason:
-The current priority is to stabilize and improve the profit decision MVP before expanding into AI/API/backend systems.
-
----
-
-## Phase 2 Technical Boundaries
-
-Current stack remains:
-
-- HTML
-- CSS
-- Vanilla JavaScript
-- Static deployment
-
-Current active files:
-
-- index.html
-- css/style.css
-- js/data-rules.js
-- js/calculations.js
-- js/diagnosis.js
-- js/export.js
-- js/main.js
-- docs/business-rules.md
-- docs/manual-test-cases.md
-- docs/DEVELOPMENT_LOG.md
-
-Responsibilities:
-
-- data-rules.js: logistics/platform rules
-- calculations.js: pure calculation formulas
-- diagnosis.js: rule-based business diagnosis
-- export.js: CSV export
-- main.js: DOM reading, UI updates, event listeners
-- docs/: business rules, test cases, development records
-
-Do not mix unrelated responsibilities back into main.js.
-
----
-
-## Phase 2 Development Rules
-
-Before modifying code:
-
-1. Explain the current behavior.
-2. Explain the problem being solved.
-3. Propose a small milestone.
-4. Modify only the necessary files.
-5. Keep existing formulas unchanged unless explicitly requested.
-6. Update docs if business rules change.
-7. Add or update manual test cases.
-8. Report exactly which files changed.
-9. Explain how to manually verify the result.
-
-Each milestone must be independently testable.
-
-Avoid:
-- large rewrites
-- hidden formula changes
-- unnecessary abstractions
-- new dependencies
-- changing existing element IDs without reason
-
----
-
-## Phase 2 Priority Order
-
-Priority 1:
-Complete and maintain business rules documentation.
-
-Priority 2:
-Complete and maintain manual test cases.
-
-Priority 3:
-Improve input validation:
-- empty selling price
-- empty weight
-- negative numbers
-- zero exchange rate
-- abnormal dimensions
-- logistics not matched
-
-Priority 4:
-Improve error and empty states:
-- explain why logistics cannot be matched
-- explain which input should be changed
-- avoid misleading profit results
-
-Priority 5:
-Improve diagnosis:
-- explain profit quality
-- explain high cost pressure
-- explain logistics pressure
-- explain advertising pressure
-- explain purchase cost pressure
-- explain subsidy impact
-
-Priority 6:
-Improve decision UI:
-- make risk/warning/healthy/good states visually clear
-- keep layout simple
-- do not redesign the whole page
-
-Priority 7:
-Consider simple localStorage save/load only after validation and diagnosis are stable.
-
----
-
-## Phase 2 Definition of Done
-
-A Phase 2 task is complete only when:
-
-- current page still works
-- formulas are unchanged unless requested
-- diagnosis updates correctly
-- input validation does not block normal use
-- manual test cases are updated
-- business rules are updated if needed
-- node --check passes for modified JS files
-- user can manually verify the change in browser
-- change is small enough to commit safely
-
-After each completed milestone, commit the change with a clear Git message.
-
----
-
-## Phase 3 Development Rules
-
-Current focus:
-Phase 3 is productization polish and seller workflow improvement for Ozon/Wildberries/Yandex sellers.
-
-The goal is to make the existing profit decision assistant easier to understand, reuse, compare, and verify in daily seller work.
-Phase 3 is not real AI/API/backend development.
-
-Allowed in Phase 3:
-
-- seller scenario examples
-- simple preset calculation templates
-- manual exchange rate explanation
-- simple channel comparison only if it is safe and clearly documented
-- documentation improvements
-- manual testing and reporting improvements
-- UI copy polish
-- logistics rule source notes
-
-Do NOT build in Phase 3:
-
-- real AI API integration
-- OpenAI API calls
-- backend
-- database
-- login or user accounts
-- crawler or automatic product link scraping
-- ERP features
-- inventory or order management
-- React/Vue/TypeScript migration
-- n8n/Dify/Hermes runtime integration
-- true multi-agent automation
-
-Execution rules:
-
-- Keep each milestone small, readable, independently testable, and reversible.
-- Start with documentation-first tasks when possible.
-- Do not change formulas, logistics behavior, or business logic unless the milestone explicitly requires it.
-- Update `docs/DEVELOPMENT_LOG.md` after each completed task.
-- Update business rules or manual test cases when behavior or seller guidance changes.
-- Report changed files and manual verification steps after each task.
-
-Recommended first Phase 3 task:
-Add seller scenario examples documentation before building interactive preset templates.
-
----
-
-## Phase 4A Development Rules
-
-Current focus:
-Phase 4A is the first controlled real API milestone for the Ozon AI product selection assistant.
-
-The goal is to make the product selection assistant feel intelligent by letting the seller paste one source product URL, then showing an automatic product recognition report and Ozon API connection status.
-
-Allowed in Phase 4A:
-
-- Cloudflare Worker backend as a lightweight API proxy
-- Ozon Seller API health check and gradual official API integration
-- source URL public metadata reading from the backend
-- rule-based product title/image/category/keyword extraction
-- AI-ready report structure
-- frontend loading, error, empty, and demo states
-- documentation for API setup and safety rules
-
-Do NOT do in Phase 4A:
-
-- store API keys in frontend files
-- commit real secrets to GitHub
-- ask the user to paste API keys into chat
-- scrape Ozon, Wildberries, or Yandex pages without compliance review
-- promise exact competitor count, average price, rating, or sales if the official API or data source does not provide it
-- rebuild the app with React, Vue, TypeScript, or a large framework
-- replace the existing profit formula
-- build ERP, inventory, orders, login, or database features
-
-Execution rules:
-
-- Keep the existing static frontend understandable for a beginner developer.
-- Keep Cloudflare Worker code small and isolated under `worker/`.
-- Frontend must call the Worker, not Ozon directly.
-- If the Worker is not deployed or credentials are missing, show a clear state instead of a blank result.
-- Update `docs/DEVELOPMENT_LOG.md` after each completed task.
-- Run `node --check` on modified frontend JavaScript and Worker JavaScript.
-
----
-
-## Phase 4B Development Rules
-
-Current focus:
-Phase 4B adds multi-platform store API profile management for Ozon / Wildberries / Yandex.
-
-Allowed in Phase 4B:
-
-- frontend store API profile management
-- membership-tier store count limits
-- localStorage for non-secret store metadata
-- backend credential reference names
-- documentation for future encrypted credential storage
-
-Do NOT do in Phase 4B:
-
-- store real API keys in localStorage
-- store real API keys in frontend JavaScript
-- commit seller credentials to GitHub
-- pretend a frontend-only profile is a live API connection
-- build paid membership billing before the API workflow is stable
-
-MVP limits:
-
-- no membership: 1 store
-- monthly card: 5 stores
-- yearly card: 10 stores
-
-These limits are product rules for the current MVP and can be adjusted later.
+* what did not change
+* checks run
+* security result
+* whether Worker behavior changed
+* whether push/deployment was performed
+* remaining risks

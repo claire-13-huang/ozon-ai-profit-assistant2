@@ -21,3 +21,5 @@ build/
 worker/.dev.vars
 worker/.wrangler/
 docs/codex-runs/
+
+docs/archive-agent-setup/*.before-rewrite.*.md

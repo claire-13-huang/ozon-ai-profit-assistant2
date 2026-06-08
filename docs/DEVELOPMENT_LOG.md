@@ -3,6 +3,47 @@
 - 后续每次修改代码前，先阅读 AGENTS.md、PROJECT_CONTEXT.md、docs/DEVELOPMENT_LOG.md
 - 每次完成一个阶段后，把变更记录追加到 docs/DEVELOPMENT_LOG.md
 
+## 2026-06-06 Product Direction Upgrade / Evidence Pack + Product Testing Score Diagnosis
+
+- 修改目标：把 AI Analysis 的 Product Card Testing Decision Workspace 升级为 `Evidence Pack + Product Testing Score Diagnosis`，让卖家可以粘贴一段商品证据、竞品观察、评价痛点和个人疑问，再由本地规则结构化并生成更具体的测品诊断。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：新增主输入 `商品证据包 / 竞品观察 / 我的疑问` 和指定说明文案；本地规则从证据包提取标题、类目线索、材质、使用场景、卖点、竞品价格、评价信任、差评、退货、物流和卖家担心点；报告新增 `关键评分总览`，输出 `利润安全评分`、`价格竞争力评分`、`产品卡片质量评分`、`评价与信任评分`、`物流与退货风险评分`、`平台匹配度评分` 六项 0-100 诊断和原因。
+- 报告变化：报告区块调整为测品结论、商品定位、核心卖点、产品卡片问题、价格竞争判断、评价与信任风险、利润安全边际、物流与退货风险、上架前优化建议、上架后观察指标、继续/优化/暂停条件和数据边界；缺少利润核心字段时仍生成 `商品卡片观察报告`，并明确显示 `利润数据不足，本次不输出利润安全结论。`
+- 安全边界：未新增 LLM API、crawler、dynamic renderer、parser、代理抓取、登录抓取、新后端或新依赖；未修改利润公式、物流匹配逻辑、平台预设、平台切换逻辑或 Worker 行为；未使用真实凭证、未提交、未推送、未部署。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；浏览器验证缺少来源成本/目标售价时滚动到警告并生成受限观察报告，补齐来源成本和目标售价后隐藏警告并显示完整评分报告。
+- 已知风险：证据包解析是本地关键词规则，不能替代真实平台后台数据、真实广告表现、真实评价明细或卖家对类目/成本/规格的人工确认。
+
+## 2026-06-06 UX Bugfix / decision report visibility and profit-data warning
+
+- 修改目标：修复 Product Card Testing Decision Workspace 中点击 `生成测品决策报告` 后用户不清楚报告是否生成、是否在下方、或是否缺少利润关键数据的问题。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：将 `来源成本` 和 `目标售价` 标记为核心字段，并增加说明 `来源成本和目标售价会直接影响是否值得上架测试。`；在生成按钮上方新增可见校验提示，来源成本/目标售价缺失且利润计算器快照不完整时显示指定警告；点击生成后会自动滚动到校验提示或已生成报告；利润数据不足时仍生成 `商品卡片观察报告`，但明确显示 `利润数据不足，本次不输出利润安全结论。`
+- 后续修正：完整利润计算器快照现在要求售价、采购价、重量和汇率都为正数，避免默认 `0` 采购价被误判为完整利润数据；滚动目标在报告渲染后统一决定，缺少利润决策数据时优先滚动到 `decisionValidationWarning`，不会直接越过警告滚到报告。
+- 再次修正：AI Analysis 页面的 `来源成本` 和 `目标售价` 现在必须都填写正数才进入完整测品决策报告；旧的、默认的或已保存的利润计算器快照不能绕过这两个 AI 页面核心字段。来源成本为 `0` 不再视为有效输入。
+- 安全边界：未修改利润公式、物流匹配逻辑、平台预设、Worker 行为、来源提取能力或一件代发测试逻辑；未新增爬虫、动态渲染、外部解析器、真实凭证、推送、部署或提交。
+- 验收方式：运行 `node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；手动验证缺少利润数据时显示警告并滚动到提示，补齐利润数据时滚动到报告。
+
+## 2026-06-06 Product Direction Pivot / Product Card Testing Decision Workspace
+
+- 修改目标：将 AI Analysis 从 URL extraction first 调整为 `Product Card Testing Decision Workspace`，面向 Ozon / Wildberries / Yandex 一件代发卖家，上架前先判断商品卡片、公开市场、利润和风险。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：AI Analysis 主流程改为 `商品基础信息 -> 公开市场与竞品观察 -> 产品卡片质量判断 -> 利润与风险判断 -> 测品决策报告`；商品标题、来源平台、目标平台、类目、采购成本、目标售价、估重、材质、使用场景和核心卖点成为主输入；新增竞品价格带、竞品卡片质量、市场拥挤度、好评信号、差评痛点、标题/主图/卖点/类目/规格/差异化/退货/评价信任判断；新增独立 `生成测品决策报告` 按钮，来源链接提取改为折叠的可选辅助。
+- 报告变化：决策标签改为 `建议上架测试`、`优化后再测`、`谨慎测试`、`暂不建议测试`；报告内容聚焦平台匹配度、产品卡片质量、价格竞争力、评价与信任风险、利润安全边际、物流与退货风险、上架后观察指标以及继续/优化/暂停条件；移除固定首批数量和件数建议，改为一件代发低风险验证。
+- Worker 行为：本次 pivot 未新增 Worker 能力，未新增 crawler、dynamic renderer、browser automation、proxy scraping、captcha bypass、external parser 或新后端服务；来源链接提取仍只作为公开页面可见信息的可选 helper。
+- 安全边界：未修改利润公式、物流匹配逻辑、平台预设或 Ozon/WB/Yandex 平台切换逻辑；未使用真实凭证、未推送、未部署、未提交。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；人工检查 AI Analysis 不需要来源链接即可生成报告，链接提取失败不阻断测品决策，报告包含后台数据未提供的数据边界。
+- 已知风险：报告仍是本地规则模型 + 当前利润快照，不会自动同步真实平台曝光、点击、转化、广告、订单、评价明细、财务或竞品数据；公开市场和卡片质量判断依赖卖家手动观察输入。
+
+## 2026-06-06 Phase 4A / URL-first AI Analysis extraction workflow
+
+- 修改目标：将 AI Analysis 从手动表单优先调整为 URL-first 自动商品识别与测品决策流程。
+- 涉及文件：index.html、css/style.css、js/main.js、js/product-selection.js、worker/index.js、docs/manual-test-cases.md、docs/DEVELOPMENT_LOG.md。
+- 修改内容：AI Analysis 主流程改为 `粘贴商品链接 -> 自动识别商品信息 -> 补充你的理解 / 疑问 / 运营观察 -> 生成测品决策报告`；旧的手动商品标题、采购价、类目字段移入“识别后手动校正 / 补充商品信息”折叠区；新增固定分析模型披露；新增结构化提取结果面板，展示平台、平台类型、标题、图片、价格、运费、总候选采购成本、币种、价格角色、类目、材质、用途、场景、规格、置信度、提取来源、失败原因和需要人工确认项；URL 变化会清空旧提取结果、图片和报告，并用 request id + 当前 URL 校验忽略异步旧响应。
+- Worker 行为：`/api/source/preview` 在原有安全公开 HTML/metadata 读取范围内，扩展返回 `shippingFee`、`totalCandidateSourceCost`、`material`、`usage`、`scene`、`specifications`、`productDetails`、`modelDisclosure`、`extractionConfidence`、`extractionSource`、`failureReason` 和 `manualConfirmationNeeded`；运费只从公开可见文本中保守识别，供应商页只有价格和运费都存在时才计算总候选采购成本；材质/用途/场景只用标题、描述、类目和公开文本的低置信关键词规则。
+- 安全边界：未新增 Playwright、Puppeteer、动态渲染、浏览器自动化、代理抓取、验证码绕过、登录抓取、外部商品解析器、数据库、登录或支付；未修改利润公式、物流匹配逻辑、平台预设或 Ozon/WB/Yandex 平台切换逻辑；未使用真实凭证、未推送、未部署。
+- 验收方式：运行 `node --check worker/index.js`、`node --check js/main.js`、`node --check js/product-selection.js`、`node --check js/store-api.js`、`git diff --check`、`grep -R "api-seller.ozon.ru" index.html js css`；浏览器检查 AI Analysis 页面显示 URL-first 流程、模型披露、折叠手动校正和结构化提取结果区域。
+- 已知风险：主流电商平台仍可能阻止 Cloudflare Worker、要求动态渲染或只返回空元数据；本次不会绕过这些限制。公开页面价格和运费仍需卖家确认，市场平台价格不会被当作采购成本。
+
 ## 2026-06-05 Phase 4A / platform-aware source extraction
 
 - 修改目标：将 `/api/source/preview` 从通用公开元数据预览升级为平台识别的公开商品信息提取流程，减少卖家粘贴主流电商链接后的手动负担。

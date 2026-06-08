@@ -267,13 +267,14 @@
         </div>
 
         <div class="section future-panel">
-          <div class="title">AI 测品决策报告</div>
-          <p class="panel-intro">当前流程用于判断一个商品是否值得小量测试：先识别来源链接，再补充手动商品信息，并结合上方利润测算生成测品建议；不抓取平台页面，不同步店铺经营数据，不保存密钥。</p>
+          <div class="title">产品卡片测品决策工作台</div>
+          <p class="panel-intro">面向 Ozon / Wildberries / Yandex 一件代发卖家：先整理商品基础、公开市场观察和产品卡片质量，再结合利润快照判断是否值得上架测试。</p>
+          <div class="analysis-model-disclosure" id="analysisModelDisclosure">当前分析模型：本地规则分析模型 v0.1 + 当前利润计算快照。暂未接入大模型 API；不会自动同步真实平台曝光、点击、转化、广告、订单或财务数据。</div>
 
           <div class="analysis-connection-grid">
             <div>
               <span>Data source</span>
-              <strong id="aiDataSourceStatus">Manual input</strong>
+              <strong id="aiDataSourceStatus">Product card workspace</strong>
             </div>
             <div>
               <span>Product link</span>
@@ -285,56 +286,287 @@
             </div>
             <div>
               <span>Analysis mode</span>
-              <strong id="aiAnalysisModeStatus">Preview / manual</strong>
+              <strong id="aiAnalysisModeStatus">Local rules</strong>
             </div>
           </div>
 
-          <div class="auto-selection-entry">
+          <div class="url-first-steps product-card-steps" aria-label="测品分析流程">
+            <span>1. 商品基础信息</span>
+            <span>2. 公开市场与竞品观察</span>
+            <span>3. 产品卡片质量判断</span>
+            <span>4. 利润与风险判断</span>
+            <span>5. 测品决策报告</span>
+          </div>
+
+          <section class="decision-workspace-section evidence-pack-section">
+            <div class="workspace-section-head">
+              <div>
+                <h3>商品证据包 / 竞品观察 / 我的疑问</h3>
+                <p>可以粘贴商品标题、竞品价格、评论痛点、材质描述、使用场景、你的担心点。系统会先结构化这些证据，再生成测品判断。</p>
+              </div>
+              <span>主输入</span>
+            </div>
+            <textarea id="productEvidencePack" rows="7" placeholder="例如：商品标题、竞品价格区间、评论痛点、材质、使用场景、你担心的退货原因、价格或类目疑问。"></textarea>
+            <p class="field-helper">本地规则只整理你提供的公开证据；缺失信息会标记为未提供，不会猜测隐藏平台数据。</p>
+          </section>
+
+          <section class="decision-workspace-section">
+            <div class="workspace-section-head">
+              <div>
+                <h3>商品基础信息</h3>
+                <p>链接只是辅助；即使提取失败，也可以用你看到的商品信息继续判断。</p>
+              </div>
+              <span>必填核心：标题 / 成本 / 售价 / 类目</span>
+            </div>
+            <div class="decision-input-grid">
+              <div>
+                <label>商品标题 / 产品名称</label>
+                <input id="manualProductTitle" autocomplete="off" placeholder="例如 便携旅行收纳包 / 夏季速干短裤">
+              </div>
+              <div>
+                <label>目标销售平台</label>
+                <select id="productSelectionPlatform">
+                  <option value="Ozon">Ozon</option>
+                  <option value="Wildberries">Wildberries</option>
+                  <option value="Yandex">Yandex</option>
+                </select>
+              </div>
+              <div>
+                <label>来源平台</label>
+                <select id="sourcePlatformInput">
+                  <option value="">未确认</option>
+                  <option value="1688">1688</option>
+                  <option value="Taobao">Taobao</option>
+                  <option value="Tmall">Tmall</option>
+                  <option value="Pinduoduo">Pinduoduo</option>
+                  <option value="JD">JD</option>
+                  <option value="AliExpress">AliExpress</option>
+                  <option value="Amazon">Amazon</option>
+                  <option value="Ozon">Ozon</option>
+                  <option value="Wildberries">Wildberries</option>
+                  <option value="Yandex Market">Yandex Market</option>
+                  <option value="Other">其他</option>
+                </select>
+              </div>
+              <div>
+                <label>产品类目</label>
+                <input id="manualProductCategory" autocomplete="off" placeholder="例如 家居收纳 / 服饰 / 车品">
+              </div>
+              <div>
+                <label>来源成本（人民币）<span class="core-field-tag">核心字段</span></label>
+                <input id="manualSourceCost" type="number" step="0.01" min="0" placeholder="真实拿货成本或候选成本">
+                <p class="field-helper">来源成本和目标售价会直接影响是否值得上架测试。</p>
+              </div>
+              <div>
+                <label>目标售价<span class="core-field-tag">核心字段</span></label>
+                <input id="targetSellingPriceInput" type="number" step="0.01" min="0" placeholder="可留空，默认读取利润计算器售价">
+                <p class="field-helper">来源成本和目标售价会直接影响是否值得上架测试。</p>
+              </div>
+              <div>
+                <label>预计重量（g）</label>
+                <input id="estimatedWeightInput" type="number" step="1" min="0" placeholder="可留空，默认读取利润计算器毛重">
+              </div>
+              <div>
+                <label>材质</label>
+                <input id="productMaterialInput" autocomplete="off" placeholder="例如 棉 / 涤纶 / 塑料 / 不确定">
+              </div>
+              <div>
+                <label>使用场景</label>
+                <input id="productUsageSceneInput" autocomplete="off" placeholder="例如 厨房 / 户外 / 夏季 / 办公">
+              </div>
+              <div class="decision-input-wide">
+                <label>核心卖点 / 简短描述</label>
+                <textarea id="productSellingPointInput" rows="3" placeholder="一句话说明这个产品为什么值得点击、购买或测试。"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <details class="manual-fallback-panel link-helper-panel">
+            <summary>可选：商品链接提取助手</summary>
+            <p class="manual-assumption-copy">链接提取只用于辅助预填公开标题、图片、类目、可见价格或材质线索。提取失败不影响测品报告。</p>
+            <div class="auto-selection-entry">
             <div>
-              <label>1. 来源商品链接（全球任意网站）</label>
+              <label>来源商品链接（可选）</label>
               <input id="sourceProductUrl" type="url" placeholder="粘贴 1688、淘宝、Amazon、品牌站或其他任意商品链接">
             </div>
-            <button class="auto-analysis-button" id="autoAnalysisButton" type="button">生成测品建议</button>
+              <button class="auto-analysis-button secondary-analysis-button" id="autoAnalysisButton" type="button">尝试提取链接信息</button>
+            </div>
+
+            <div class="analysis-status" id="autoAnalysisStatus">链接提取未开始；不影响下方测品判断。</div>
+            <div class="source-extraction-details" id="sourceExtractionDetails">可选链接提取结果会显示在这里。</div>
+          </details>
+
+          <div class="product-image-preview is-empty" id="productImagePreview">
+            <img id="productImagePreviewImg" alt="商品图片预览">
           </div>
-          <div class="manual-product-panel" aria-label="手动商品信息">
+
+          <section class="decision-workspace-section">
+            <div class="workspace-section-head">
+              <div>
+                <h3>公开市场与竞品观察</h3>
+                <p>来自前台页面、截图文字或人工观察即可，不需要后台数据。</p>
+              </div>
+            </div>
+            <div class="decision-input-grid">
+              <div>
+                <label>竞品最低价（卢布）</label>
+                <input id="competitorMinPrice" type="number" step="0.01" min="0" placeholder="可选">
+              </div>
+              <div>
+                <label>竞品最高价（卢布）</label>
+                <input id="competitorMaxPrice" type="number" step="0.01" min="0" placeholder="可选">
+              </div>
+              <div>
+                <label>竞品均价（卢布）</label>
+                <input id="competitorAvgPrice" type="number" step="0.01" min="0" placeholder="例如 1300">
+              </div>
+              <div>
+                <label>可见评论数</label>
+                <input id="topCompetitorReviews" type="number" step="1" min="0" placeholder="例如 800">
+              </div>
+              <div>
+                <label>竞品卡片水平</label>
+                <select id="competitorCardQuality">
+                  <option value="">未观察</option>
+                  <option value="strong">头部竞品很专业</option>
+                  <option value="average">整体一般</option>
+                  <option value="weak">竞品卡片偏弱</option>
+                </select>
+              </div>
+              <div>
+                <label>市场拥挤度</label>
+                <select id="marketCrowding">
+                  <option value="">未判断</option>
+                  <option value="crowded">相似款很多</option>
+                  <option value="balanced">有竞争但可切入</option>
+                  <option value="gap">有明显空档</option>
+                </select>
+              </div>
+              <div class="decision-input-wide">
+                <label>竞品链接 / 商品名 / 卡片观察</label>
+                <textarea id="manualMarketObservationNotes" rows="3" placeholder="例如：头部竞品主图、标题、价格带、卖点、规格、差评痛点。"></textarea>
+              </div>
+              <div class="decision-input-wide">
+                <label>可见好评信号</label>
+                <textarea id="positiveReviewSignals" rows="2" placeholder="例如 买家认可材质、大小合适、安装简单、包装好。"></textarea>
+              </div>
+              <div class="decision-input-wide">
+                <label>可见差评 / 退货痛点</label>
+                <textarea id="negativeReviewSignals" rows="2" placeholder="例如 尺码不准、材质廉价、色差、易坏、气味、物流损坏。"></textarea>
+              </div>
+            </div>
+          </section>
+
+          <section class="decision-workspace-section">
+            <div class="workspace-section-head">
+              <div>
+                <h3>产品卡片质量判断</h3>
+                <p>先判断这个商品卡片是否有机会转化，再谈是否值得上架测试。</p>
+              </div>
+            </div>
+            <div class="decision-input-grid">
+              <div>
+                <label>标题清晰度</label>
+                <select id="titleClarity">
+                  <option value="">未判断</option>
+                  <option value="strong">清晰，关键词明确</option>
+                  <option value="average">基本清楚</option>
+                  <option value="weak">不清楚 / 难搜索</option>
+                </select>
+              </div>
+              <div>
+                <label>主图吸引力</label>
+                <select id="mainImageQuality">
+                  <option value="">未判断</option>
+                  <option value="strong">主图强，有点击欲望</option>
+                  <option value="average">一般，可优化</option>
+                  <option value="weak">主图弱</option>
+                </select>
+              </div>
+              <div>
+                <label>卖点清晰度</label>
+                <select id="sellingPointClarity">
+                  <option value="">未判断</option>
+                  <option value="strong">卖点明确</option>
+                  <option value="average">有卖点但不突出</option>
+                  <option value="weak">卖点不清晰</option>
+                </select>
+              </div>
+              <div>
+                <label>类目匹配</label>
+                <select id="categoryFit">
+                  <option value="">未判断</option>
+                  <option value="strong">类目匹配</option>
+                  <option value="average">大致匹配</option>
+                  <option value="weak">类目可能不匹配</option>
+                </select>
+              </div>
+              <div>
+                <label>规格复杂度</label>
+                <select id="specComplexity">
+                  <option value="">未判断</option>
+                  <option value="low">规格简单</option>
+                  <option value="medium">规格中等</option>
+                  <option value="high">规格复杂</option>
+                </select>
+              </div>
+              <div>
+                <label>视觉差异化</label>
+                <select id="visualDifferentiation">
+                  <option value="">未判断</option>
+                  <option value="strong">明显不同</option>
+                  <option value="average">略有差异</option>
+                  <option value="weak">同质化明显</option>
+                </select>
+              </div>
+              <div>
+                <label>退货风险</label>
+                <select id="returnRiskLevel">
+                  <option value="">未判断</option>
+                  <option value="low">低</option>
+                  <option value="medium">中</option>
+                  <option value="high">高</option>
+                </select>
+              </div>
+              <div>
+                <label>评价信任风险</label>
+                <select id="reviewTrustLevel">
+                  <option value="">未判断</option>
+                  <option value="low">低</option>
+                  <option value="medium">中</option>
+                  <option value="high">高</option>
+                </select>
+              </div>
+              <div class="decision-input-wide">
+                <label>粘贴商品标题 / 详情 / 评价痛点（可选）</label>
+                <textarea id="manualProductTextHelper" rows="4" placeholder="可粘贴公开标题、详情页可见文案、截图转写或评价痛点。系统只做规则辅助，不读取或猜测隐藏数据。"></textarea>
+                <p id="manualProductTextHelperStatus">可用公开文本辅助建议标题和类目；采购成本、竞品价格和评价信号仍需你确认。</p>
+              </div>
+            </div>
+          </section>
+
+          <section class="decision-workspace-section">
+            <div class="workspace-section-head">
+              <div>
+                <h3>利润与风险判断</h3>
+                <p>利润、物流和售价默认读取上方利润计算器快照；这里不修改任何公式。</p>
+              </div>
+            </div>
+            <div class="profit-snapshot-note">后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。请在利润计算器中填好售价、重量、成本、物流和费率。</div>
+            <div class="analysis-store-row">
             <div>
-              <label>2. 商品标题</label>
-              <input id="manualProductTitle" autocomplete="off" placeholder="手动填写来源商品标题">
-            </div>
-            <div>
-              <label>3. 采购价</label>
-              <input id="manualSourceCost" type="number" step="0.01" min="0" placeholder="例如 38.5">
-            </div>
-            <div>
-              <label>4. 类目或产品类型</label>
-              <input id="manualProductCategory" autocomplete="off" placeholder="例如 家居收纳 / 车品 / 女装配件">
-            </div>
-            <div class="manual-product-notes">
-              <label>5. 卖点或备注</label>
-              <textarea id="manualProductNotes" rows="3" placeholder="例如 材质、规格、适用场景、差异化卖点、需要复核的问题。"></textarea>
-            </div>
-            <div class="manual-product-helper">
-              <label>粘贴商品标题/详情文本（可选）</label>
-              <textarea id="manualProductTextHelper" rows="4" placeholder="可粘贴商品标题、详情页可见文案或供应商备注。系统只会辅助建议标题和类目，不会读取或猜测价格。"></textarea>
-              <p id="manualProductTextHelperStatus">系统可以根据标题或粘贴文本建议类目，但采购价必须由你确认，避免误把促销价、区间价或起批价当成真实成本。</p>
-            </div>
-          </div>
-          <div class="profit-snapshot-note">利润快照来自上方利润计算器：售价、总成本、利润率、采购成本和物流成本会进入测品报告。请先在利润计算器中填好基础成本。</div>
-          <div class="analysis-store-row">
-            <div>
-              <label>选择用于分析的店铺</label>
+              <label>可选：选择用于分析的店铺</label>
               <select id="analysisStoreProfile">
                 <option value="">默认 Ozon 凭证 / 未选择店铺</option>
               </select>
             </div>
-          </div>
-          <div class="auto-selection-note">当前视图用于整理选品判断资料。配置 Worker 后只会尝试读取公开页面元数据；Ozon 店铺商品摘要只是可选授权店铺上下文。</div>
+            </div>
+            <div class="auto-selection-note">店铺后台、广告、订单、点击、转化和 API 数据都是未来可选输入；当前报告不依赖这些数据。</div>
+          </section>
 
-          <div class="analysis-status" id="autoAnalysisStatus">等待粘贴链接并开始分析。</div>
-          <div class="source-extraction-details" id="sourceExtractionDetails">公开商品信息识别结果会显示在这里。</div>
           <div class="analysis-progress" id="autoAnalysisProgress">
             <span data-step="link">接收链接</span>
-            <span data-step="identify">预览分析</span>
+            <span data-step="identify">自动识别</span>
             <span data-step="ozon">后端授权</span>
             <span data-step="report">生成报告</span>
           </div>
@@ -358,20 +590,14 @@
             </div>
           </div>
 
+          <div class="decision-validation-warning" id="decisionValidationWarning" hidden></div>
+          <button class="auto-analysis-button decision-report-button" id="generateDecisionReportButton" type="button">生成测品决策报告</button>
           <button class="demo-analysis-button" id="loadDemoAnalysisButton" type="button">查看示例报告</button>
 
           <details class="manual-fallback-panel manual-assumption-panel">
-            <summary>可选：人工预估测品参数</summary>
+            <summary>可选：后台 / 广告模拟参数（非必填）</summary>
             <p class="manual-assumption-copy">当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。</p>
             <div class="grid product-selection-grid">
-              <div>
-                <label>目标平台</label>
-                <select id="productSelectionPlatform">
-                  <option value="Ozon">Ozon</option>
-                  <option value="Wildberries">Wildberries</option>
-                  <option value="Yandex">Yandex</option>
-                </select>
-              </div>
               <div>
                 <label>目标平台相似商品链接</label>
                 <input id="productUrl" type="url" placeholder="未来自动匹配 Ozon / WB / Yandex 相似商品">
@@ -399,18 +625,6 @@
               <div>
                 <label>竞品数量（手动观察）</label>
                 <input id="competitorCount" type="number" step="1" min="0" placeholder="例如 35">
-              </div>
-              <div>
-                <label>竞品均价（手动观察，卢布）</label>
-                <input id="competitorAvgPrice" type="number" step="0.01" min="0" placeholder="例如 1300">
-              </div>
-              <div>
-                <label>竞品最低价（卢布）</label>
-                <input id="competitorMinPrice" type="number" step="0.01" min="0" placeholder="可选">
-              </div>
-              <div>
-                <label>竞品最高价（卢布）</label>
-                <input id="competitorMaxPrice" type="number" step="0.01" min="0" placeholder="可选">
               </div>
               <div>
                 <label>Top 竞品评分</label>
@@ -458,11 +672,11 @@
               </div>
               <div>
                 <label>本地备注 / 偏好</label>
-                <input id="localPreference" placeholder="例如 不压库存 / 只小预算测试">
+                <input id="localPreference" placeholder="例如 一件代发 / 只小预算测试">
               </div>
               <div>
                 <label>预计曝光量备注（手动预估）</label>
-                <textarea id="estimatedExposureNotes" placeholder="例如：估计首轮测试曝光范围、自然曝光或广告曝光假设。"></textarea>
+                <textarea id="estimatedExposureNotes" placeholder="例如：估计上架初期曝光范围、自然曝光或广告曝光假设。"></textarea>
               </div>
               <div>
                 <label>预计点击率备注（手动预估）</label>
@@ -472,47 +686,58 @@
                 <label>预计转化率备注（手动预估）</label>
                 <textarea id="estimatedConversionRateNotes" placeholder="例如：评价少、价格敏感或规格复杂时，转化率需要保守估计。"></textarea>
               </div>
-              <div>
-                <label>平台观察备注（人工）</label>
-                <textarea id="manualMarketObservationNotes" placeholder="例如：前台头部商品、主图质量、评论痛点、关键词或价格带观察。"></textarea>
-              </div>
             </div>
           </details>
-          <div class="product-image-preview is-empty" id="productImagePreview">
-            <img id="productImagePreviewImg" alt="商品图片预览">
+          <div class="user-product-context-panel">
+            <label>卖家补充判断 / 疑问 / 运营观察</label>
+            <textarea id="manualProductNotes" rows="4" placeholder="例如：担心材质、尺码、退货、季节性、俄罗斯市场适配、同质化或想测试的卖点。"></textarea>
           </div>
-          <div class="notice" id="aiResultBox">粘贴来源商品链接并填写手动商品信息后，页面会基于来源域名、手动字段和当前利润测算生成测品建议。</div>
+          <div class="notice" id="aiResultBox">填写商品基础、公开市场观察和产品卡片质量后，可直接生成测品决策报告；链接提取只是可选辅助。</div>
           <div class="selection-report selection-waiting" id="productSelectionReport">
             <div class="decision-head">
               <span class="decision-label">测品结论</span>
               <span class="decision-status" id="productSelectionStatus">等待输入</span>
             </div>
-            <div class="selection-summary" id="productSelectionSummary">请先粘贴来源商品链接，并手动填写商品标题、采购价和类目信息。当前页面不会自动抓取任意网站或平台竞品数据。</div>
+            <div class="selection-summary" id="productSelectionSummary">请先填写商品基础信息、公开竞品观察和利润快照。链接提取失败不会阻止报告。</div>
+            <div class="score-overview" id="testingScoreOverview" hidden></div>
+            <div class="evidence-diagnosis" id="evidenceDiagnosisSummary" hidden></div>
             <div class="selection-report-grid">
               <div>
-                <span>利润安全边际</span>
+                <span>商品定位</span>
                 <p id="selectionPriceText">等待利润快照。</p>
               </div>
               <div>
-                <span>建议测试数量</span>
+                <span>核心卖点</span>
                 <p id="selectionProfitText">等待利润测算。</p>
               </div>
               <div>
-                <span>最低售价底线</span>
+                <span>产品卡片问题</span>
+                <p id="selectionCardProblemsText">等待商品卡片质量判断。</p>
+              </div>
+              <div>
+                <span>价格竞争判断</span>
                 <p id="selectionCompetitionText">等待当前成本快照。</p>
               </div>
               <div>
-                <span>主要风险</span>
+                <span>评价与信任风险</span>
+                <p id="selectionReviewRiskText">等待评价观察。</p>
+              </div>
+              <div>
+                <span>利润安全边际</span>
                 <p id="selectionAdText">等待商品信息和利润测算。</p>
+              </div>
+              <div>
+                <span>物流与退货风险</span>
+                <p id="selectionLogisticsReturnText">等待重量、材质和退货风险判断。</p>
               </div>
               <div>
                 <span>数据边界</span>
                 <p id="selectionStoreText">等待来源链接和可选上下文状态。</p>
               </div>
             </div>
-            <div class="selection-actions-title">下一步动作</div>
+            <div class="selection-actions-title">上架前优化建议 / 上架后观察指标 / 继续-优化-暂停条件</div>
             <ul class="selection-actions" id="selectionNextActions">
-              <li>先补齐商品信息和利润测算，再决定是否小量测试。</li>
+              <li>先补齐商品基础信息和利润测算，再判断是否值得上架测试。</li>
             </ul>
           </div>
         </div>

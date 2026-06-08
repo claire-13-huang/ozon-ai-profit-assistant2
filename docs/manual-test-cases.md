@@ -1,5 +1,123 @@
 # Manual Test Cases
 
+## AI Analysis Product Card Testing Decision Workspace
+
+1. Evidence pack is the primary input
+   - Input: open the app, switch to `AI Analysis`.
+   - Expected: the page shows a large textarea labeled `商品证据包 / 竞品观察 / 我的疑问` with helper text `可以粘贴商品标题、竞品价格、评论痛点、材质描述、使用场景、你的担心点。系统会先结构化这些证据，再生成测品判断。`
+
+2. Evidence pack enriches the report
+   - Input: paste a block containing a product title, competitor price range, review pain points, material, usage scene, selling point, and seller doubts; leave the source link empty; click `生成测品决策报告`.
+   - Expected: report includes structured evidence rows for title/category/material/scene, competitor/review signals, and doubts/risks. Missing evidence is marked as not provided; no hidden platform data is invented.
+
+3. Product testing score diagnosis appears
+   - Input: generate a report with evidence pack and structured card-quality fields.
+   - Expected: `关键评分总览` shows six score cards: `利润安全评分`, `价格竞争力评分`, `产品卡片质量评分`, `评价与信任评分`, `物流与退货风险评分`, and `平台匹配度评分`, each with a 0-100 score and a short rule-based reason.
+
+4. Upgraded report sections are visible
+   - Input: generate a report after filling evidence pack, basic product fields, market observations, and card-quality fields.
+   - Expected: report includes `测品结论`, `关键评分总览`, `商品定位`, `核心卖点`, `产品卡片问题`, `价格竞争判断`, `评价与信任风险`, `利润安全边际`, `物流与退货风险`, `上架前优化建议`, `上架后观察指标`, `继续 / 优化 / 暂停条件`, and `数据边界`.
+
+5. Limited report with missing profit fields
+   - Input: leave 来源成本 and 目标售价 empty, paste an evidence pack, and click `生成测品决策报告`.
+   - Expected: the page scrolls to the visible warning first; report status is `商品卡片观察报告`; report says `利润数据不足，本次不输出利润安全结论。`; score cards still render, but profit safety reason says profit data is insufficient.
+
+6. Full score report requires AI page profit fields
+   - Input: fill 来源成本 and 目标售价 with positive numbers, paste an evidence pack, and click `生成测品决策报告`.
+   - Expected: no missing-profit warning remains; the page scrolls to the report; status is one of `建议上架测试`, `优化后再测`, `谨慎测试`, `暂不建议测试`; report includes profit safety scoring and, when a complete profit snapshot exists, minimum safe price reference.
+
+7. Saved calculator snapshot cannot bypass missing AI fields
+   - Input: complete the profit calculator, then clear AI Analysis 来源成本 or 目标售价 and click `生成测品决策报告`.
+   - Expected: missing-profit warning appears and the report stays in `商品卡片观察报告` mode until both AI page fields are positive numbers.
+
+8. Backend-missing boundary is explicit
+   - Input: generate any report without optional Store API data.
+   - Expected: `数据边界` includes `后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。`
+
+9. No new backend or extraction dependency is required
+   - Input: inspect the generated report after using only evidence pack and manual fields.
+   - Expected: report works without a product URL, without Store API authorization, without LLM API, and without crawler/dynamic-renderer/parser behavior.
+
+1. Product-card workspace loads
+   - Input: open the app, switch to `AI Analysis`.
+   - Expected: the main visible flow is `商品基础信息 -> 公开市场与竞品观察 -> 产品卡片质量判断 -> 利润与风险判断 -> 测品决策报告`; 商品标题、来源平台、目标平台、类目、采购成本、目标售价、估重、材质、使用场景和核心卖点 are primary fields.
+
+2. Analysis model disclosure is visible
+   - Input: inspect the AI Analysis panel.
+   - Expected: the page shows `当前分析模型：本地规则分析模型 v0.1 + 当前利润计算快照。暂未接入大模型 API；不会自动同步真实平台曝光、点击、转化、广告、订单或财务数据。`
+
+12. Report works without a source link
+   - Input: leave 来源商品链接 empty, fill 商品基础信息, 公开市场观察, 产品卡片质量判断, and valid profit calculator inputs, then click `生成测品决策报告`.
+   - Expected: a report is generated from current product-card inputs, public observations, and the profit snapshot. The report includes seller-facing diagnosis sections and does not depend on successful link extraction.
+
+4. Link extraction is optional helper only
+   - Input: configure a safe Worker URL, paste a readable public product URL with title, image, JSON-LD/meta price, and optional specs, then click `尝试提取链接信息`.
+   - Expected: the extraction panel displays platform, platform type, title, image, price, currency, price role, category suggestion, confidence, extraction source, and any specs returned from public JSON-LD/meta/itemprop data.
+
+5. Extraction failure does not block the workspace
+   - Input: paste a blocked or metadata-empty product URL and click `尝试提取链接信息`.
+   - Expected: the panel shows the current URL failure reason and fallback message: `该平台可能限制自动读取。你可以补充截图文字、商品描述或运营疑问，系统会基于已识别内容继续分析。`; the seller can still click `生成测品决策报告` without successful extraction.
+
+6. Product card quality drives recommendations
+   - Input: mark title clarity, main image quality, selling point clarity, category fit, spec complexity, visual differentiation, return risk, and review trust risk, then generate a report.
+   - Expected: weak card quality can produce `优化后再测` or `谨慎测试`; strong card quality supports `建议上架测试` only when profit and risk inputs also allow it.
+
+7. Competitor and review observations are manual
+   - Input: fill competitor price range, visible review count, competitor card quality, market crowding, positive review signals, and negative review pain points.
+   - Expected: report discusses price competitiveness and review/trust risk as manual public observations only; it does not imply platform API synchronization.
+
+18. No stocking quantity wording appears
+   - Input: generate reports for high, medium, and low margin cases.
+   - Expected: decision labels are one of `建议上架测试`, `优化后再测`, `谨慎测试`, `暂不建议测试`; report does not mention first-batch stocking quantity or fixed piece counts.
+
+10. Amazon then blocked link does not keep Amazon data
+   - Input: use a URL that returns Amazon title/image/price metadata, generate a report, then replace it with a blocked/fallback URL and generate again.
+   - Expected: changing the link immediately clears old extraction, image, price, shipping, material, specs, category, and report; the second report contains only the second URL and its current fallback data.
+
+11. Stale async response is ignored
+   - Input: start extraction for URL A, quickly change the field to URL B before URL A returns.
+   - Expected: URL A response is ignored because request id/current URL no longer match; only URL B can update the extraction panel or report.
+
+12. Supplier candidate price warning appears
+   - Input: paste a 1688/Taobao/Tmall/Pinduoduo/JD/AliExpress URL that returns a public visible price.
+   - Expected: platform type is `supplier`, price role is `candidate_source_cost`, and the UI shows `识别到的是候选采购价，请确认是否为真实拿货成本。`; the price is not silently treated as confirmed purchase cost.
+
+13. Marketplace reference price warning appears
+   - Input: paste an Amazon/Ozon/Wildberries/Yandex Market URL that returns a public visible price.
+   - Expected: platform type is `marketplace`, price role is `market_reference_price`, and the UI shows `识别到的是平台销售参考价，不等于你的采购成本。`; purchase cost is not filled from marketplace price.
+
+14. Missing shipping does not invent total cost
+   - Input: use a supplier URL that returns price but no clear public shipping fee.
+   - Expected: shipping shows `运费未能自动识别，请后续确认。`; total candidate source cost remains missing and is not invented.
+
+15. Price plus shipping can create supplier total candidate cost
+    - Input: use a supplier URL or fixture that returns a clear public price and a clear public shipping fee.
+    - Expected: `totalCandidateSourceCost` is shown as price + shipping, marked as a candidate source cost that still requires confirmation.
+
+16. Missing price does not fake profit conclusion
+    - Input: use a URL with title/image but no price and leave the profit calculator purchase cost unconfirmed.
+    - Expected: report highlights missing price/source cost confirmation instead of producing a fake purchasing-cost conclusion.
+
+17. Material / usage / scene are conservative
+    - Input: use public title/description containing clear keywords such as cotton, polyester, kitchen, travel, outdoor, baby, sports, home, office, or beach.
+    - Expected: material, usage, or scene appears with low confidence and a keyword-rule source; if absent, material says `材质未能自动识别。`
+
+18. Worker behavior stays safe
+    - Input: inspect `/api/source/preview` response for readable and blocked pages.
+    - Expected: response contains only public normalized fields and limitations; no stock, SKU, reviews, sales count, seller-private data, login-only data, hidden fields, crawler output, browser-rendered content, or external parser data appears.
+
+19. Missing core profit fields shows visible warning
+    - Input: leave 来源成本 and 目标售价 empty, keep the profit calculator incomplete, then click `生成测品决策报告`.
+    - Expected: a warning appears above the button with `请先填写来源成本和目标售价，或先在利润计算器中完成售价、采购价、重量和平台测算。否则只能做商品卡片观察，不能判断利润安全边际。`; the page scrolls to that warning.
+
+20. Limited card observation report still generates
+    - Input: fill product title, platforms, weight, selling point, competitor price range, review count, competitor link/observation, and card quality fields, but leave profit calculator incomplete; click `生成测品决策报告`.
+    - Expected: report status is `商品卡片观察报告` and clearly says `利润数据不足，本次不输出利润安全结论。`
+
+30. Complete AI page profit data scrolls to report
+    - Input: fill 来源成本 and 目标售价 with positive numbers, then click `生成测品决策报告`.
+    - Expected: no blocking warning remains; the page scrolls to the generated report.
+
 ## Cost And Result Explanation
 
 1. Normal valid input with balanced costs
@@ -239,32 +357,32 @@
    - Expected: the second report only shows the current URL fallback. Old title, image, price, priceRole, confidence, and extraction sources do not appear.
 
 1. Manual product information only should generate a testing decision
-   - Input: fill a valid source URL, 商品标题, 采购价, 类目或产品类型, and 卖点或备注; leave 可选：人工预估测品参数 empty; click `生成测品建议`.
-   - Expected: report appears from source domain, manual product information, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`; report sections include `测品结论`, `利润安全边际`, `建议测试数量`, `最低售价底线`, `主要风险`, and `下一步动作`.
+   - Input: leave source URL empty, fill 商品标题, 采购价, 类目或产品类型, 材质, 使用场景, 核心卖点, 产品卡片质量判断, and valid profit calculator inputs; click `生成测品决策报告`.
+   - Expected: report appears from manual product information, public observation fields, and current profit calculator snapshot; empty exposure/click/conversion assumptions do not cause `数据不足`; report sections focus on product-card quality, price competitiveness, review risk, profit safety, logistics/return risk, and continue/optimize/pause conditions.
 
 2. Optional manual testing assumptions should be labeled as estimates
-   - Input: expand the optional manual assumption panel before clicking `生成测品建议`; fill 预计曝光量（手动预估）, 预计点击率（手动预估）, 预计转化率（手动预估）, exposure/click/conversion notes, competitor observations, and optional ad-share assumptions.
+   - Input: expand the optional manual assumption panel before clicking `生成测品决策报告`; fill 预计曝光量（手动预估）, 预计点击率（手动预估）, 预计转化率（手动预估）, exposure/click/conversion notes, competitor observations, and optional ad-share assumptions.
    - Expected: the fields are clearly part of the pre-generation workflow; report includes those values as manual estimates only; UI shows `当前不会自动读取店铺曝光、点击、转化、广告或订单数据。以下参数仅用于人工模拟测品结果，不代表平台 API 自动同步数据。`; no text implies API sync.
 
 3. Report should not fail when optional metrics are empty
-   - Input: clear 预计曝光量 / 预计点击率 / 预计转化率 and all optional market assumptions; keep source URL, manual product info, and profit calculator inputs valid; click `生成测品建议`.
+   - Input: clear 预计曝光量 / 预计点击率 / 预计转化率 and all optional backend/ad assumptions; keep manual product info, card quality inputs, public market observations, and profit calculator inputs valid; click `生成测品决策报告`.
    - Expected: report still shows a testing decision based on profit margin, total cost, source cost, category, selling point, and logistics/profit snapshot; `数据边界` explains optional assumptions are empty but does not make the report look failed.
 
-4. High-margin product should produce small-test decision
-   - Input: set profit calculator values so profit margin is 30% or higher, fill source URL and manual product fields, then click `生成测品建议`.
-   - Expected: decision label is `建议小量测试`; report suggests a small first test quantity such as 5-10 units, gives a current-cost minimum price reference, and reminds the seller to record clicks/add-to-cart/orders/returns/ad spend.
+4. High-margin product should produce listing-test decision
+   - Input: set profit calculator values so profit margin is 30% or higher, fill product-card and public market fields, then click `生成测品决策报告`.
+   - Expected: decision label can be `建议上架测试` when card quality and market risk are acceptable; report reminds the seller to record exposure, clicks, add-to-cart, orders, returns, review signals, and ad spend.
 
 5. Medium-margin product should produce cautious decision
-   - Input: set profit calculator values so profit margin is between 10% and 20%, fill source URL and manual product fields, then click `生成测品建议`.
-   - Expected: decision label is `谨慎测试`; report suggests a low first test quantity such as 1-3 units and warns that ad spend, returns, or logistics changes may compress profit.
+   - Input: set profit calculator values so profit margin is between 10% and 20%, fill product-card and public market fields, then click `生成测品决策报告`.
+   - Expected: decision label is `谨慎测试` or `优化后再测`; report warns that ad spend, returns, review trust, card quality, or logistics changes may compress profit.
 
 6. Low-margin or negative product should not be recommended
-   - Input: set profit calculator values so profit margin is below 10% or profit is negative, fill source URL and manual product fields, then click `生成测品建议`.
-   - Expected: decision label is `暂不建议测试`; report tells the seller not to stock yet and to improve price, purchase cost, logistics cost, or ad assumptions before testing.
+   - Input: set profit calculator values so profit margin is below 10% or profit is negative, fill product-card and public market fields, then click `生成测品决策报告`.
+   - Expected: decision label is `暂不建议测试`; report tells the seller to improve price, purchase cost, logistics cost, card quality, review risk, or ad assumptions before testing.
 
 7. 1688 link with manual product information
-   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and optional 卖点或备注, then click `生成测品建议`.
-   - Expected: source domain is recognized; manual product information drives the analysis preview; optional Ozon context unavailable appears only once under `数据边界`.
+   - Input: paste a valid `detail.1688.com` URL, enter 商品标题, 采购价, 类目或产品类型, and card-quality fields, then click `生成测品决策报告`.
+   - Expected: source domain is optional context; manual product information and card-quality fields drive the decision; optional Ozon context unavailable appears only once under `数据边界`.
 
 8. Ozon product page link with manual product information
    - Input: paste an `ozon.ru` product page URL and fill the manual product fields.
@@ -463,12 +581,12 @@
 ## Product Selection Pre-Decision Assistant
 
 1. Empty key fields should show waiting state
-   - Input: clear source product URL or competitor average price, while keeping the profit calculator valid.
-   - Expected: product selection report shows `等待数据`, explains that backend/API collection is not connected yet, and does not give a confident decision.
+   - Input: clear 商品标题, 类目, 采购成本, or profit calculator inputs.
+   - Expected: product selection report asks for missing product-card or profit inputs, explains that backend/API collection is optional, and does not give a fake confident decision.
 
 2. High profit, low competition, vertical store
-   - Input: sale price 120, exchange rate 12.5, valid weight/dimensions/costs with profit margin above 20%; source product URL filled; temporary auto-filled target category filled; competitor count 15; competitor average price 1600 RUB; ad share 15%; store type vertical.
-   - Expected: report shows `建议小量测试` or cautious small-test wording, with next actions focused on validating ads, clicks, orders, and returns.
+   - Input: sale price 120, exchange rate 12.5, valid weight/dimensions/costs with profit margin above 20%; product title/category/selling point filled; competitor count 15; competitor average price 1600 RUB; ad share 15%; card quality marked acceptable.
+   - Expected: report shows `建议上架测试` or `谨慎测试`, with next actions focused on validating exposure, clicks, add-to-cart, orders, reviews, returns, and ad spend.
 
 3. Low profit with 30% ad share
    - Input: adjust current calculator until profit margin is below 10%, fill source product URL/category, competitor count 30, competitor average price near current RUB price, ad share 30%, store type vertical.
