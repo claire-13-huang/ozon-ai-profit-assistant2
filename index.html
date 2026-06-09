@@ -18,7 +18,7 @@
         <div class="app-navigation" aria-label="主功能导航">
           <button class="app-nav-button is-active" type="button" data-view-target="profit">利润计算器</button>
           <button class="app-nav-button" type="button" data-view-target="ai">选品测品分析</button>
-          <button class="app-nav-button" type="button" data-view-target="topic-tags">主题标签</button>
+          <button class="app-nav-button" type="button" data-view-target="topic-tags">Ozon 主题标签</button>
           <button class="app-nav-button" type="button" data-view-target="title-keywords">标题关键词</button>
           <button class="app-nav-button" type="button" data-view-target="detail-page">详情页优化</button>
           <button class="app-nav-button" type="button" data-view-target="ad-review">广告复盘</button>
@@ -35,7 +35,7 @@
           <h2>功能中心</h2>
           <p>一个入口，一个任务，一个结果。选择当前要处理的卖家任务，只显示对应工作台。</p>
         </div>
-        <span class="function-center-note">当前可用：利润计算器 / 选品测品分析 / API 设置</span>
+        <span class="function-center-note">当前可用：利润计算器 / 选品测品分析 / Ozon 主题标签 / API 设置</span>
       </div>
       <div class="module-grid">
         <button class="module-card is-active" type="button" data-view-target="profit">
@@ -49,9 +49,9 @@
           <span>基于商品证据包、竞品观察、卡片质量和利润底盘，判断是否值得上架测试。</span>
         </button>
         <button class="module-card" type="button" data-view-target="topic-tags">
-          <span class="module-status status-next">下一阶段</span>
-          <strong>主题标签助手</strong>
-          <span>拆解核心标签、场景标签、属性标签和长尾标签方向。</span>
+          <span class="module-status status-ready">已可用</span>
+          <strong>Ozon 主题标签</strong>
+          <span>先拆解竞品标签和竞品标题，再判断产品类型，生成 Ozon 可复制主题标签。</span>
         </button>
         <button class="module-card" type="button" data-view-target="title-keywords">
           <span class="module-status status-next">下一阶段</span>
@@ -840,30 +840,246 @@
       <div id="aiAnalysisMount"></div>
     </section>
 
-    <section class="app-view placeholder-module-view" id="topicTagAssistantView" data-view="topic-tags">
-      <div class="section module-placeholder-panel">
+    <section class="app-view topic-tag-module-view" id="topicTagAssistantView" data-view="topic-tags">
+      <div class="section topic-tag-panel">
         <div class="module-placeholder-head">
           <div>
-            <p class="eyebrow">Next Module</p>
-            <div class="title">主题标签助手</div>
-            <p class="panel-intro">根据商品标题、类目、卖点、材质、使用场景和竞品关键词，帮助卖家拆解主题标签方向。</p>
+            <p class="eyebrow">Ozon Topic Tag Strategy Assistant v1.0</p>
+            <div class="title">Ozon 主题标签</div>
+            <p class="panel-intro">当前模块仅针对 Ozon 主题标签：先分析竞品标签 / 竞品标题，再判断产品类型，最后生成可复制标签清单。</p>
           </div>
-          <span class="module-status status-next">下一阶段</span>
+          <span class="module-status status-ready">已可用</span>
         </div>
-        <div class="placeholder-detail-grid">
+
+        <section class="topic-tag-input-section">
+          <div class="workspace-section-head">
+            <div>
+              <h3>商品基础</h3>
+              <p>先给出产品类型、场景和卖点，系统会按标签角色拆解，不做关键词堆砌。</p>
+            </div>
+          </div>
+          <div class="decision-input-grid">
+            <div>
+              <label>商品标题 / 产品名称</label>
+              <input id="topicProductTitle" autocomplete="off" placeholder="例如 野餐保温包 35L 大容量">
+            </div>
+            <div>
+              <label>目标平台</label>
+              <input id="topicTargetPlatform" value="Ozon" readonly>
+            </div>
+            <div>
+              <label>产品类目</label>
+              <input id="topicProductCategory" autocomplete="off" placeholder="例如 户外 / 野餐 / 保温包">
+            </div>
+            <div>
+              <label>材质</label>
+              <input id="topicMaterial" autocomplete="off" placeholder="例如 牛津布 / 铝膜内胆 / 涤纶">
+            </div>
+            <div>
+              <label>规格 / 型号 / 尺寸</label>
+              <input id="topicSpecification" autocomplete="off" placeholder="例如 35L / 适配型号 / 尺寸规格">
+            </div>
+            <div>
+              <label>使用场景</label>
+              <input id="topicUsageScene" autocomplete="off" placeholder="例如 野餐、露营、海边、车载旅行">
+            </div>
+            <div>
+              <label>目标人群 / 用途（可选）</label>
+              <input id="topicTargetUser" autocomplete="off" placeholder="例如 家庭户外 / 学生午餐 / 办公便当">
+            </div>
+            <div class="decision-input-wide">
+              <label>核心卖点</label>
+              <textarea id="topicSellingPoints" rows="3" placeholder="例如 35L大容量，保温保冷，多层口袋，可手提，适合家庭户外。"></textarea>
+            </div>
+          </div>
+        </section>
+
+        <section class="topic-tag-input-section">
+          <div class="workspace-section-head">
+            <div>
+              <h3>竞品标签样本</h3>
+              <p>优先粘贴 Ozon 竞品标题、搜索词、商品证据包和竞品主题标签。竞品主题标签会作为最强证据处理。</p>
+            </div>
+          </div>
+          <textarea id="topicEvidencePack" rows="7" placeholder="例如：竞品标题包含 термосумка, сумка холодильник, пикник, кемпинг, пляж。担心标签太泛导致流量不精准。"></textarea>
+          <div class="decision-input-grid topic-optional-grid">
+            <div class="decision-input-wide">
+              <label>竞品主题标签（可粘贴多个）</label>
+              <p class="field-helper">从 Ozon 竞品卡片或后台看到的主题标签粘贴到这里。相似商品正在使用的标签是本模块的优先信号。</p>
+              <textarea id="topicCompetitorTags" rows="3" placeholder="例如 термосумка, сумка холодильник, пикник, кемпинг, сумка"></textarea>
+            </div>
+            <div class="decision-input-wide">
+              <label>我的候选标签</label>
+              <p class="field-helper">粘贴你自己想到的标签，系统会做去重、分类、长度检查、错配风险判断。</p>
+              <textarea id="topicCandidateTags" rows="3" placeholder="例如 термосумка для пикника, сумка холодильник 35л"></textarea>
+            </div>
+            <div class="decision-input-wide">
+              <label>品牌词 / 禁用词</label>
+              <p class="field-helper">粘贴品牌名、竞品品牌、平台名或不想使用的词，最终标签不得包含这些词。</p>
+              <textarea id="topicBannedWords" rows="2" placeholder="例如 nike, adidas, ozon, wildberries, xiaomi"></textarea>
+            </div>
+          </div>
+          <button class="auto-analysis-button decision-report-button" id="generateTopicTagsButton" type="button">生成 Ozon 主题标签策略</button>
+        </section>
+
+        <div class="topic-tag-boundary">当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。</div>
+
+        <section class="topic-tag-report selection-report selection-waiting" id="topicTagReport">
+          <div class="decision-head">
+            <span class="decision-label">标签策略结论</span>
+            <span class="decision-status" id="topicTagStatus">等待输入</span>
+          </div>
+          <div class="selection-summary" id="topicTagSummary">填写商品标题、类目、规格、场景、竞品标签和候选标签后，生成 Ozon 可复制标签清单。</div>
+
+          <div class="topic-strategy-grid" aria-label="Ozon 标签策略摘要">
+            <div>
+              <span>1. 产品类型判断</span>
+              <p id="topicProductTypeInsight">等待生成。</p>
+            </div>
+            <div>
+              <span>2. 竞品证据优先级</span>
+              <p id="topicCompetitorPriorityInsight">等待生成。</p>
+            </div>
+            <div>
+              <span>3. 核心词提取</span>
+              <p id="topicCoreTermInsight">等待生成。</p>
+            </div>
+            <div>
+              <span>4. 标签策略建议</span>
+              <p id="topicStrategyInsight">等待生成。</p>
+            </div>
+          </div>
+
+          <div class="topic-copy-panel">
+            <div class="topic-copy-head">
+              <div>
+                <span>5. 最终可复制 Ozon 主题标签</span>
+                <strong id="topicFinalTagCount">当前可推荐标签：0 / 30</strong>
+              </div>
+              <p>合规提示：最终标签仅保留 #、下划线、俄文字母、拉丁字母和数字；中文词只作为参考，不进入最终清单。</p>
+            </div>
+            <div class="topic-copy-grid topic-copy-single">
+              <div>
+                <span>一行一个，直接复制</span>
+                <pre id="topicFinalTagBlock">等待生成。</pre>
+                <p class="topic-final-note" id="topicFinalTagNote">等待生成。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="topic-report-layout">
+            <div class="topic-report-main">
+              <div class="topic-backup-tags" id="topicBackupTags">候补标签：需要人工确认 等待生成。</div>
+              <div class="topic-chinese-reference">
+                <span>中文参考 / 需要翻译确认</span>
+                <p id="topicChineseReference">等待生成。</p>
+              </div>
+              <details class="topic-detail-section">
+                <summary>查看标签明细表</summary>
+                <div class="topic-table-wrap">
+                  <table class="topic-tag-table">
+                    <thead>
+                      <tr>
+                        <th>标签</th>
+                        <th>类型</th>
+                        <th>来源</th>
+                        <th>字符数</th>
+                        <th>状态</th>
+                        <th>理由</th>
+                      </tr>
+                    </thead>
+                    <tbody id="topicTagDetailTableBody">
+                      <tr><td colspan="6">等待生成。</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </div>
+            <aside class="topic-report-side">
+              <div class="topic-rejected-summary">
+                <span>已排除 / 需修改标签</span>
+                <p id="topicRejectedTags">等待生成。</p>
+              </div>
+              <div class="topic-score-grid" id="topicTagScores" hidden></div>
+              <div class="topic-analysis-grid">
+                <div>
+                  <span>2. 竞品词拆解</span>
+                  <p id="topicCompetitorTagAnalysis">等待生成。</p>
+                </div>
+                <div>
+                  <span>我的候选标签分析</span>
+                  <p id="topicCandidateTagAnalysis">等待生成。</p>
+                </div>
+              </div>
+              <div class="selection-actions-title">数据边界 / 人工确认</div>
+              <ul class="selection-actions" id="topicTagWarnings">
+                <li>当前主题标签建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。</li>
+              </ul>
+            </aside>
+          </div>
+
+          <details class="topic-compact-details">
+            <summary>查看标签分组和组合方案</summary>
+            <div class="topic-tag-output-grid">
+            <div>
+              <span>核心标签</span>
+              <p id="topicCoreTags">等待生成。</p>
+            </div>
+            <div>
+              <span>场景标签</span>
+              <p id="topicSceneTags">等待生成。</p>
+            </div>
+            <div>
+              <span>属性标签</span>
+              <p id="topicAttributeTags">等待生成。</p>
+            </div>
+            <div>
+              <span>人群 / 用途标签</span>
+              <p id="topicAudienceTags">等待生成。</p>
+            </div>
+            <div>
+              <span>长尾标签</span>
+              <p id="topicLongTailTags">等待生成。</p>
+            </div>
+            <div>
+              <span>不建议使用的泛标签</span>
+              <p id="topicAvoidTags">等待生成。</p>
+            </div>
+            </div>
+            <div class="topic-combination-grid">
+            <div>
+              <span>保守精准组合</span>
+              <p id="topicPrecisionGroup">等待生成。</p>
+            </div>
+            <div>
+              <span>流量扩展组合</span>
+              <p id="topicExpansionGroup">等待生成。</p>
+            </div>
+            <div>
+              <span>转化意图组合</span>
+              <p id="topicConversionGroup">等待生成。</p>
+            </div>
+            </div>
+          </details>
+        </section>
+
+        <details class="manual-fallback-panel topic-tag-reference">
+          <summary>本模块 v0.3 如何工作</summary>
+          <div class="placeholder-detail-grid">
           <div>
-            <span>未来输入</span>
-            <p>商品标题、类目、核心卖点、材质、使用场景、竞品关键词。</p>
+            <span>标签角色</span>
+            <p>核心标签描述产品类型；场景标签描述使用环境；属性标签描述材质、容量、尺寸、功能；长尾标签组合产品 + 场景 + 属性。</p>
           </div>
           <div>
-            <span>未来输出</span>
-            <p>下一阶段开发：生成核心标签、场景标签、属性标签、长尾标签和不建议使用的泛标签。</p>
+            <span>规则来源</span>
+            <p>只使用你填写的文本和本地保守映射，不读取平台搜索量、不调用翻译 API、不抓取竞品数据。</p>
           </div>
           <div>
-            <span>当前状态</span>
-            <p>占位模块，仅用于功能中心导航结构；本次不实现标签生成逻辑。</p>
+            <span>人工确认</span>
+            <p>俄语词和长尾词必须结合目标平台搜索结果再次确认，避免错配流量和低质量点击。</p>
           </div>
         </div>
+        </details>
       </div>
     </section>
 
@@ -888,7 +1104,7 @@
           </div>
           <div>
             <span>当前状态</span>
-            <p>占位模块，仅用于功能中心导航结构；本次不实现标题或关键词生成逻辑。</p>
+            <p>下一阶段保留入口；本次不实现标题或关键词生成逻辑。</p>
           </div>
         </div>
       </div>
@@ -915,7 +1131,7 @@
           </div>
           <div>
             <span>当前状态</span>
-            <p>占位模块，仅用于功能中心导航结构；本次不实现详情页生成或图片方案引擎。</p>
+            <p>下一阶段保留入口；本次不实现详情页生成或图片方案引擎。</p>
           </div>
         </div>
       </div>
@@ -942,7 +1158,7 @@
           </div>
           <div>
             <span>当前状态</span>
-            <p>占位模块，仅用于功能中心导航结构；本次不实现广告数据分析逻辑。</p>
+            <p>下一阶段保留入口；本次不实现广告数据分析逻辑。</p>
           </div>
         </div>
       </div>

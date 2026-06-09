@@ -96,6 +96,20 @@ const savedFieldIds = [
   'subsidySalePrice',
   'subsidyAmountInput',
   'subsidyRateInput',
+  'topicProductTitle',
+  'topicTargetPlatform',
+  'topicProductCategory',
+  'topicMaterial',
+  'topicSpecification',
+  'topicUsageScene',
+  'topicSellingPoints',
+  'topicTargetUser',
+  'topicEvidencePack',
+  'topicCompetitorTags',
+  'topicCandidateTags',
+  'topicBannedWords',
+  'topicCompetitorKeywords',
+  'topicAvoidWords',
   'sourceProductUrl',
   'productEvidencePack',
   'manualProductTitle',
@@ -961,6 +975,1436 @@ function renderEvidenceDiagnosis(evidenceSummary) {
     item.append(label, text);
     container.appendChild(item);
   });
+}
+
+const TOPIC_TAG_BOUNDARY_TEXT = '当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。当前建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。';
+const TOPIC_TOOL_STRATEGY_TEXT = '工具类、机械类、配件类产品不适合追求太泛的流量。它们的搜索流量可能小，但用户意图更明确。主题标签应优先围绕核心产品词、型号规格、适配对象和具体使用场景，提升精准点击和转化概率。';
+const TOPIC_CONSUMER_STRATEGY_TEXT = '普通消费品可以通过场景、材质、季节、人群和功能词扩展流量，但仍然不能使用和产品不匹配的泛词。';
+
+const TOPIC_TAG_RULES = [
+  {
+    id: 'automotive_endoscope',
+    roles: ['core'],
+    patterns: [/内窥镜/i, /endoscope/i, /эндоскоп/i],
+    tags: [
+      { text: 'эндоскоп', reason: '内窥镜核心产品词；如果竞品标签中出现，应优先作为主核心词', ru: true },
+      { text: 'автомобильный эндоскоп', reason: '汽车维修场景 + 内窥镜的精准核心组合', ru: true },
+      { text: 'эндоскоп для авто', reason: '汽车适配对象 + 内窥镜的长尾方向', ru: true },
+      { text: '内窥镜', reason: '中文产品类型词' }
+    ]
+  },
+  {
+    id: 'car_repair',
+    roles: ['scene'],
+    patterns: [/汽车维修/i, /修理厂/i, /ремонт/i, /для ремонта/i, /car repair/i, /auto repair/i],
+    tags: [
+      { text: 'для ремонта', reason: '维修使用场景词，适合工具类产品长尾', ru: true },
+      { text: 'ремонт авто', reason: '汽车维修意图词，适合精准流量', ru: true },
+      { text: '汽车维修', reason: '中文使用场景词' }
+    ]
+  },
+  {
+    id: 'car_engine',
+    roles: ['scene'],
+    patterns: [/发动机/i, /engine/i, /двигател/i],
+    tags: [
+      { text: 'двигатель', reason: '汽车发动机适配 / 检测对象词', ru: true },
+      { text: 'ремонт двигателя', reason: '发动机维修场景词', ru: true },
+      { text: '发动机检测', reason: '中文使用场景词' }
+    ]
+  },
+  {
+    id: 'rotating',
+    roles: ['attribute'],
+    patterns: [/旋转/i, /360/i, /поворот/i, /rotat/i],
+    tags: [
+      { text: 'поворотный', reason: '旋转结构 / 功能词', ru: true },
+      { text: '360', reason: '旋转角度规格词', ru: true },
+      { text: '旋转', reason: '中文功能词' }
+    ]
+  },
+  {
+    id: 'high_resolution',
+    roles: ['attribute'],
+    patterns: [/1080\s*p/i, /高清/i, /пиксель/i, /ips/i],
+    tags: [
+      { text: '1080p', reason: '清晰度规格词，适合工具类精准长尾', ru: true },
+      { text: '高清', reason: '中文功能词' }
+    ]
+  },
+  {
+    id: 'cooler_bag',
+    roles: ['core'],
+    patterns: [/保温包/i, /保冷包/i, /冷藏包/i, /cooler bag/i, /thermal bag/i, /термосумка/i, /сумка холодильник/i],
+    tags: [
+      { text: 'термосумка', reason: '保温包 / 保冷包核心产品词', ru: true },
+      { text: 'сумка холодильник', reason: '保冷袋核心产品词', ru: true },
+      { text: '保温包', reason: '中文产品类型词' }
+    ]
+  },
+  {
+    id: 'lunch_bag',
+    roles: ['core', 'audience'],
+    patterns: [/午餐包/i, /便当包/i, /lunch bag/i, /сумка для обеда/i],
+    tags: [
+      { text: 'сумка для обеда', reason: '午餐包产品词', ru: true },
+      { text: '午餐包', reason: '中文产品类型词' }
+    ]
+  },
+  {
+    id: 'storage',
+    roles: ['core', 'scene'],
+    patterns: [/收纳/i, /整理/i, /storage/i, /organizer/i, /хранение/i],
+    tags: [
+      { text: 'хранение', reason: '收纳 / 存放方向', ru: true },
+      { text: '收纳', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'picnic',
+    roles: ['scene', 'audience'],
+    patterns: [/野餐/i, /picnic/i, /пикник/i],
+    tags: [
+      { text: 'пикник', reason: '野餐使用场景', ru: true },
+      { text: 'для пикника', reason: '用于野餐的长尾结构', ru: true },
+      { text: '野餐', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'camping',
+    roles: ['scene'],
+    patterns: [/露营/i, /camping/i, /camp/i, /кемпинг/i],
+    tags: [
+      { text: 'кемпинг', reason: '露营使用场景', ru: true },
+      { text: '露营', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'beach',
+    roles: ['scene'],
+    patterns: [/海边/i, /沙滩/i, /beach/i, /пляж/i],
+    tags: [
+      { text: 'пляж', reason: '海边 / 沙滩使用场景', ru: true },
+      { text: '海边', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'travel',
+    roles: ['scene', 'audience'],
+    patterns: [/旅行/i, /出行/i, /travel/i, /путешествие/i],
+    tags: [
+      { text: 'путешествие', reason: '旅行出行场景', ru: true },
+      { text: '旅行', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'outdoor',
+    roles: ['scene'],
+    patterns: [/户外/i, /outdoor/i, /для улицы/i],
+    tags: [
+      { text: 'для улицы', reason: '户外使用方向', ru: true },
+      { text: '户外', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'car',
+    roles: ['scene', 'audience'],
+    patterns: [/车载/i, /自驾/i, /汽车/i, /car/i, /auto/i],
+    tags: [
+      { text: 'для автомобиля', reason: '车载 / 自驾使用方向，俄语需确认', ru: true, confirm: true },
+      { text: '车载旅行', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'home',
+    roles: ['scene'],
+    patterns: [/家用/i, /家居/i, /home/i, /дом/i],
+    tags: [
+      { text: 'дом', reason: '家用场景', ru: true },
+      { text: '家用', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'kitchen',
+    roles: ['scene'],
+    patterns: [/厨房/i, /kitchen/i, /кухня/i],
+    tags: [
+      { text: 'кухня', reason: '厨房场景', ru: true },
+      { text: '厨房', reason: '中文场景词' }
+    ]
+  },
+  {
+    id: 'large_capacity',
+    roles: ['attribute', 'conversion'],
+    patterns: [/大容量/i, /\b\d+\s*l\b/i, /\d+\s*L/i, /\d+\s*升/i, /large capacity/i, /большая вместимость/i],
+    tags: [
+      { text: 'большая вместимость', reason: '大容量属性', ru: true },
+      { text: '大容量', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'waterproof',
+    roles: ['attribute'],
+    patterns: [/防水/i, /waterproof/i, /водонепроницаемый/i],
+    tags: [
+      { text: 'водонепроницаемый', reason: '防水属性', ru: true },
+      { text: '防水', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'insulated',
+    roles: ['attribute', 'conversion'],
+    patterns: [/保温/i, /保冷/i, /隔热/i, /insulated/i, /thermal/i, /термоизоляция/i],
+    tags: [
+      { text: 'термоизоляция', reason: '保温 / 隔热属性', ru: true },
+      { text: '保温保冷', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'pockets',
+    roles: ['attribute'],
+    patterns: [/口袋/i, /多层/i, /pockets?/i, /карманы/i],
+    tags: [
+      { text: 'карманы', reason: '口袋 / 分层属性', ru: true },
+      { text: '多层口袋', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'foldable',
+    roles: ['attribute'],
+    patterns: [/折叠/i, /可折/i, /foldable/i, /складной/i],
+    tags: [
+      { text: 'складной', reason: '可折叠属性', ru: true },
+      { text: '可折叠', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'lightweight',
+    roles: ['attribute'],
+    patterns: [/轻便/i, /轻量/i, /lightweight/i, /легкий/i],
+    tags: [
+      { text: 'легкий', reason: '轻便属性', ru: true },
+      { text: '轻便', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'cotton',
+    roles: ['attribute'],
+    patterns: [/棉/i, /cotton/i, /хлопок/i],
+    tags: [
+      { text: 'хлопок', reason: '棉材质', ru: true },
+      { text: '棉', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'polyester',
+    roles: ['attribute'],
+    patterns: [/涤纶/i, /聚酯/i, /polyester/i, /полиэстер/i],
+    tags: [
+      { text: 'полиэстер', reason: '涤纶 / 聚酯材质', ru: true },
+      { text: '涤纶', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'plastic',
+    roles: ['attribute'],
+    patterns: [/塑料/i, /plastic/i, /пластик/i],
+    tags: [
+      { text: 'пластик', reason: '塑料材质', ru: true },
+      { text: '塑料', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'silicone',
+    roles: ['attribute'],
+    patterns: [/硅胶/i, /silicone/i, /силикон/i],
+    tags: [
+      { text: 'силикон', reason: '硅胶材质', ru: true },
+      { text: '硅胶', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'stainless',
+    roles: ['attribute'],
+    patterns: [/不锈钢/i, /stainless steel/i, /нержавеющая сталь/i],
+    tags: [
+      { text: 'нержавеющая сталь', reason: '不锈钢材质', ru: true },
+      { text: '不锈钢', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'oxford',
+    roles: ['attribute'],
+    patterns: [/牛津布/i, /oxford/i],
+    tags: [
+      { text: 'oxford fabric（俄语需确认）', reason: '牛津布材质线索，俄语表达需卖家确认', confirm: true },
+      { text: '牛津布', reason: '中文材质词' }
+    ]
+  },
+  {
+    id: 'aluminum_lining',
+    roles: ['attribute'],
+    patterns: [/铝膜/i, /铝箔/i, /aluminum/i, /foil/i],
+    tags: [
+      { text: 'алюминиевая фольга（需确认）', reason: '铝膜 / 铝箔内胆线索，俄语表达需卖家确认', ru: true, confirm: true },
+      { text: '铝膜内胆', reason: '中文属性词' }
+    ]
+  },
+  {
+    id: 'family',
+    roles: ['audience', 'conversion'],
+    patterns: [/家庭/i, /family/i, /семья/i],
+    tags: [
+      { text: 'для семьи', reason: '家庭用途方向，俄语需确认', ru: true, confirm: true },
+      { text: '家庭户外', reason: '中文用途词' }
+    ]
+  },
+  {
+    id: 'baby',
+    roles: ['audience'],
+    patterns: [/婴儿/i, /宝宝/i, /儿童/i, /baby/i, /детский/i],
+    tags: [
+      { text: 'детский', reason: '儿童 / 宝宝用途方向', ru: true },
+      { text: '儿童', reason: '中文人群词' }
+    ]
+  },
+  {
+    id: 'women',
+    roles: ['audience'],
+    patterns: [/女性/i, /女/i, /women/i, /женский/i],
+    tags: [
+      { text: 'женский', reason: '女性人群方向，仅在产品确实面向女性时使用', ru: true },
+      { text: '女性', reason: '中文人群词' }
+    ]
+  },
+  {
+    id: 'men',
+    roles: ['audience'],
+    patterns: [/男性/i, /男/i, /men/i, /мужской/i],
+    tags: [
+      { text: 'мужской', reason: '男性人群方向，仅在产品确实面向男性时使用', ru: true },
+      { text: '男性', reason: '中文人群词' }
+    ]
+  }
+];
+
+const TOPIC_TAG_AVOID_RULES = [
+  { patterns: [/женская сумка/i, /women bag/i, /女包/i], text: 'женская сумка / women bag', reason: '如果不是时尚女包，会吸引错配流量。' },
+  { patterns: [/рюкзак/i, /backpack/i, /双肩包/i], text: 'рюкзак / backpack', reason: '如果商品不是双肩背包，不要用背包标签。' },
+  { patterns: [/\bbag\b/i, /(^|[\s,，])сумка($|[\s,，])/i, /包$/i], text: 'bag / сумка', reason: '过于宽泛，建议用更具体的产品词替代。' },
+  { patterns: [/fashion/i, /мода/i, /时尚/i], text: 'fashion / 时尚', reason: '只有时尚穿搭属性明确时才使用。' },
+  { patterns: [/женский/i, /мужской/i, /女性/i, /男性/i], text: 'gender tag', reason: '人群性别不明确时不要使用，会降低流量精准度。' }
+];
+
+function topicNormalizeText(value) {
+  return String(value || '').replace(/\s+/g, ' ').trim();
+}
+
+function getTopicTagInput() {
+  return {
+    title: fieldValue('topicProductTitle'),
+    platform: fieldValue('topicTargetPlatform') || platform,
+    category: fieldValue('topicProductCategory'),
+    material: fieldValue('topicMaterial'),
+    specification: fieldValue('topicSpecification'),
+    usageScene: fieldValue('topicUsageScene'),
+    sellingPoints: fieldValue('topicSellingPoints'),
+    targetUser: fieldValue('topicTargetUser'),
+    evidencePack: fieldValue('topicEvidencePack'),
+    competitorTags: fieldValue('topicCompetitorTags'),
+    candidateTags: fieldValue('topicCandidateTags'),
+    bannedWords: fieldValue('topicBannedWords') || fieldValue('topicAvoidWords'),
+    competitorKeywords: fieldValue('topicCompetitorKeywords')
+  };
+}
+
+function topicTextCorpus(input) {
+  return [
+    input.title,
+    input.category,
+    input.material,
+    input.specification,
+    input.usageScene,
+    input.sellingPoints,
+    input.targetUser,
+    input.evidencePack,
+    input.competitorTags,
+    input.candidateTags,
+    input.competitorKeywords,
+    input.bannedWords
+  ].filter(Boolean).join('\n');
+}
+
+function topicTextHasRule(corpus, rule) {
+  return rule.patterns.some(pattern => pattern.test(corpus));
+}
+
+function buildTopicTag(text, role, rule, sourceText) {
+  const appearsInEvidence = text && sourceText.toLowerCase().includes(String(text).toLowerCase().replace(/（.*?）/g, '').trim());
+  return {
+    text,
+    role,
+    reason: rule.reason || '基于商品信息和本地标签规则。',
+    confidence: appearsInEvidence ? '证据中出现' : rule.confirm ? '需卖家确认' : rule.ru ? '内置保守映射' : '商品信息支持',
+    source: appearsInEvidence ? '证据包' : '系统补充'
+  };
+}
+
+function addTopicTag(group, tag) {
+  if (!tag || !tag.text) return;
+  if (group.some(item => item.text === tag.text)) return;
+  group.push(tag);
+}
+
+function formatTopicTags(tags, fallback = '未生成。') {
+  if (!tags || !tags.length) return fallback;
+  return tags.map(tag => {
+    const note = tag.confidence ? `（${tag.confidence}）` : '';
+    return `${tag.text}${note}`;
+  }).join('、');
+}
+
+function formatTopicTagDetails(tags, fallback = '未生成。') {
+  if (!tags || !tags.length) return fallback;
+  return tags.map(tag => `${tag.text}：${tag.reason}${tag.confidence ? `；${tag.confidence}` : ''}`).join('\n');
+}
+
+function extractCustomTopicTerms(value, reason, maxItems = 12) {
+  return String(value || '')
+    .split(/[\n,，;；、|]+/)
+    .map(item => topicNormalizeText(item))
+    .filter(item => item.length >= 2 && item.length <= 60)
+    .slice(0, maxItems)
+    .map(text => ({ text, reason, confidence: '卖家提供' }));
+}
+
+const TOPIC_FINAL_TAG_TARGET = 30;
+const TOPIC_FINAL_TAG_MAX_LENGTH = 30;
+const TOPIC_DEFAULT_BANNED_WORDS = ['ozon', 'wildberries', 'yandex', 'amazon', 'aliexpress', 'taobao', 'tmall', '1688'];
+const TOPIC_BROAD_TAGS = [
+  'сумка',
+  'bag',
+  'товар',
+  'product',
+  'аксессуар',
+  'accessory',
+  'аксессуары',
+  'goods',
+  'outdoor bag'
+];
+
+function topicTagLength(tag) {
+  return Array.from(String(tag || '')).length;
+}
+
+function topicCleanTagText(value) {
+  return topicNormalizeText(value)
+    .replace(/^[\s"'“”‘’`·•\-]+|[\s"'“”‘’`。.!！?？]+$/g, '')
+    .replace(/\s+/g, ' ');
+}
+
+function topicTagKey(value) {
+  return topicFormattedSearchKey(value);
+}
+
+function splitTopicTagInput(value, maxItems = 80) {
+  return String(value || '')
+    .replace(/#/g, '\n')
+    .split(/[\n,，;；、|]+/)
+    .map(topicCleanTagText)
+    .filter(item => item.length >= 2)
+    .slice(0, maxItems);
+}
+
+function topicCorpusKey(input) {
+  return topicFormattedSearchKey(topicTextCorpus(input).replace(/#/g, ' ').replace(/_/g, ' '));
+}
+
+function topicEvidenceSupportsText(text, input) {
+  const key = topicFormattedSearchKey(text);
+  if (!key) return false;
+  const corpusKey = topicCorpusKey(input);
+  if (corpusKey.includes(key)) return true;
+  return key.split(' ').filter(part => part.length >= 2).some(part => corpusKey.includes(part));
+}
+
+function extractTopicSpecTerms(input) {
+  const text = topicTextCorpus(input);
+  const terms = [];
+  const addMatches = pattern => {
+    const matches = text.match(pattern) || [];
+    matches.forEach(match => terms.push(match.toLocaleLowerCase('ru-RU').replace(/\s+/g, '')));
+  };
+
+  addMatches(/\b[a-z]{1,4}\d{1,5}[a-z0-9-]*\b/gi);
+  addMatches(/\b\d{3,4}\s*p\b/gi);
+  addMatches(/\bip\s*\d{2}\b/gi);
+  addMatches(/\b\d{3,5}\s*mah\b/gi);
+  addMatches(/\b\d+(?:[.,]\d+)?\s*(?:mm|мм)\b/gi);
+  addMatches(/\b\d+(?:[.,]\d+)?\s*(?:m|м)\b/gi);
+  addMatches(/\b\d+\s*(?:l|л)\b/gi);
+  (text.match(/\d+(?:[.,]\d+)?\s*米/g) || []).forEach(match => {
+    terms.push(match.replace(/\s*米/g, 'м').replace(',', '.'));
+  });
+  return uniqueList(terms
+    .map(term => term.replace(/^(\d+(?:[.,]\d+)?)l$/i, '$1л'))
+    .map(topicCleanTagText)
+    .filter(term => !topicContainsCjk(term)), 12);
+}
+
+function getTopicBannedWords(input) {
+  return uniqueList(TOPIC_DEFAULT_BANNED_WORDS.concat(splitTopicTagInput(input.bannedWords, 40)), 80)
+    .map(word => topicCleanTagText(word).toLowerCase())
+    .filter(Boolean);
+}
+
+function normalizeRawTag(text) {
+  return String(text || '')
+    .replace(/#+/g, ' ')
+    .replace(/[，,]+/g, ' ')
+    .replace(/[\/\\()[\]{}<>«»"“”‘’'`~!！?？.:：;；|+=*&^%$@、。·•-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function formatOzonTag(rawTag) {
+  const normalized = normalizeRawTag(rawTag)
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_+|_+$/g, '')
+    .toLocaleLowerCase('ru-RU');
+  return normalized ? `#${normalized}` : '#';
+}
+
+function getFormattedTagLength(tag) {
+  return Array.from(String(tag || '')).length;
+}
+
+function topicFormattedSearchKey(value) {
+  return normalizeRawTag(String(value || '').replace(/_/g, ' '))
+    .toLocaleLowerCase('ru-RU');
+}
+
+function isValidFormattedTag(tag, bannedWords = []) {
+  return isOzonFinalTagSafe(tag, bannedWords);
+}
+
+function isOzonFinalTagSafe(tag, bannedWords = []) {
+  const value = String(tag || '').trim();
+  if (!value.startsWith('#')) return false;
+  if (value === '#') return false;
+  if (topicContainsCjk(value)) return false;
+  if (value.includes(',') || value.includes('，') || /\s/.test(value)) return false;
+  if (!/^#[\u0400-\u04FFA-Za-z0-9_]+$/u.test(value)) return false;
+  if (getFormattedTagLength(value) > TOPIC_FINAL_TAG_MAX_LENGTH) return false;
+  return !topicContainsBannedWord(value, bannedWords);
+}
+
+function topicContainsCjk(value) {
+  return /[\u4e00-\u9fff]/.test(String(value || ''));
+}
+
+function topicContainsBannedWord(tag, bannedWords) {
+  const key = topicFormattedSearchKey(tag);
+  return bannedWords.find(word => {
+    const normalizedWord = topicFormattedSearchKey(word);
+    return normalizedWord && key.includes(normalizedWord);
+  });
+}
+
+function topicIsBroadTag(tag) {
+  const key = topicTagKey(tag);
+  if (TOPIC_BROAD_TAGS.includes(key)) return true;
+  return /^(сумка|bag|товар|product|аксессуар|accessory)$/i.test(key);
+}
+
+function topicDetectProfile(input) {
+  const corpus = topicTextCorpus(input).toLowerCase();
+  return {
+    mechanical: /model|型号|compatible|适配|spare part|запчасть|насадка|фильтр|двигатель|кабель|connector|разъем|内窥镜|эндоскоп|endoscope|汽车维修|ремонт|ip67|1080p/.test(corpus),
+    fashion: /clothing|fashion|одежда|платье|куртка|обувь|женский|мужской|服装|衣服|女装|男装|鞋|穿搭/.test(corpus),
+    homeKitchen: /home|kitchen|дом|кухня|storage|хранение|家用|家居|厨房|收纳|清洁|烹饪/.test(corpus),
+    outdoorPicnic: /outdoor|picnic|camping|beach|пикник|кемпинг|пляж|户外|野餐|露营|海边|保温包|термосумка|сумка холодильник/.test(corpus)
+  };
+}
+
+function getTopicProductType(input, matchedRuleIds = []) {
+  const profile = topicDetectProfile(input);
+  if (matchedRuleIds.includes('automotive_endoscope') || /内窥镜|эндоскоп|endoscope/.test(topicTextCorpus(input))) {
+    return {
+      id: 'tool',
+      label: '工具 / 汽车维修类产品',
+      why: '商品证据中出现内窥镜、汽车维修、发动机检测、型号规格或防水高清等工具属性。',
+      strategy: '优先使用核心产品词、型号 / 规格词、适配对象词和维修场景词，避免生活方式泛词。',
+      trafficLogic: TOPIC_TOOL_STRATEGY_TEXT
+    };
+  }
+  if (profile.mechanical) {
+    return {
+      id: 'tool',
+      label: '工具 / 机械 / 配件类产品',
+      why: '商品证据中出现型号、适配、维修、配件、机械或连接器等精准搜索线索。',
+      strategy: '先锁定准确产品词，再补型号规格、适配对象、安装维修和维护场景。',
+      trafficLogic: TOPIC_TOOL_STRATEGY_TEXT
+    };
+  }
+  if (profile.fashion) {
+    return {
+      id: 'fashion',
+      label: '服饰 / 时尚类产品',
+      why: '商品证据更偏服饰、鞋服、穿搭、性别或风格表达。',
+      strategy: '围绕产品类型、性别证据、季节、材质、风格和尺码版型扩展。',
+      trafficLogic: '服饰类标签可以扩展风格和季节，但性别、版型、风格词必须有商品证据支持。'
+    };
+  }
+  if (profile.homeKitchen) {
+    return {
+      id: 'homeKitchen',
+      label: '家居 / 厨房消费品',
+      why: '商品证据更偏家用、厨房、清洁、收纳或烹饪场景。',
+      strategy: '围绕产品类型、材质、功能、尺寸 / 容量和使用场景扩展。',
+      trafficLogic: '家居 / 厨房产品适合用功能、材质、容量和场景词覆盖真实使用需求。'
+    };
+  }
+  if (profile.outdoorPicnic) {
+    return {
+      id: 'ordinary',
+      label: '普通户外消费品',
+      why: '商品证据中出现野餐、露营、海边、户外、保温包或容量等普通消费场景。',
+      strategy: '可使用产品类型 + 场景 + 容量 + 保温保冷 + 便携 / 口袋等功能属性扩展。',
+      trafficLogic: TOPIC_CONSUMER_STRATEGY_TEXT
+    };
+  }
+  return {
+    id: 'ordinary',
+    label: '普通消费品',
+    why: '当前证据没有明显机械、配件、服饰或专业工具属性。',
+    strategy: '围绕产品类型、场景、材质、功能、规格和用户意图做保守扩展。',
+    trafficLogic: TOPIC_CONSUMER_STRATEGY_TEXT
+  };
+}
+
+function topicIsCoolerBagContext(input, matchedRuleIds = []) {
+  return matchedRuleIds.includes('cooler_bag') || /保温包|保冷包|冷藏包|термосумка|сумка холодильник|cooler bag|thermal bag/i.test(topicTextCorpus(input));
+}
+
+function topicMismatchReason(tag, input, matchedRuleIds = []) {
+  const key = topicTagKey(tag);
+  const coolerBagContext = topicIsCoolerBagContext(input, matchedRuleIds);
+  const profile = topicDetectProfile(input);
+  if (profile.mechanical && /сумка|bag|рюкзак|пикник|кемпинг|пляж|женск|мода|fashion/.test(key)) return '工具 / 机械 / 配件类产品不应使用生活方式、时尚或泛包类标签。';
+  if (coolerBagContext && /рюкзак|backpack|双肩包/.test(key)) return '商品不是双肩背包，使用背包词会导入错配流量。';
+  if (coolerBagContext && /женская сумка|women bag|女包/.test(key)) return '商品不是时尚女包，性别包类词会误导流量。';
+  if (coolerBagContext && /пляжная сумка/.test(key) && !/термо|холод|термосумка/.test(key)) return '更像普通沙滩包，未体现保温/保冷属性。';
+  if (coolerBagContext && key === 'outdoor bag') return '英文泛词过宽，未体现保温包产品类型。';
+  if (!/жен|女性|women|муж|男性|men/.test(topicTextCorpus(input).toLowerCase()) && /женский|женская|women|мужской|men/.test(key)) return '人群性别缺少商品证据支持。';
+  return '';
+}
+
+function topicInferTagType(tag, role, input) {
+  const key = topicTagKey(tag);
+  if (/эндоскоп|термосумка|сумка холодильник|сумка для обеда|保温包|午餐包|хранение/.test(key) || role === 'core') return '核心产品词';
+  if (/авто|автомоб|двигател|compatible|适配/.test(key)) return '适配对象词';
+  if (/model|型号|запчасть|насадка|фильтр|кабель|connector|t\d+|1080p|ip\d+|\d+\s*(mah|l|л|cm|см|mm|мм|m|м|kg|кг)\b/i.test(key)) return '型号 / 规格词';
+  if (/поворот|360|водонепроницаемый|термоизоляция|карманы|高清|防水|隔热|保温|保冷/.test(key)) return '功能词';
+  if (/для |пикник|кемпинг|пляж|путешеств|野餐|露营|海边|旅行|车载/.test(key) && /термосумка|сумка холодильник|сумка для обеда|保温包|午餐包/.test(key)) return '长尾组合词';
+  if (role === 'scene' || /ремонт|для ремонта|пикник|кемпинг|пляж|путешеств|для улицы|дом|кухня|野餐|露营|海边|旅行|户外|家用|厨房|维修/.test(key)) return '使用场景词';
+  if (/хлопок|полиэстер|пластик|силикон|нержавеющая сталь|oxford|фольга|牛津布|铝膜|棉|涤纶|塑料|硅胶|不锈钢/.test(key)) return '材质词';
+  if (role === 'attribute' || /большая вместимость|карманы|складной|легкий|容量|口袋|折叠|轻便/.test(key)) return '属性词';
+  if (role === 'audience' || /для семьи|детский|женский|мужской|家庭|儿童|女性|男性/.test(key)) return '人群词';
+  if (/лето|зима|summer|winter|夏|冬/.test(key)) return '季节词';
+  if (input.targetUser && key.includes(input.targetUser.toLowerCase())) return '用途词';
+  return '长尾组合词';
+}
+
+function topicSourceForTag(tag, fallbackSource, sourceText) {
+  const clean = topicTagKey(tag);
+  if (clean && String(sourceText || '').toLowerCase().includes(clean)) return '证据包';
+  return fallbackSource;
+}
+
+function buildTopicCandidateRow(tag, options) {
+  const text = topicCleanTagText(tag);
+  const formattedTag = formatOzonTag(text);
+  const input = options.input;
+  const bannedWords = options.bannedWords;
+  const matchedRuleIds = options.matchedRuleIds || [];
+  const role = options.role || '';
+  const type = options.type || topicInferTagType(text, role, input);
+  const source = options.source || '系统补充';
+  const charCount = getFormattedTagLength(formattedTag);
+  const bannedWord = topicContainsBannedWord(formattedTag, bannedWords);
+  const mismatchReason = topicMismatchReason(text, input, matchedRuleIds);
+  const broad = topicIsBroadTag(text);
+  const hasCjk = topicContainsCjk(text);
+  const unsafePunctuation = /[\/\\()[\]{}<>«»"“”‘’'`~!！?？.:：;；|+=*&^%$@、。·•-]/.test(text.replace(/^#/, '').replace(/_/g, ''));
+  const evidenceSupported = topicEvidenceSupportsText(text, input);
+  let status = options.status || '推荐使用';
+  let riskLevel = options.riskLevel || '低';
+  const reasons = [options.reason || '基于商品信息和本地规则生成。'];
+  const issues = [];
+
+  if (charCount > TOPIC_FINAL_TAG_MAX_LENGTH) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('too-long');
+    reasons.push(`超过 ${TOPIC_FINAL_TAG_MAX_LENGTH} 个字符。`);
+  }
+  if (bannedWord) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('banned-word');
+    reasons.push(`包含品牌词 / 禁用词：${bannedWord}。`);
+  }
+  if (broad) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('too-broad');
+    reasons.push('标签过于宽泛，新品不建议用作强标签。');
+  }
+  if (mismatchReason) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('mismatch');
+    reasons.push(mismatchReason);
+  }
+  if (hasCjk) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('contains-chinese');
+    reasons.push('包含中文，不能进入最终 Ozon 标签；只保留为中文参考。');
+  }
+  if (unsafePunctuation) {
+    status = '不建议使用';
+    riskLevel = '高';
+    issues.push('unsafe-punctuation');
+    reasons.push('包含不安全标点；最终标签只允许 #、_、俄文字母、拉丁字母和数字。');
+  }
+  if (status !== '不建议使用' && (/需确认|需要卖家确认/.test(options.reason || '') || /（需确认|俄语需确认/.test(text))) {
+    status = '需要人工确认';
+    riskLevel = riskLevel === '高' ? riskLevel : '中';
+    issues.push('needs-manual-confirmation');
+    reasons.push('该表达来自保守映射或不稳定翻译，不能直接放入最终强标签。');
+  }
+  if (source === '竞品标签' && status === '推荐使用') {
+    reasons.push(evidenceSupported
+      ? '竞品主题标签是最强证据：说明相似商品已经在 Ozon 流量入口使用该表达。'
+      : '竞品主题标签可优先参考，但仍需确认是否与当前商品完全一致。');
+  }
+  if (source === '我的候选标签' && status === '推荐使用' && !evidenceSupported) {
+    status = '需要人工确认';
+    riskLevel = '中';
+    issues.push('candidate-needs-review');
+    reasons.push('候选词需要结合实际搜索结果确认是否贴合商品。');
+  }
+
+  return {
+    text,
+    formattedTag,
+    charCount,
+    type,
+    source,
+    reason: uniqueList(reasons, 4).join(' '),
+    riskLevel,
+    status,
+    issues,
+    role,
+    evidenceSupported,
+    bannedWords,
+    priority: options.priority || 0
+  };
+}
+
+function buildTopicAvoidTags(input, corpus, matchedRuleIds) {
+  const avoid = [];
+  const profile = topicDetectProfile(input);
+  extractCustomTopicTerms(input.bannedWords, '卖家明确不想使用，需要从标签方案中排除。', 20).forEach(item => addTopicTag(avoid, item));
+
+  TOPIC_TAG_AVOID_RULES.forEach(rule => {
+    if (topicTextHasRule([corpus, input.bannedWords].filter(Boolean).join('\n'), rule)) {
+      addTopicTag(avoid, { text: rule.text, reason: rule.reason, confidence: '风险提示' });
+    }
+  });
+
+  const isSpecificBag = matchedRuleIds.includes('cooler_bag') || matchedRuleIds.includes('lunch_bag');
+  if (isSpecificBag) {
+    addTopicTag(avoid, { text: 'bag / сумка', reason: '产品类型已经更具体，泛包类词会降低流量精准度。', confidence: '风险提示' });
+    if (!matchedRuleIds.includes('women')) {
+      addTopicTag(avoid, { text: 'женская сумка', reason: '保温包不是时尚女包时不要使用。', confidence: '风险提示' });
+    }
+    addTopicTag(avoid, { text: 'рюкзак', reason: '非双肩背包不要使用背包标签。', confidence: '风险提示' });
+  }
+  if (profile.mechanical) {
+    addTopicTag(avoid, { text: 'lifestyle', reason: '工具 / 机械 / 配件类产品不适合用生活方式泛词扩流。', confidence: '风险提示' });
+    addTopicTag(avoid, { text: 'fashion', reason: '工具 / 机械 / 配件类产品不应使用时尚风格词。', confidence: '风险提示' });
+  }
+
+  return avoid;
+}
+
+function buildTopicLongTail(coreTags, sceneTags, attributeTags, input) {
+  const longTail = [];
+  const core = coreTags.find(tag => /эндоскоп/i.test(tag.text))
+    || coreTags.find(tag => /термосумка|сумка холодильник|сумка для обеда/i.test(tag.text))
+    || coreTags[0];
+  const isToolCore = core && /эндоскоп/i.test(core.text);
+  const scenes = sceneTags
+    .filter(tag => isToolCore
+      ? /ремонт|авто|двигател|для автомобиля/i.test(tag.text)
+      : /пикник|кемпинг|пляж|путешествие|для улицы/i.test(tag.text))
+    .slice(0, 4);
+  const attrs = attributeTags
+    .filter(tag => isToolCore
+      ? /поворот|1080p|водонепроницаемый|ip67|360/i.test(tag.text)
+      : /большая вместимость|термоизоляция|водонепроницаемый|карманы/i.test(tag.text))
+    .slice(0, 4);
+  const scenePhraseMap = {
+    'пикник': 'для пикника',
+    'кемпинг': 'для кемпинга',
+    'пляж': 'для пляжа',
+    'путешествие': 'для путешествий',
+    'двигатель': 'для двигателя',
+    'ремонт авто': 'для ремонта авто'
+  };
+
+  if (core) {
+    scenes.forEach(scene => {
+      const scenePhrase = scenePhraseMap[scene.text] || scene.text;
+      addTopicTag(longTail, {
+        text: `${core.text} ${scenePhrase}`,
+        reason: '产品词 + 使用场景，适合更精准的长尾搜索方向。',
+        confidence: core.confidence === '证据中出现' && scene.confidence === '证据中出现' ? '证据中出现' : '俄语需确认'
+      });
+    });
+
+    attrs.forEach(attr => {
+      addTopicTag(longTail, {
+        text: `${core.text} ${attr.text}`,
+        reason: '产品词 + 属性，强调购买意图和筛选条件。',
+        confidence: attr.confidence === '证据中出现' ? '证据中出现' : '俄语需确认'
+      });
+    });
+  }
+
+  if (!longTail.length) {
+    const chineseParts = [input.title || input.category, input.usageScene, input.material || input.sellingPoints]
+      .map(part => topicNormalizeText(part))
+      .filter(Boolean)
+      .slice(0, 3);
+    if (chineseParts.length) {
+      addTopicTag(longTail, {
+        text: chineseParts.join(' + '),
+        reason: '中文结构可作为长尾方向，俄语翻译需要卖家结合平台搜索确认。',
+        confidence: '需卖家确认'
+      });
+    }
+  }
+
+  return longTail.slice(0, 8);
+}
+
+function buildTopicSpecTags(input, coreTags) {
+  const specTerms = uniqueList(splitTopicTagInput(input.specification, 8)
+    .map(term => term.replace(/(\d+)\s*[lL]\b/g, '$1л').replace(/(\d+)\s*米/g, '$1м'))
+    .map(topicCleanTagText)
+    .filter(term => term && !topicContainsCjk(term))
+    .concat(extractTopicSpecTerms(input)), 12);
+  const tags = [];
+  const core = coreTags.find(tag => /эндоскоп/i.test(tag.text))
+    || coreTags.find(tag => /термосумка|сумка холодильник|сумка для обеда/i.test(tag.text))
+    || coreTags[0];
+
+  specTerms.forEach(term => {
+    addTopicTag(tags, {
+      text: term,
+      role: 'spec',
+      reason: '来自规格 / 型号 / 尺寸字段，适合精确筛选。',
+      confidence: '商品信息支持',
+      source: '商品信息'
+    });
+    if (core && !topicContainsCjk(core.text)) {
+      addTopicTag(tags, {
+        text: `${core.text} ${term}`,
+        role: 'longTail',
+        reason: '产品词 + 规格，适合 Ozon 新品精准标签。',
+        confidence: '商品信息支持',
+        source: '系统补充'
+      });
+    }
+  });
+
+  if (/35\s*[lLл]/i.test(topicTextCorpus(input)) && core && !tags.some(tag => /35л/i.test(tag.text))) {
+    addTopicTag(tags, {
+      text: `${core.text} 35л`,
+      role: 'longTail',
+      reason: '证据中出现 35L 容量，转为俄语容量写法用于精准长尾。',
+      confidence: '证据中出现',
+      source: '证据包'
+    });
+  }
+
+  return tags.slice(0, 8);
+}
+
+function topicScore(value) {
+  return Math.max(0, Math.min(100, Math.round(value)));
+}
+
+function buildTopicScores(groups, input, matchedRuleIds, finalRows = [], rejectedRows = []) {
+  const evidenceLength = topicTextCorpus(input).length;
+  const longTailCount = finalRows.filter(row => row.type === '长尾组合词' || row.type === '规格 / 型号词' || row.type === '型号 / 规格词').length;
+  const relevance = topicScore(35 + groups.core.length * 16 + groups.scene.length * 5 + (input.category ? 8 : 0) + Math.min(12, finalRows.length));
+  const specificity = topicScore(28 + groups.attribute.length * 6 + longTailCount * 7 + (input.specification ? 8 : 0) - Math.min(12, rejectedRows.filter(row => row.issues.includes('too-broad')).length * 3));
+  const coverage = topicScore(24 + Math.min(26, groups.core.length * 10) + Math.min(22, groups.scene.length * 5) + Math.min(18, groups.attribute.length * 3) + (evidenceLength > 80 ? 8 : 0) + Math.min(16, finalRows.length));
+  const mismatchRisk = topicScore(42 + (groups.core.length ? 16 : 0) + Math.min(18, rejectedRows.length * 3) + (matchedRuleIds.includes('cooler_bag') || matchedRuleIds.includes('lunch_bag') ? 8 : 0) - Math.min(12, rejectedRows.filter(row => row.issues.includes('mismatch')).length * 3));
+  const conversionIntent = topicScore(30 + groups.attribute.length * 5 + groups.scene.length * 4 + groups.audience.length * 5 + longTailCount * 6);
+
+  return [
+    {
+      label: '相关性评分',
+      score: relevance,
+      reason: groups.core.length ? '最终标签围绕核心产品词展开，没有让泛词替代产品类型。' : '核心产品类型不足，先补商品名称或类目。'
+    },
+    {
+      label: '具体性评分',
+      score: specificity,
+      reason: longTailCount ? '已优先使用规格、场景和属性长尾，减少新品泛流量。' : '属性词或长尾组合不足，建议补容量、材质、尺寸或功能。'
+    },
+    {
+      label: '搜索覆盖评分',
+      score: coverage,
+      reason: finalRows.length ? `当前可推荐 ${finalRows.length} 个标签，但不代表真实搜索量。` : '场景词和长尾词不足，覆盖面偏窄。'
+    },
+    {
+      label: '错配风险控制评分',
+      score: mismatchRisk,
+      reason: rejectedRows.length ? '已识别并排除品牌词、泛词或错配词。' : '暂未发现明显错配词，但仍需平台搜索结果复核。'
+    },
+    {
+      label: '转化意图评分',
+      score: conversionIntent,
+      reason: longTailCount && groups.attribute.length ? '长尾标签能同时表达产品、场景、规格或功能，更接近购买意图。' : '购买意图线索不足，建议补使用目的、核心卖点和痛点。'
+    }
+  ];
+}
+
+function buildTopicCombinations(groups) {
+  const precision = uniqueList(groups.core.concat(groups.scene.slice(0, 2)).map(tag => tag.text), 8);
+  const expansion = uniqueList(groups.core.concat(groups.scene, groups.attribute.slice(0, 4)).map(tag => tag.text), 12);
+  const conversion = uniqueList(groups.longTail.concat(groups.attribute, groups.audience).map(tag => tag.text), 12);
+
+  return {
+    precision: {
+      tags: precision,
+      explanation: '用于新品冷启动或预算有限时：流量较小，但更贴近商品本身。'
+    },
+    expansion: {
+      tags: expansion,
+      explanation: '用于已有基础点击后扩展：比精准组更宽，但仍围绕商品、场景和属性。'
+    },
+    conversion: {
+      tags: conversion,
+      explanation: '用于优化转化：强调使用场景、容量/材质/功能和购买目的。'
+    }
+  };
+}
+
+function topicRowsFromGroup(tags, input, bannedWords, matchedRuleIds) {
+  return tags.map(tag => buildTopicCandidateRow(tag.text, {
+    input,
+    bannedWords,
+    matchedRuleIds,
+    role: tag.role,
+    source: tag.source || '系统补充',
+    reason: tag.reason,
+    priority: tag.role === 'longTail' ? 24 : tag.role === 'core' ? 20 : tag.role === 'spec' ? 22 : 10
+  }));
+}
+
+function buildTopicSourceRows(input, bannedWords, matchedRuleIds) {
+  const competitorRows = splitTopicTagInput(input.competitorTags, 60).map(tag => buildTopicCandidateRow(tag, {
+    input,
+    bannedWords,
+    matchedRuleIds,
+    source: '竞品标签',
+    reason: '来自 Ozon 竞品主题标签；相似商品已经使用的表达优先级高于系统猜测。',
+    priority: 45
+  }));
+
+  const candidateRows = splitTopicTagInput(input.candidateTags, 60).map(tag => buildTopicCandidateRow(tag, {
+    input,
+    bannedWords,
+    matchedRuleIds,
+    source: '我的候选标签',
+    reason: '来自卖家自己的候选标签。',
+    priority: 14
+  }));
+
+  return { competitorRows, candidateRows };
+}
+
+function formatTopicDecompositionRows(rows, fallback) {
+  if (!rows.length) return fallback;
+  return rows.slice(0, 18).map(row => {
+    const role = topicMeaningForRow(row);
+    return `${row.formattedTag || formatOzonTag(row.text)}：${role}；${row.type}；${row.status}；${shortTopicReason(row)}`;
+  }).join('\n');
+}
+
+function topicMeaningForRow(row) {
+  const key = topicTagKey(row.text);
+  if (/эндоскоп/.test(key)) return '内窥镜 / 核心产品词';
+  if (/авто|автомоб/.test(key)) return '汽车适配对象';
+  if (/ремонт/.test(key)) return '维修使用场景';
+  if (/двигател/.test(key)) return '发动机适配或维修对象';
+  if (/поворот|360/.test(key)) return '旋转结构 / 功能';
+  if (/1080p|ip67|mah|mm|мм|м\b|t\d+/.test(key)) return '型号或规格';
+  if (/термосумка|сумка холодильник/.test(key)) return '保温包 / 保冷包核心产品词';
+  if (/пикник|кемпинг|пляж|путешеств/.test(key)) return '户外使用场景';
+  if (/термоизоляция|большая вместимость|карманы/.test(key)) return '保温、容量或结构属性';
+  if (/рюкзак|женская сумка|сумка$/.test(key)) return '可能错配或过泛的包类词';
+  return row.type || '标签词';
+}
+
+function shortTopicReason(row) {
+  if (row.issues.includes('too-broad')) return '过泛，不能替代准确产品词。';
+  if (row.issues.includes('mismatch')) return '与当前产品类型不匹配。';
+  if (row.issues.includes('banned-word')) return '包含品牌词、平台词或禁用词。';
+  if (row.issues.includes('too-long')) return `超过 ${TOPIC_FINAL_TAG_MAX_LENGTH} 字符。`;
+  if (row.issues.includes('duplicate-intent') || row.issues.includes('duplicate')) return '与更精准标签重复。';
+  return row.reason;
+}
+
+function collectTopicChineseReference(input, rows) {
+  const corpusItems = [
+    input.title,
+    input.category,
+    input.material,
+    input.specification,
+    input.usageScene,
+    input.sellingPoints,
+    input.targetUser,
+    input.evidencePack,
+    input.candidateTags,
+    input.competitorTags
+  ];
+  const fromInputs = corpusItems
+    .join('\n')
+    .split(/[\n,，;；、。.!！?？|/\\\s]+/)
+    .map(item => topicCleanTagText(item))
+    .filter(item => item.length >= 2 && item.length <= 12 && topicContainsCjk(item));
+  const fromRows = rows
+    .map(row => row.text)
+    .filter(text => text.length <= 12 && topicContainsCjk(text));
+  return uniqueList(fromInputs.concat(fromRows), 18);
+}
+
+function topicRowSortScore(row) {
+  const statusScore = row.status === '推荐使用' ? 100 : row.status === '可选使用' ? 70 : row.status === '需要人工确认' ? 30 : 0;
+  const typeScore = row.type === '长尾组合词' ? 35 : row.type === '型号 / 规格词' || row.type === '规格 / 型号词' ? 32 : row.type === '核心产品词' ? 34 : row.type === '适配对象词' ? 30 : row.type === '功能词' ? 22 : row.type === '属性词' ? 18 : row.type === '使用场景词' || row.type === '场景词' ? 18 : 8;
+  const sourceScore = row.source === '竞品标签' ? 24 : row.source === '我的候选标签' ? 8 : row.source === '证据包' ? 10 : 0;
+  return statusScore + typeScore + sourceScore + row.priority;
+}
+
+function topicIntentKey(row) {
+  const key = topicTagKey(row.formattedTag || row.text);
+  if (key === 'сумка') return 'generic:bag';
+  if (key === 'пикник' || key === 'для пикника' || key.includes('для пикника')) return 'scene:picnic';
+  if (key === 'кемпинг' || key.includes('для кемпинга')) return 'scene:camping';
+  if (key === 'пляж' || key.includes('для пляжа')) return 'scene:beach';
+  return key;
+}
+
+function dedupeByIntent(rows) {
+  const intentSeen = new Map();
+  const keptRows = [];
+  const duplicateRows = [];
+
+  rows.forEach(row => {
+    const intentKey = topicIntentKey(row);
+    if (!intentKey) return;
+
+    if (intentSeen.has(intentKey)) {
+      const kept = intentSeen.get(intentKey);
+      duplicateRows.push({
+        ...row,
+        status: row.status === '不建议使用' ? row.status : '不建议使用',
+        riskLevel: row.riskLevel === '高' ? row.riskLevel : '中',
+        reason: `${row.reason} 与“${kept.formattedTag || kept.text}”表达相近，最终清单只保留更精准的一条。`,
+        issues: uniqueList((row.issues || []).concat(['duplicate-intent']), 10)
+      });
+      return;
+    }
+
+    intentSeen.set(intentKey, row);
+    keptRows.push(row);
+  });
+
+  return { keptRows, duplicateRows };
+}
+
+function buildTopicFinalPlan(rows) {
+  const seen = new Map();
+  const duplicateRows = [];
+  const sortedRows = rows.slice().sort((a, b) => topicRowSortScore(b) - topicRowSortScore(a));
+
+  sortedRows.forEach(row => {
+    const key = topicTagKey(row.formattedTag || row.text);
+    if (!key) return;
+    if (seen.has(key)) {
+      duplicateRows.push({
+        ...row,
+        status: row.status === '不建议使用' ? row.status : '不建议使用',
+        riskLevel: '中',
+        reason: `${row.reason} 与“${seen.get(key).text}”重复，最终清单只保留一个。`,
+        issues: uniqueList((row.issues || []).concat(['duplicate']), 10)
+      });
+      return;
+    }
+    seen.set(key, row);
+  });
+
+  const intentResult = dedupeByIntent(Array.from(seen.values()));
+  const dedupedRows = intentResult.keptRows;
+  const finalRows = dedupedRows
+    .filter(row => ['推荐使用', '可选使用'].includes(row.status))
+    .filter(row => isValidFormattedTag(row.formattedTag, row.bannedWords || []))
+    .filter(row => !row.issues.includes('banned-word') && !row.issues.includes('too-broad') && !row.issues.includes('mismatch'))
+    .slice(0, TOPIC_FINAL_TAG_TARGET);
+  const backupRows = dedupedRows
+    .filter(row => row.status === '需要人工确认')
+    .filter(row => row.charCount <= TOPIC_FINAL_TAG_MAX_LENGTH)
+    .slice(0, 12);
+  const rejectedRows = dedupedRows
+    .filter(row => row.status === '不建议使用')
+    .concat(duplicateRows, intentResult.duplicateRows)
+    .slice(0, 40);
+
+  return { finalRows, backupRows, rejectedRows, detailRows: finalRows.concat(backupRows, rejectedRows) };
+}
+
+function getTopicCoreTerms(reportParts) {
+  const rows = reportParts.sourceRows.competitorRows
+    .concat(reportParts.plan.finalRows, reportParts.systemRows)
+    .filter(row => row.type === '核心产品词' || /эндоскоп|термосумка|сумка холодильник|сумка для обеда/.test(topicTagKey(row.text)));
+  const preferred = rows
+    .filter(row => isValidFormattedTag(row.formattedTag, row.bannedWords || []))
+    .map(row => row.formattedTag || formatOzonTag(row.text));
+  return uniqueList(preferred, 5);
+}
+
+function buildTopicConfirmationItems(input, missing, plan) {
+  const items = [];
+  if (missing.length) items.push(`缺失信息：${missing.join('、')}。`);
+  if (plan.backupRows.some(row => /нужно|需确认|确认|俄语|manual|candidate/.test(row.reason))) items.push('俄语表达或翻译不确定的词需要在 Ozon 搜索结果中复核。');
+  if (!input.category) items.push('类目未确认，可能影响主题标签边界。');
+  if (!input.specification && topicDetectProfile(input).mechanical) items.push('型号 / 规格 / 适配对象不足，工具或配件类标签可能不够精准。');
+  if (!input.competitorTags) items.push('未提供 Ozon 竞品主题标签，当前结果会更依赖本地规则。');
+  if (!items.length) items.push('仍需人工确认俄语语义、型号规格、类目边界和 Ozon 搜索结果是否一致。');
+  return uniqueList(items, 8);
+}
+
+function formatTopicAnalysisRows(rows, fallback) {
+  if (!rows.length) return fallback;
+  const keep = rows.filter(row => ['推荐使用', '可选使用'].includes(row.status)).map(row => row.formattedTag);
+  const revise = rows.filter(row => row.status === '需要人工确认').map(row => row.formattedTag);
+  const remove = rows.filter(row => row.status === '不建议使用').map(row => row.formattedTag);
+  return [
+    keep.length ? `可借鉴 / 保留：${keep.slice(0, 8).join('、')}` : '',
+    revise.length ? `修改或确认：${revise.slice(0, 8).join('、')}` : '',
+    remove.length ? `应避免 / 删除：${remove.slice(0, 8).join('、')}` : ''
+  ].filter(Boolean).join('\n') || fallback;
+}
+
+function buildTopicSynonymNotes(rows) {
+  const texts = rows.map(row => topicTagKey(row.text));
+  const notes = [];
+  if (texts.includes('термосумка') && texts.includes('сумка холодильник')) {
+    notes.push('相近意图：термосумка 作为主核心词；сумка холодильник 可作替代核心词；带 35л、для пикника、для кемпинга 的组合更适合长尾精准流量。');
+  }
+  if (texts.includes('пикник') && texts.includes('для пикника')) {
+    notes.push('相近意图：пикник 是场景词；для пикника 更适合和产品词组合成长尾。');
+  }
+  if (texts.includes('сумка') && texts.some(text => text.includes('термосумка') || text.includes('сумка холодильник'))) {
+    notes.push('重复/过宽：сумка 单独使用过泛，已由更具体的 термосумка / сумка холодильник 覆盖。');
+  }
+  return notes.join('\n');
+}
+
+function formatTopicRejectedRows(rows) {
+  if (!rows.length) return '暂未识别需要排除的标签。仍需人工检查品牌词、平台词和错配词。';
+  const shortReason = row => {
+    if (row.issues.includes('too-broad')) return '过泛';
+    if (row.issues.includes('mismatch')) return '错配';
+    if (row.issues.includes('contains-chinese')) return '含中文';
+    if (row.issues.includes('banned-word')) return '禁用词';
+    if (row.issues.includes('too-long')) return `超过 ${TOPIC_FINAL_TAG_MAX_LENGTH} 字符`;
+    if (row.issues.includes('unsafe-punctuation')) return '不安全标点';
+    if (row.issues.includes('duplicate-intent')) return '重复意图';
+    if (row.issues.includes('duplicate')) return '重复';
+    if (row.issues.includes('needs-manual-confirmation')) return '需确认';
+    return row.riskLevel || '风险';
+  };
+  const summarizeItems = items => {
+    const visible = items.slice(0, 5).map(row => `${row.formattedTag || formatOzonTag(row.text)}（${shortReason(row)}）`);
+    const extra = items.length > visible.length ? `；另 ${items.length - visible.length} 个` : '';
+    return `${visible.join('、')}${extra}`;
+  };
+  const buckets = [
+    { label: '过于宽泛', issue: 'too-broad' },
+    { label: '类目错配 / 与产品不符', issue: 'mismatch' },
+    { label: '包含中文', issue: 'contains-chinese' },
+    { label: '包含品牌词 / 禁用词 / 平台词', issue: 'banned-word' },
+    { label: '超过 30 字符', issue: 'too-long' },
+    { label: '不安全标点', issue: 'unsafe-punctuation' },
+    { label: '重复意图', issue: 'duplicate-intent' },
+    { label: '重复标签', issue: 'duplicate' },
+    { label: '需要人工确认', issue: 'needs-manual-confirmation' }
+  ];
+  const lines = buckets.map(bucket => {
+    const items = rows
+      .filter(row => row.issues.includes(bucket.issue))
+      .slice(0, 20);
+    return items.length ? `${bucket.label}：${summarizeItems(items)}` : '';
+  }).filter(Boolean);
+
+  const covered = new Set();
+  buckets.forEach(bucket => {
+    rows.filter(row => row.issues.includes(bucket.issue)).forEach(row => covered.add(row));
+  });
+  const other = rows.filter(row => !covered.has(row)).slice(0, 8);
+  if (other.length) {
+    lines.push(`其他风险：${summarizeItems(other)}`);
+  }
+
+  return lines.join('\n');
+}
+
+function buildTopicTagReport(input) {
+  const corpus = topicTextCorpus(input);
+  const core = [];
+  const scene = [];
+  const attribute = [];
+  const audience = [];
+  const matchedRuleIds = [];
+
+  TOPIC_TAG_RULES.forEach(rule => {
+    if (!topicTextHasRule(corpus, rule)) return;
+    matchedRuleIds.push(rule.id);
+    rule.tags.forEach(tagRule => {
+      rule.roles.forEach(role => {
+        if (role === 'conversion') return;
+        const tag = buildTopicTag(tagRule.text, role, { ...tagRule, reason: tagRule.reason }, corpus);
+        if (role === 'core') addTopicTag(core, tag);
+        if (role === 'scene') addTopicTag(scene, tag);
+        if (role === 'attribute') addTopicTag(attribute, tag);
+        if (role === 'audience') addTopicTag(audience, tag);
+      });
+    });
+  });
+
+  extractCustomTopicTerms(input.competitorKeywords, '卖家提供的竞品关键词，建议人工确认相关性。', 10).forEach(item => {
+    if (!core.some(tag => tag.text === item.text) && !scene.some(tag => tag.text === item.text) && !attribute.some(tag => tag.text === item.text)) {
+      addTopicTag(scene, { ...item, reason: item.reason + ' 若是产品词，可移入核心标签；若是场景词，可作为扩展标签。' });
+    }
+  });
+
+  const avoid = buildTopicAvoidTags(input, corpus, matchedRuleIds);
+  const spec = buildTopicSpecTags(input, core);
+  const longTail = buildTopicLongTail(core, scene, attribute, input).concat(spec.filter(tag => tag.role === 'longTail'));
+  const groups = { core, scene, attribute: attribute.concat(spec.filter(tag => tag.role === 'spec')), audience, longTail, avoid };
+  const bannedWords = getTopicBannedWords(input);
+  const sourceRows = buildTopicSourceRows(input, bannedWords, matchedRuleIds);
+  const systemRows = topicRowsFromGroup(groups.core.concat(groups.scene, groups.attribute, groups.audience, groups.longTail), input, bannedWords, matchedRuleIds);
+  const avoidRows = groups.avoid.map(tag => buildTopicCandidateRow(tag.text, {
+    input,
+    bannedWords,
+    matchedRuleIds,
+    source: '系统补充',
+    reason: tag.reason,
+    status: '不建议使用',
+    riskLevel: '高',
+    priority: 1
+  }));
+  const plan = buildTopicFinalPlan(sourceRows.competitorRows.concat(systemRows, sourceRows.candidateRows, avoidRows));
+  const chineseReference = collectTopicChineseReference(input, plan.detailRows);
+  const scores = buildTopicScores(groups, input, matchedRuleIds, plan.finalRows, plan.rejectedRows);
+  const combinations = buildTopicCombinations(groups);
+  const missing = [];
+  const productType = getTopicProductType(input, matchedRuleIds);
+  const profile = topicDetectProfile(input);
+
+  if (!input.title) missing.push('商品标题');
+  if (!input.category) missing.push('产品类目');
+  if (!input.specification && profile.mechanical) missing.push('规格 / 型号 / 适配信息');
+  if (!input.usageScene && !scene.length) missing.push('使用场景');
+  if (!input.material && !attribute.length) missing.push('材质 / 属性');
+  if (!input.evidencePack && !input.competitorTags && !input.competitorKeywords) missing.push('竞品标题、竞品标签或搜索词');
+
+  const coreTerms = getTopicCoreTerms({ sourceRows, plan, systemRows });
+  const mainDirection = coreTerms.length
+    ? `优先围绕 ${coreTerms.slice(0, 3).join('、')} 做核心产品词，并用规格、场景、功能做长尾。`
+    : '核心产品词不足，先补准确产品名称，避免直接使用泛标签。';
+  const evidenceStatus = missing.length
+    ? `仍缺少：${missing.join('、')}。`
+    : '当前证据足够生成 v1.0 Ozon 标签策略，但俄语词仍需平台搜索复核。';
+  const confirmationItems = buildTopicConfirmationItems(input, missing, plan);
+  const finalNote = plan.finalRows.length < TOPIC_FINAL_TAG_TARGET
+    ? '未用弱词凑满。建议补充更多竞品标签、型号、规格或适配场景后再扩展。'
+    : '已达到 30 个标签上限，建议先复制当前清单并继续人工复核。';
+
+  return {
+    status: plan.finalRows.length ? '已生成 Ozon 标签方案' : '需要补充核心信息',
+    summary: `${productType.label}。${mainDirection}${productType.strategy}${evidenceStatus}`,
+    productType,
+    coreTerms,
+    finalNote,
+    groups,
+    scores,
+    combinations,
+    plan,
+    chineseReference,
+    competitorPriority: input.competitorTags
+      ? '已优先分析竞品主题标签。竞品标签有价值，是因为它们展示了相似商品已经如何在 Ozon 流量入口描述自己。'
+      : '未粘贴竞品主题标签；建议补充 Ozon 相似商品标签后再扩展。',
+    competitorAnalysis: [formatTopicDecompositionRows(sourceRows.competitorRows, '未粘贴竞品主题标签。'), buildTopicSynonymNotes(sourceRows.competitorRows)].filter(Boolean).join('\n'),
+    candidateAnalysis: [formatTopicAnalysisRows(sourceRows.candidateRows, '未粘贴我的候选标签。'), buildTopicSynonymNotes(sourceRows.candidateRows)].filter(Boolean).join('\n'),
+    rejectedAnalysis: formatTopicRejectedRows(plan.rejectedRows),
+    warnings: uniqueList([
+      TOPIC_TAG_BOUNDARY_TEXT,
+      productType.trafficLogic,
+      `当前可推荐标签：${plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}。`,
+      finalNote,
+      confirmationItems.join(' '),
+      groups.avoid.length ? `建议避开：${groups.avoid.slice(0, 4).map(tag => tag.text).join('、')}。` : '',
+      '不要把这些建议当作平台官方标签库或真实搜索量。'
+    ], 8)
+  };
+}
+
+function renderTopicScoreCards(scores) {
+  const container = document.getElementById('topicTagScores');
+  if (!container) return;
+
+  container.textContent = '';
+  container.hidden = !Array.isArray(scores) || !scores.length;
+  if (!scores || !scores.length) return;
+
+  scores.forEach(item => {
+    const score = topicScore(item.score);
+    const card = document.createElement('div');
+    card.className = 'topic-score-card';
+    card.dataset.scoreBand = score >= 75 ? 'good' : score >= 55 ? 'watch' : 'risk';
+
+    const label = document.createElement('span');
+    label.textContent = item.label;
+    const value = document.createElement('strong');
+    value.textContent = `${score} / 100`;
+    const reason = document.createElement('p');
+    reason.textContent = item.reason;
+    card.append(label, value, reason);
+    container.appendChild(card);
+  });
+}
+
+function renderTopicTagDetailTable(rows) {
+  const tbody = document.getElementById('topicTagDetailTableBody');
+  if (!tbody) return;
+  tbody.textContent = '';
+
+  if (!rows || !rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 6;
+    td.textContent = '等待生成。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.dataset.status = row.status;
+    [row.formattedTag || formatOzonTag(row.text), row.type, row.source, row.charCount, row.status, row.reason].forEach(value => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function formatTopicBackupRows(rows) {
+  if (!rows || !rows.length) return '候补标签：需要人工确认 暂无。';
+  const items = rows.map(row => {
+    if (topicContainsCjk(row.text)) return `${row.text}（需要翻译确认）`;
+    return row.formattedTag || formatOzonTag(row.text);
+  });
+  return `候补标签：需要人工确认 ${items.join('、')}`;
+}
+
+function formatTopicChineseReference(items) {
+  if (!items || !items.length) return '暂无中文参考词。';
+  return items.map(item => `${item}：只作为中文证据，需要翻译确认后再使用。`).join('\n');
+}
+
+function renderTopicTagReport(report) {
+  const card = document.getElementById('topicTagReport');
+  if (!card || !report) return;
+
+  card.classList.remove('selection-waiting', 'selection-risk', 'selection-warning', 'selection-test');
+  card.classList.add(report.plan.finalRows.length ? 'selection-test' : 'selection-warning');
+  setText('topicTagStatus', report.status);
+  setText('topicTagSummary', report.summary);
+  setText('topicProductTypeInsight', `${report.productType.label}：${report.productType.why}\n${report.productType.trafficLogic}`);
+  setText('topicCompetitorPriorityInsight', report.competitorPriority);
+  setText('topicCoreTermInsight', report.coreTerms.length ? report.coreTerms.join('\n') : '未能确认核心产品词。请补充 Ozon 竞品主题标签或更准确产品名称。');
+  setText('topicStrategyInsight', report.productType.strategy);
+  setText('topicFinalTagCount', `当前可推荐标签：${report.plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}`);
+  setText('topicFinalTagBlock', report.plan.finalRows.length ? report.plan.finalRows.map(row => row.formattedTag).join('\n') : '没有足够证据生成可直接复制的标签。');
+  setText('topicFinalTagNote', report.finalNote);
+  setText('topicBackupTags', formatTopicBackupRows(report.plan.backupRows));
+  setText('topicChineseReference', formatTopicChineseReference(report.chineseReference));
+  renderTopicScoreCards(report.scores);
+  renderTopicTagDetailTable(report.plan.detailRows);
+  setText('topicCompetitorTagAnalysis', report.competitorAnalysis);
+  setText('topicCandidateTagAnalysis', report.candidateAnalysis);
+  setText('topicRejectedTags', report.rejectedAnalysis);
+  setText('topicCoreTags', formatTopicTagDetails(report.groups.core, '未识别核心产品标签。请补准确产品名称，例如“保温包 / 午餐包 / 收纳盒”。'));
+  setText('topicSceneTags', formatTopicTagDetails(report.groups.scene, '未识别场景标签。请补野餐、露营、旅行、厨房、家用等使用场景。'));
+  setText('topicAttributeTags', formatTopicTagDetails(report.groups.attribute, '未识别属性标签。请补材质、容量、尺寸、功能、颜色或结构。'));
+  setText('topicAudienceTags', formatTopicTagDetails(report.groups.audience, '未识别人群或用途标签。只有证据支持时才建议使用。'));
+  setText('topicLongTailTags', formatTopicTagDetails(report.groups.longTail, '长尾标签不足。请补产品词、场景词和属性词。'));
+  setText('topicAvoidTags', formatTopicTagDetails(report.groups.avoid, '暂未识别需要避开的泛标签。仍需人工检查是否有错配词。'));
+  setText('topicPrecisionGroup', `${formatTopicTags(report.combinations.precision.tags.map(text => ({ text })), '未生成。')}\n${report.combinations.precision.explanation}`);
+  setText('topicExpansionGroup', `${formatTopicTags(report.combinations.expansion.tags.map(text => ({ text })), '未生成。')}\n${report.combinations.expansion.explanation}`);
+  setText('topicConversionGroup', `${formatTopicTags(report.combinations.conversion.tags.map(text => ({ text })), '未生成。')}\n${report.combinations.conversion.explanation}`);
+
+  const warnings = document.getElementById('topicTagWarnings');
+  if (warnings) {
+    warnings.textContent = '';
+    report.warnings.forEach(warning => {
+      const li = document.createElement('li');
+      li.textContent = warning;
+      warnings.appendChild(li);
+    });
+  }
+}
+
+function generateTopicTagReport() {
+  const report = buildTopicTagReport(getTopicTagInput());
+  renderTopicTagReport(report);
+  persistFormState();
+
+  window.requestAnimationFrame(() => {
+    scrollToWorkspaceElement('topicTagReport');
+  });
+}
+
+function bindTopicTagAssistantControls() {
+  const button = document.getElementById('generateTopicTagsButton');
+  if (!button) return;
+  button.addEventListener('click', generateTopicTagReport);
 }
 
 function scrollToWorkspaceElement(id) {
@@ -2841,6 +4285,7 @@ mountAiAnalysisWorkspace();
 bindAppViewSwitching();
 bindExchangeRateHelper();
 bindOzonAnalysisControls();
+bindTopicTagAssistantControls();
 bindBackendWorkerUrlControls();
 bindOzonTemporaryConnectionControls();
 bindStoreApiManager();

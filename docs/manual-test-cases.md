@@ -841,3 +841,117 @@
 28. Other seller Ozon link should not be treated as Seller API-readable store data
     - Input: paste another seller's Ozon product URL and use a mocked product-summary HTTP 400 response.
     - Expected: the source link preview remains visible, the Ozon Seller API limitation text appears, and the product-summary error is shown only as optional warning.
+
+## Topic Tag Assistant v0.1
+
+1. Picnic cooler bag should generate grouped topic tags
+   - Input: open Function Center, choose `主题标签助手`, enter title `野餐保温包 35L 大容量 多层口袋 保温保冷`, target platform `Ozon`, category `户外 / 野餐 / 保温包`, material `牛津布 / 铝膜内胆`, usage `野餐、露营、海边、车载旅行`, selling points `35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`, and evidence `竞品标题包含 термосумка, сумка холодильник, пикник, кемпинг, пляж. 竞品价格约1000-1500卢布。担心标签太泛导致流量不精准，不想误用 женская сумка 或 рюкзак。`
+   - Expected: report status becomes generated; core tags include `термосумка` or `сумка холодильник`; scene tags include `пикник`, `кемпинг`, and `пляж`; attribute tags include large-capacity, insulation, pocket, oxford fabric, or aluminum lining directions; avoid tags include `женская сумка` and `рюкзак`.
+
+2. Topic tag assistant should show clear data boundary
+   - Input: generate any topic tag report.
+   - Expected: report includes `当前主题标签建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。俄语词需要卖家结合平台搜索结果再次确认。`
+
+3. Topic tag assistant should not invent search volume or platform demand
+   - Input: generate a report from sparse title-only text.
+   - Expected: report can suggest local rule-based tag directions, but does not claim real search volume, official platform tags, real exposure, clicks, orders, ads, or demand.
+
+4. Topic tag assistant should preserve future module boundaries
+   - Input: inspect Function Center modules after implementation.
+   - Expected: `主题标签助手` is available; `标题关键词助手`, `商品卡片 / 详情页助手`, and `广告数据复盘` remain placeholders and do not contain new engines.
+
+5. Topic tag assistant should not call backend or Ozon Seller API
+   - Input: generate a topic tag report with browser devtools network panel open.
+   - Expected: no Worker request, LLM API request, crawler request, parser service request, or direct `api-seller.ozon.ru` browser request is sent by the topic tag module.
+
+## Topic Tag Assistant v0.2
+
+1. Ozon copy-ready final tag list should be generated
+   - Input: open Function Center, choose `主题标签助手`, enter title `野餐保温包 35L 大容量 多层口袋 保温保冷`, platform `Ozon`, category `户外 / 野餐 / 保温包`, material `牛津布 / 铝膜内胆`, specification `35L`, usage `野餐、露营、海边、车载旅行`, selling points `35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`, evidence `竞品标题包含 термосумка, сумка холодильник, пикник, кемпинг, пляж. 竞品价格约1000-1500卢布。担心标签太泛导致流量不精准，不想误用 женская сумка 或 рюкзак。`, competitor topic tags `термосумка, сумка холодильник, пикник, кемпинг, пляж, сумка, рюкзак, женская сумка, большая вместимость, термоизоляция, карманы`, candidate tags `термосумка для пикника, сумка холодильник 35л, пляжная сумка, сумка для еды, термосумка большая, outdoor bag`, and banned words `nike, adidas, ozon, wildberries, xiaomi`.
+   - Expected: report shows `最终可复制标签清单`, `当前可推荐标签：X / 30`, one-per-line copy block, comma-separated copy block, competitor tag analysis, candidate tag analysis, rejected tag explanations, and a tag detail table.
+
+2. Final Ozon tags should respect practical constraints
+   - Input: run the v0.2 sample above.
+   - Expected: every tag in the final copy-ready list has `Array.from(tag).length <= 30`; no duplicate tags appear; no final tag contains `nike`, `adidas`, `ozon`, `wildberries`, or `xiaomi`; broad/mismatched tags such as `сумка`, `женская сумка`, `рюкзак`, and unsupported `outdoor bag` are excluded from the final copy-ready list.
+
+3. Long-tail precise tags should be prioritized
+   - Input: run the v0.2 sample above.
+   - Expected: final or recommended rows prioritize precise tags such as `термосумка для пикника`, `сумка холодильник 35л`, `термосумка для кемпинга`, or capacity/function combinations over empty broad words like `сумка`, `товар`, or `аксессуар`.
+
+4. Tag detail table should explain each analyzed tag
+   - Input: run the v0.2 sample above.
+   - Expected: table rows show tag text, character count, tag type, source, reason, risk level, and status. Status values are one of `推荐使用`, `可选使用`, `需要人工确认`, or `不建议使用`.
+
+5. Future modules should remain placeholders
+   - Input: inspect Function Center after v0.2.
+   - Expected: Topic Tag Assistant is implemented; Title Keyword Assistant, Product Card / Detail Page Assistant, and Advertising Data Review are not implemented as new engines.
+
+## Topic Tag Assistant v0.3
+
+1. Final Ozon tags should be formatted for direct copy
+   - Input: run the picnic cooler bag sample with competitor tags, candidate tags, and banned words from ACTIVE_GOAL.md.
+   - Expected: the final copy-ready list appears near the top of the report; every final tag starts with `#`; multi-word tags use `_`; tags are one per line; no comma-separated copy block is visible.
+
+2. Final formatted tags should pass the 30-character rule
+   - Input: run the v0.3 sample.
+   - Expected: every final visible tag passes `Array.from(tag).length <= 30`, including the leading `#` and underscores. Over-length tags are excluded from the final list and appear in rejected or confirmation areas with an over-length reason.
+
+3. Risky tags should be rejected or flagged clearly
+   - Input: run the v0.3 sample.
+   - Expected: `#женская_сумка`, `#рюкзак`, weak `#сумка`, and unsupported `#outdoor_bag` do not appear in the final copy-ready list. Rejected tags are grouped by broadness, mismatch, banned word, over-length, duplicate intent, or confirmation need.
+
+4. Report layout should show usable result first
+   - Input: generate a topic tag report.
+   - Expected: report order is strategy conclusion, final Ozon tag copy block, tag count, compliance hint, then compact backup/rejected/detail/analysis sections. Detailed grouping and combination output is inside a collapsible section.
+
+5. Competitor and candidate analysis should be concise
+   - Input: generate with empty competitor/candidate tags, then with sample competitor/candidate tags.
+   - Expected: empty state shows only `未粘贴竞品主题标签。` or `未粘贴我的候选标签。`; populated analysis uses short grouped summaries such as keep/confirm/remove instead of large paragraph blocks.
+
+## Topic Tag Assistant v0.4
+
+1. Final Ozon tags should pass the stricter safe-character rule
+   - Input: run the v0.4 sample with Chinese product fields, competitor tags, candidate tags `термосумка для пикника, сумка холодильник 35л, пляжная сумка, сумка для еды, термосумка большая, outdoor bag, 保温包, 大容量`, and banned words `nike, adidas, ozon, wildberries, xiaomi`.
+   - Expected: every final copy-ready tag starts with `#`, has no Chinese, no spaces, no commas, no slash, no brackets, no punctuation except `#` and `_`, and passes `Array.from(tag).length <= 30`.
+
+2. Chinese terms should move to reference or confirmation areas
+   - Input: run the v0.4 sample.
+   - Expected: `保温包`, `大容量`, `野餐`, `户外`, and similar Chinese words do not appear in the final copy-ready list. They may appear only in `中文参考 / 需要翻译确认`, candidate/backup confirmation, rejected/explanation area, or detail rows with non-final status.
+
+3. Unsafe mixed punctuation tags should not enter the final list
+   - Input: run the v0.4 sample.
+   - Expected: final list does not include `#bag_/_сумка`, any tag containing `/`, any tag containing brackets, or any tag containing comma punctuation. Risky tags such as `#сумка`, `#рюкзак`, `#женская_сумка`, and unsupported `#outdoor_bag` are excluded or flagged.
+
+4. Duplicate competitor-title input should be removed
+   - Input: inspect Topic Tag Assistant input area.
+   - Expected: there is no separate `竞品标题（可选）` input. Competitor titles/search text belong in `商品证据包 / 竞品标题 / 搜索词`.
+
+5. Detail table should be collapsed by default
+   - Input: generate a v0.4 topic tag report.
+   - Expected: the full tag detail table is inside a closed `查看标签明细表` details section by default, and the report first shows final tags, count, compliance hint, candidate confirmation, Chinese reference, rejected groups, scores, and concise analyses.
+
+## Ozon Topic Tag Strategy Assistant v1.0
+
+1. Module should be Ozon-only
+   - Input: open Function Center and choose `Ozon 主题标签`.
+   - Expected: module title is `Ozon 主题标签`; the intro and boundary text say the module only targets Ozon topic tags; Wildberries and Yandex are described only as future separate keyword assistants; no WB/Yandex keyword generation appears in this module.
+
+2. Automotive endoscope should use tool / repair strategy
+   - Input: title `汽车旋转式内窥镜`, category `汽车配件`, specification `T42 单镜头 1米硬线`, usage `汽车维修`, target user `家庭汽车维修，修理厂`, selling points `适用于汽车发动机的检测与维修工作。1080高清像素，2600mah续航，8mm微镜头，IP67级别防水。`, evidence `эндоскоп автомобильный поворотный 360 эндоскопия двигателя infsue 4,3-дюймовый IPS-экран 1080P пиксельный 6,2 мм объектив линия 1 м водонепроницаемая IP67, для ремонта автомобильных двигателей`, competitor tags `#эндоскоп #эндоскоп_автомобильный #эндоскоп_поворотный #автомобильный_эндоскоп`, candidate tags `эндоскоп автомобильный поворотный`.
+   - Expected: product type is `工具 / 汽车维修类产品`; strategy explains precise long-tail traffic over broad lifestyle traffic; core terms include `#эндоскоп`; competitor tags are analyzed before final output; final tags include competitor core words plus model/spec/use-scene tags; final tags contain no Chinese, use `#` and `_`, and none exceed 30 characters.
+
+3. Picnic cooler bag should use ordinary consumer strategy
+   - Input: title `野餐保温包 35L 大容量 多层口袋 保温保冷`, category `户外 / 野餐 / 保温包`, material `牛津布 / 铝膜内胆`, specification `35L`, usage `野餐、露营、海边、车载旅行`, selling points `35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`, competitor tags `термосумка, сумка холодильник, пикник, кемпинг, пляж, сумка, рюкзак, женская сумка, большая вместимость, термоизоляция, карманы`.
+   - Expected: product type is `普通户外消费品`; strategy allows scene / capacity / insulation / pocket expansion; final tags focus on product type, scenes, capacity and function; `#рюкзак`, `#женская_сумка`, and broad `#сумка` are rejected and do not enter the final copy-ready list.
+
+4. Final Ozon tags should remain copy-ready
+   - Input: run either v1.0 sample.
+   - Expected: final tag block is one tag per line; every tag starts with `#`; multi-word tags use `_`; no final tag contains Chinese, spaces, commas, slashes, brackets, or punctuation except `#` and `_`; every final tag passes `Array.from(tag).length <= 30`; if fewer than 30 tags are available, the report says weak tags were not used to fill the list.
+
+5. Rejected and confirmation sections should explain risk
+   - Input: run the v1.0 samples.
+   - Expected: rejected tags are grouped by reason, including too broad, wrong product type, contains Chinese, banned/platform word, over 30 characters, unsafe punctuation, duplicate intent, or unsupported evidence; human confirmation reminds the seller to confirm Russian wording, model/specification, category, and Ozon search-result fit.
+
+6. Existing modules should still open
+   - Input: after using `Ozon 主题标签`, click `利润计算器`, `选品测品分析`, and `API 设置`.
+   - Expected: each target module opens; no console errors appear; profit formulas, logistics logic, platform presets, Product Testing Analysis, Profit Calculator, API Settings, Worker behavior, API calls, crawler/parser behavior, and credentials are unchanged.

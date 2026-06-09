@@ -2,456 +2,533 @@
 
 ## Goal
 
-Upgrade the AI Analysis page from a manual Product Card Testing Decision Workspace into an Evidence Pack + Product Testing Score Diagnosis system.
+Upgrade the current Topic Tag Assistant into **Ozon Topic Tag Strategy Assistant v1.0**.
 
-The current page workflow is usable, but the analysis is still too weak and too manual.
+This is not a simple keyword generator anymore.
 
-The new goal is:
+The module must become a seller-facing Ozon tag strategy tool that works in this order:
 
-The seller can paste one block of product evidence, competitor observations, review signals, and personal doubts. The system should structure that evidence, score the product across key dimensions, and output a stronger seller-facing testing decision.
+`competitor tags / competitor title → tag decomposition → product type judgment → strategy explanation → final Ozon topic tags`
 
-Do not build a new page from scratch.
+The core idea:
 
-Improve the existing AI Analysis page.
+* Competitor tags and competitor titles are stronger evidence than AI-generated guesses.
+* The assistant should first analyze competitor wording.
+* Then it should decide the product type.
+* Then it should generate a final Ozon topic tag plan.
 
-Do not add large model API integration in this task.
+This task only applies to **Ozon topic tags**.
 
-Use local rule-based analysis only for now.
+Wildberries and Yandex should not be treated as topic-tag platforms in this module. Their keyword functions should remain future modules.
 
-## Product Direction
+## Current Problem
 
-The product should help beginner Ozon / Wildberries / Yandex sellers answer:
+The current Topic Tag Assistant still behaves like a general tag generator.
 
-* Is this product worth listing and testing?
-* What is the product positioning?
-* What are the main selling points?
-* What are the product card weaknesses?
-* Is the price competitive?
-* Is the profit margin safe?
-* Are reviews or trust signals weak?
-* Is logistics or return risk high?
-* What should the seller fix before listing?
-* What should the seller observe after listing?
-* Should the seller continue, optimize, or pause?
+Problems found in user testing:
 
-The page should feel less like a form and more like a decision assistant.
+1. It outputs too much Chinese explanation.
+2. It does not deeply analyze competitor tags first.
+3. It does not clearly extract the competitor core product word.
+4. It does not explain the difference between ordinary consumer products and tool / mechanical / accessory products.
+5. It does not tell the seller why tool products need more precise long-tail tags.
+6. It does not use competitor tags as the main signal.
+7. It still implies Ozon / Wildberries / Yandex share the same tag logic.
+8. The final output does not clearly teach the seller the traffic strategy behind the tags.
 
-## Core UX Change
+## Product Positioning
 
-Add a new primary input area:
+Rename / clarify this module as:
 
-`商品证据包 / 竞品观察 / 我的疑问`
+`Ozon 主题标签策略助手`
 
-This should be a large textarea where the seller can paste natural language evidence, for example:
+This module is only for Ozon topic tag planning.
 
-* product title
-* source product description
-* competitor titles
-* competitor price range
-* competitor review observations
-* visible negative review points
-* product material
-* usage scenario
-* worries about returns
-* doubts about price
-* doubts about category
-* seller’s own operating judgment
+Wildberries and Yandex should be shown as future keyword assistants if needed, not handled here.
 
-The existing structured fields can remain, but the evidence pack should become the main analysis input.
+## Required Workflow
 
-## Keep Existing Workflow
+The module should be structured as 4 steps:
 
-Keep the current sections:
+### Step 1. 商品基础
 
-* 商品基础信息
-* 公开市场与竞品观察
-* 产品卡片质量判断
-* 利润与风险判断
-* 测品决策报告
+Inputs:
 
-But improve them so the evidence pack can enrich the report.
+* 商品标题 / 产品名称
+* Ozon 类目
+* 规格 / 型号 / 尺寸
+* 材质
+* 使用场景
+* 核心卖点
 
-Do not require a product URL.
+### Step 2. 竞品标签样本
 
-Do not depend on successful link extraction.
+Inputs:
 
-Do not require backend store data.
+* 竞品标题 / 搜索词 / 商品证据包
+* 竞品主题标签
+* 我的候选标签
+* 品牌词 / 禁用词
 
-## Evidence Pack Parsing
+Competitor topic tags should be treated as the strongest evidence.
 
-Add local rule-based parsing from the evidence pack.
+The assistant should explain that competitor tags are useful because they show how similar products are already describing themselves on platform traffic entrances.
 
-The system should attempt to identify:
+### Step 3. AI 拆解
 
-* product title
+The assistant must decompose competitor tags and product evidence into:
+
+* 核心产品词
+* 型号 / 规格词
+* 适配对象词
+* 使用场景词
+* 材质词
+* 功能词
+* 人群 / 用途词
+* 季节词
+* 泛词
+* 错配词
+* 品牌 / 禁用词
+
+Each detected word should show:
+
+* original word
+* Chinese meaning or role explanation
+* type
+* whether it is usable
+* reason
+
+### Step 4. 最终 Ozon 主题标签
+
+Generate final Ozon tags:
+
+* one tag per line
+* starts with `#`
+* multi-word tags use `_`
+* no Chinese
+* no spaces
+* no commas
+* no slashes
+* no brackets
+* no punctuation except `#` and `_`
+* max 30 characters using `Array.from(tag).length`
+* up to 30 tags
+* no brand words
+* no banned words
+* no unsupported platform words
+
+Final tag list should be directly copy-ready.
+
+## Product Type Strategy
+
+The assistant must judge product type before generating tags.
+
+### Ordinary Consumer Product
+
+Examples:
+
+* picnic bag
+* storage box
+* kitchen item
+* home item
+* clothing
+* accessories
+
+Strategy:
+
+* more scene tags
+* more use-case tags
+* material tags
+* attribute tags
+* seasonal tags
+* user-intent tags
+* broader traffic expansion is acceptable if still relevant
+
+Seller explanation:
+
+`普通消费品可以通过场景、材质、季节、人群和功能词扩展流量，但仍然不能使用和产品不匹配的泛词。`
+
+### Tool / Mechanical / Accessory Product
+
+Examples:
+
+* automotive endoscope
+* car repair tool
+* phone replacement part
+* machine part
+* cable connector
+* filter
+* nozzle
+* spare part
+* adapter
+
+Strategy:
+
+* prioritize exact product word
+* model / specification words
+* compatibility words
+* use-scene words
+* repair / installation / maintenance intent
+* avoid broad lifestyle words
+* avoid irrelevant user / season tags
+
+Seller explanation:
+
+`工具类、机械类、配件类产品不适合追求太泛的流量。它们的搜索流量可能小，但用户意图更明确。主题标签应优先围绕核心产品词、型号规格、适配对象和具体使用场景，提升精准点击和转化概率。`
+
+### Clothing / Fashion Product
+
+Strategy:
+
 * product type
-* category hints
-* material hints
-* usage / scene hints
-* selling points
-* competitor price signals
-* review trust signals
-* negative review risks
-* return risk hints
-* logistics risk hints
-* seller doubts or concerns
+* gender if supported
+* season
+* material
+* style
+* size / fit if provided
+* avoid unsupported style or gender words
 
-Do not invent facts.
+### Home / Kitchen Product
 
-If the evidence is missing, say it is missing.
+Strategy:
 
-If confidence is low, mark it as low confidence.
+* product type
+* material
+* function
+* size / capacity
+* use scene
+* storage / cleaning / cooking intent if supported
 
-## Scoring System
+## Ozon-Only Rule
 
-Add a product testing score diagnosis.
+This module must clearly say:
 
-Use 0-100 scores for:
+`当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。`
 
-1. `利润安全评分`
-2. `价格竞争力评分`
-3. `产品卡片质量评分`
-4. `评价与信任评分`
-5. `物流与退货风险评分`
-6. `平台匹配度评分`
+In the UI:
 
-Also calculate an overall decision:
+* Change module title to `Ozon 主题标签`
+* Avoid saying this module generates tags for Ozon / WB / Yandex together
+* Keep WB / Yandex keyword modules as future modules, not this one
 
-* `建议上架测试`
-* `优化后再测`
-* `谨慎测试`
-* `暂不建议测试`
+## Output Sections
 
-Scoring should be rule-based and explainable.
+The report should include these sections in this order:
 
-Do not use fake precision.
+### 1. 产品类型判断
 
-Show short explanations for each score.
+Show:
+
+* product type
+* why it belongs to this type
+* recommended tag strategy
+* traffic logic
+
+Example for automotive endoscope:
+
+`该产品属于工具 / 汽车维修类产品。主题标签不应追求泛流量，而应优先使用核心产品词、型号规格、适配对象和维修场景词。`
+
+### 2. 竞品词拆解
+
+Analyze competitor title and competitor topic tags.
+
+For each important word show:
+
+* word
+* Chinese meaning / role
+* type
+* recommended / optional / avoid / needs confirmation
+* reason
 
 Example:
 
-* `价格竞争力评分：62 / 100`
-* `原因：目标售价接近竞品价格区间上沿，若没有更强主图或卖点，转化压力较大。`
+* `эндоскоп` = core product word
+* `автомобильный_эндоскоп` = product + car scene
+* `поворотный` = function / structure word
+* `1080p` = specification word
+* `1м` = specification word
+* `для_ремонта` = use-scene word
+* `сумка` = mismatch if product is automotive endoscope
 
-## Report Upgrade
+### 3. 核心词提取
 
-The report should include:
+Show the true core product term.
 
-* 测品结论
-* 关键评分总览
-* 商品定位
-* 核心卖点
-* 产品卡片问题
-* 价格竞争判断
-* 评价与信任风险
-* 利润安全边际
-* 物流与退货风险
-* 上架前优化建议
-* 上架后观察指标
-* 继续 / 优化 / 暂停条件
-* 数据边界
+For automotive endoscope, prioritize:
 
-The report should be more specific and action-oriented.
+* `эндоскоп`
+* `автомобильный_эндоскоп`
+* `эндоскоп_для_авто`
+* related words only if supported by evidence
 
-Avoid vague phrases such as:
+If the competitor tag already provides a stronger core word than the system guess, the competitor word should win.
 
-* 需要进一步观察
-* 建议综合判断
-* 可以适当优化
-* 存在一定风险
+### 4. 标签策略建议
 
-Use concrete seller actions:
+Explain how to build the final tag set:
 
-* 优先优化主图第一视觉
-* 标题需要突出容量 / 材质 / 使用场景
-* 目标售价高于竞品区间时，需要强化差异化卖点
-* 评价少时，不要依赖高广告消耗放量
-* 材质不清时，详情页必须补充材质说明
-* 重量偏高时，优先检查物流成本是否吃掉利润
-* 有点击无订单时，优先检查价格、评价、物流时效和主图信任感
+* core product tags
+* model / specification tags
+* scene / use tags
+* function tags
+* long-tail precision tags
+* tags to avoid
 
-## One-Piece Fulfillment Logic
+### 5. 最终可复制 Ozon 主题标签
 
-Keep one-piece fulfillment / dropshipping testing logic.
+Show final tags at the top of the practical output area.
 
-Do not recommend stock quantity.
+Rules:
 
-Do not use:
+* one per line
+* starts with `#`
+* words joined by `_`
+* no Chinese
+* no unsafe punctuation
+* max 30 characters
+* up to 30 tags
+* do not fill weak tags just to reach 30
 
-* 首批备货
-* 第一批货备多少
-* 批量进货
-* 备货数量
-* 5-10 件测试数量
+Show:
 
-Use:
+`当前可推荐标签：X / 30`
 
-* 是否值得上架测试
-* 是否需要优化后再测
-* 是否谨慎测试
-* 是否暂不建议测试
-* 上架后观察哪些指标
-* 什么情况下继续 / 优化 / 暂停
+If fewer than 30 tags:
 
-## Profit Data Logic
+`未用弱词凑满。建议补充更多竞品标签、型号、规格或适配场景后再扩展。`
 
-Use the existing profit calculator snapshot and structured fields.
+### 6. 不建议使用的标签
 
-Do not modify profit formulas.
+Group rejected tags by reason:
 
-If source cost or target selling price is missing:
+* too broad
+* wrong product type
+* contains Chinese
+* contains banned / brand word
+* over 30 characters
+* unsafe punctuation
+* duplicate intent
+* unsupported by evidence
 
-* still generate a limited product card observation report
-* do not output a full profit safety conclusion
-* show:
-  `利润数据不足，本次不输出利润安全结论。`
+### 7. 人工确认项
 
-If source cost and target selling price exist:
+Show items that need seller confirmation:
 
-* include profit safety score
-* include minimum safe price reference if available
-* explain whether the product has enough margin for ads, returns, and logistics pressure
-
-## Backend Data Logic
-
-The user currently may not have store backend data.
-
-Therefore:
-
-* do not require impressions
-* do not require clicks
-* do not require add-to-cart
-* do not require orders
-* do not require ad spend
-* do not require conversion rate
-* do not require store API authorization
-
-If backend data is missing, show:
-
-`后台数据未提供，本次只基于公开市场观察、商品卡片信息和利润测算进行上架前判断。`
-
-## Link Extraction Role
-
-Link extraction remains optional helper only.
-
-Do not make link extraction the core workflow.
-
-If link extraction succeeds, it can prefill information.
-
-If it fails, the report must still work from evidence pack and structured fields.
-
-Do not continue trying to make arbitrary ecommerce links fully extractable through Cloudflare Worker.
+* Russian wording uncertainty
+* translation uncertainty
+* model / specification uncertainty
+* category uncertainty
 
 ## UI Requirements
 
-Improve the AI Analysis page so that:
+Improve the module layout.
 
-1. Evidence pack textarea is visually prominent.
-2. Structured fields are still available but not overwhelming.
-3. Score cards appear near the top of the report.
-4. The final decision label is visually clear.
-5. Missing data is shown as a data boundary, not as a silent failure.
-6. The report feels like a seller decision coach, not a plain form summary.
+Do not make the page a long dense report.
 
-## Do Not Implement
+Preferred layout:
 
-Do not implement:
+Top:
 
-* OpenAI API
-* Claude API
-* large model API
-* Playwright
-* Puppeteer
-* dynamic renderer
+* product type judgment
+* core strategy conclusion
+* final copy-ready tag list
+
+Middle:
+
+* competitor word decomposition
+* final tag strategy
+
+Bottom:
+
+* rejected tags
+* confirmation list
+* collapsed detail table
+
+The detail table should be collapsed by default.
+
+Use compact tables or compact rows, not large repeated cards.
+
+The user should first understand:
+
+1. What type of product this is
+2. What tag strategy fits this type
+3. Which competitor words are useful
+4. Which final Ozon tags to copy
+
+## Required Example Test 1: Automotive Endoscope
+
+Product title:
+
+`汽车旋转式内窥镜`
+
+Ozon category:
+
+`汽车配件`
+
+Specification:
+
+`T42 单镜头 1米硬线`
+
+Usage scene:
+
+`汽车维修`
+
+Target user / purpose:
+
+`家庭汽车维修，修理厂`
+
+Selling points:
+
+`适用于汽车发动机的检测与维修工作。1080高清像素，2600mah续航，8mm微镜头，IP67级别防水。`
+
+Evidence pack:
+
+`эндоскоп автомобильный поворотный 360 эндоскопия двигателя infsue 4,3-дюймовый IPS-экран 1080P пиксельный 6,2 мм объектив линия 1 м водонепроницаемая IP67, для ремонта автомобильных двигателей`
+
+Competitor topic tags:
+
+`#эндоскоп #эндоскоп_автомобильный #эндоскоп_поворотный #автомобильный_эндоскоп`
+
+My candidate tags:
+
+`эндоскоп автомобильный поворотный`
+
+Expected:
+
+* product type is judged as tool / automotive repair product
+* strategy explains precision over broad traffic
+* core word is extracted as `эндоскоп`
+* competitor tags are analyzed first
+* final tags are based on competitor core words plus model/spec/use scene
+* final tags contain no Chinese
+* final tags use `#` and `_`
+* no final tag exceeds 30 characters
+* broad lifestyle words are not used
+* output explains why this product should use precise long-tail tags
+
+## Required Example Test 2: Picnic Cooler Bag
+
+Use this product to confirm ordinary consumer product strategy still works:
+
+Product title:
+
+`野餐保温包 35L 大容量 多层口袋 保温保冷`
+
+Category:
+
+`户外 / 野餐 / 保温包`
+
+Material:
+
+`牛津布 / 铝膜内胆`
+
+Specification:
+
+`35L`
+
+Usage scene:
+
+`野餐、露营、海边、车载旅行`
+
+Selling points:
+
+`35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`
+
+Competitor topic tags:
+
+`термосумка, сумка холодильник, пикник, кемпинг, пляж, сумка, рюкзак, женская сумка, большая вместимость, термоизоляция, карманы`
+
+Expected:
+
+* product type is ordinary outdoor consumer product
+* strategy allows scene / capacity / function expansion
+* `рюкзак` and `женская сумка` are rejected
+* final tags are Ozon-formatted and no Chinese
+* final tags focus on product type + scene + capacity + insulation
+
+## Do Not Modify
+
+Do not modify:
+
+* profit formulas
+* logistics logic
+* platform presets
+* Worker behavior
+* Product Testing Analysis
+* Profit Calculator
+* API Settings
+
+Do not add:
+
+* LLM API
 * crawler
-* proxy scraping
-* login scraping
-* cookie scraping
-* captcha bypass
-* anti-bot bypass
-* external parser
-* database
-* login system
-* payment system
-* new backend service
-* browser extension
-* new npm dependency
+* parser
+* dynamic renderer
+* backend
+* dependency
+* scraping
+* real credentials
 
-Do not bypass platform access controls.
-
-Do not use real credentials.
-
-Do not call Ozon Seller API.
-
-Do not modify profit formulas.
-
-Do not modify logistics matching logic.
-
-Do not modify platform presets.
+Do not commit.
 
 Do not push.
 
 Do not deploy.
-
-Do not commit unless explicitly approved.
-
-## Tasks
-
-### 1. Inspect current files
-
-Inspect:
-
-* `AGENTS.md`
-* `ACTIVE_GOAL.md`
-* `index.html`
-* `css/style.css`
-* `js/main.js`
-* `js/product-selection.js`
-* `js/store-api.js`
-* `worker/index.js`
-* `docs/manual-test-cases.md`
-* `docs/DEVELOPMENT_LOG.md`
-
-### 2. Summarize current workflow
-
-Before changing files, summarize:
-
-* current AI Analysis workflow
-* current report generation logic
-* why the analysis feels weak
-* where the UI still feels too manual
-
-### 3. Add evidence pack input
-
-Add a large textarea labeled:
-
-`商品证据包 / 竞品观察 / 我的疑问`
-
-Helper text:
-
-`可以粘贴商品标题、竞品价格、评论痛点、材质描述、使用场景、你的担心点。系统会先结构化这些证据，再生成测品判断。`
-
-### 4. Add evidence parsing logic
-
-Add local rule-based parsing for:
-
-* material
-* usage / scene
-* selling points
-* competitor pressure
-* review trust
-* return risk
-* logistics risk
-* seller concerns
-
-### 5. Add scoring engine
-
-Add 0-100 scoring for:
-
-* profit safety
-* price competitiveness
-* product card quality
-* review / trust
-* logistics / return risk
-* platform fit
-
-Each score must include a short explanation.
-
-### 6. Upgrade report
-
-Make the report more specific, more action-oriented, and less generic.
-
-The report should use evidence pack content, structured fields, and profit snapshot together.
-
-### 7. Keep current safety and business boundaries
-
-Do not change Worker behavior unless strictly necessary.
-
-Do not change formulas.
-
-Do not change logistics logic.
-
-Do not change platform presets.
-
-### 8. Update docs
-
-Update:
-
-* `docs/manual-test-cases.md`
-* `docs/DEVELOPMENT_LOG.md`
 
 ## Required Checks
 
 Run:
 
 ```bash
-node --check worker/index.js
 node --check js/main.js
 node --check js/product-selection.js
 node --check js/store-api.js
+node --check worker/index.js
 git diff --check
-git status --short
+grep -R "api-seller.ozon.ru" index.html js css
+grep -R "占位模块，仅用于功能中心导航结构" index.html js css
 ```
 
-Confirm browser-side files do not directly call:
+Also confirm:
 
 ```bash
-grep -R "api-seller.ozon.ru" index.html js css
+git diff -- worker/index.js
 ```
 
-## Manual Browser Checks
+## Browser Test
 
-Run the app locally and verify:
+Open the local app and verify:
 
-* Evidence pack textarea is visible.
-* User can generate a report from evidence pack + minimal structured fields.
-* Score cards appear in the report.
-* Missing source cost / target price generates limited report.
-* Filled source cost / target price generates stronger report.
-* No stock quantity recommendation appears.
-* Link extraction failure does not block the workflow.
-* Existing profit calculator still works.
-* Existing API Settings still works.
-* No browser console JavaScript errors.
-
-## Done When
-
-* Evidence pack input exists.
-* Evidence pack can enrich the report.
-* Local rule-based parsing extracts useful hints.
-* Score cards are shown.
-* Report is more specific and action-oriented.
-* Missing data is clearly marked.
-* One-piece fulfillment testing logic remains.
-* No stocking quantity logic appears.
-* Link extraction is optional helper only.
-* Profit formulas are unchanged.
-* Logistics logic is unchanged.
-* Platform presets are unchanged.
-* No new scraper / dynamic renderer / parser is added.
-* No real credentials are used.
-* Static checks pass.
-* Browser smoke test passes as much as possible.
-* Documentation is updated.
-* No push, deploy, or commit is performed.
+* module title is Ozon-specific
+* automotive endoscope sample works
+* picnic cooler bag sample works
+* product type judgment is different between the two samples
+* competitor tags are analyzed before final tag output
+* final tags are copy-ready
+* final tags contain no Chinese
+* final tags use `#` and `_`
+* no final tag exceeds 30 characters
+* rejected tags are grouped clearly
+* detail table is collapsed by default
+* other modules still open
+* no console errors
 
 ## Final Response
 
 Report back with:
 
-* Files inspected
-* Files changed
-* Old analysis weakness summary
-* New evidence pack workflow
-* Evidence parsing logic
-* Scoring dimensions and rules
-* Report improvements
-* How missing profit data is handled
-* How link extraction is treated
-* Static check results
-* Browser smoke test result
-* Whether Worker behavior changed
-* Whether any new API / crawler / parser / dynamic renderer was added
-* Whether real credentials were used
-* Whether push / deploy / commit was performed
-* Remaining risks
+* files inspected
+* files changed
+* old problem summary
+* new Ozon-only positioning
+* new workflow
+* product type judgment logic
+* competitor tag decomposition logic
+* final tag generation logic
+* automotive endoscope browser test result
+* picnic cooler bag browser test result
+* static check results
+* whether Worker changed
+* whether formulas / logistics / presets changed
+* whether commit / push / deploy was performed
+* remaining risks
