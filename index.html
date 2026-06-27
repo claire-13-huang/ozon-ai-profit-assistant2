@@ -844,9 +844,9 @@
       <div class="section topic-tag-panel">
         <div class="module-placeholder-head">
           <div>
-            <p class="eyebrow">Ozon Topic Tag Strategy Assistant v1.0</p>
+            <p class="eyebrow">Ozon Topic Tag Strategy + Candidate Verification Assistant v1.2</p>
             <div class="title">Ozon 主题标签</div>
-            <p class="panel-intro">当前模块仅针对 Ozon 主题标签：先分析竞品标签 / 竞品标题，再判断产品类型，最后生成可复制标签清单。</p>
+            <p class="panel-intro">当前模块仅针对 Ozon 主题标签：先分析竞品标签 / 竞品标题，再判断产品类型，生成候选标签，并给出 Ozon 搜索验证路径。</p>
           </div>
           <span class="module-status status-ready">已可用</span>
         </div>
@@ -902,24 +902,19 @@
             </div>
           </div>
           <textarea id="topicEvidencePack" rows="7" placeholder="例如：竞品标题包含 термосумка, сумка холодильник, пикник, кемпинг, пляж。担心标签太泛导致流量不精准。"></textarea>
-          <div class="decision-input-grid topic-optional-grid">
-            <div class="decision-input-wide">
-              <label>竞品主题标签（可粘贴多个）</label>
+          <div class="topic-two-column-inputs">
+            <div>
+              <label>Competitor topic tags / competitor keywords</label>
               <p class="field-helper">从 Ozon 竞品卡片或后台看到的主题标签粘贴到这里。相似商品正在使用的标签是本模块的优先信号。</p>
               <textarea id="topicCompetitorTags" rows="3" placeholder="例如 термосумка, сумка холодильник, пикник, кемпинг, сумка"></textarea>
             </div>
-            <div class="decision-input-wide">
-              <label>我的候选标签</label>
-              <p class="field-helper">粘贴你自己想到的标签，系统会做去重、分类、长度检查、错配风险判断。</p>
+            <div>
+              <label>My candidate tags / backend search terms</label>
+              <p class="field-helper">粘贴你自己想到的标签。系统会和竞品证据对照，区分可先用、需搜索验证和不建议使用。</p>
               <textarea id="topicCandidateTags" rows="3" placeholder="例如 термосумка для пикника, сумка холодильник 35л"></textarea>
             </div>
-            <div class="decision-input-wide">
-              <label>品牌词 / 禁用词</label>
-              <p class="field-helper">粘贴品牌名、竞品品牌、平台名或不想使用的词，最终标签不得包含这些词。</p>
-              <textarea id="topicBannedWords" rows="2" placeholder="例如 nike, adidas, ozon, wildberries, xiaomi"></textarea>
-            </div>
           </div>
-          <button class="auto-analysis-button decision-report-button" id="generateTopicTagsButton" type="button">生成 Ozon 主题标签策略</button>
+          <button class="auto-analysis-button decision-report-button topic-generate-button" id="generateTopicTagsButton" type="button">生成候选标签与验证清单</button>
         </section>
 
         <div class="topic-tag-boundary">当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。</div>
@@ -931,32 +926,20 @@
           </div>
           <div class="selection-summary" id="topicTagSummary">填写商品标题、类目、规格、场景、竞品标签和候选标签后，生成 Ozon 可复制标签清单。</div>
 
-          <div class="topic-strategy-grid" aria-label="Ozon 标签策略摘要">
+          <div class="topic-strategy-grid topic-primary-grid" aria-label="Ozon 标签策略摘要">
             <div>
-              <span>1. 产品类型判断</span>
+              <span>Product type judgment</span>
               <p id="topicProductTypeInsight">等待生成。</p>
-            </div>
-            <div>
-              <span>2. 竞品证据优先级</span>
-              <p id="topicCompetitorPriorityInsight">等待生成。</p>
-            </div>
-            <div>
-              <span>3. 核心词提取</span>
-              <p id="topicCoreTermInsight">等待生成。</p>
-            </div>
-            <div>
-              <span>4. 标签策略建议</span>
-              <p id="topicStrategyInsight">等待生成。</p>
             </div>
           </div>
 
           <div class="topic-copy-panel">
             <div class="topic-copy-head">
               <div>
-                <span>5. 最终可复制 Ozon 主题标签</span>
-                <strong id="topicFinalTagCount">当前可推荐标签：0 / 30</strong>
+                <span>Final copy-ready tags</span>
+                <strong id="topicFinalTagCount">高置信候选标签：0 / 30</strong>
               </div>
-              <p>合规提示：最终标签仅保留 #、下划线、俄文字母、拉丁字母和数字；中文词只作为参考，不进入最终清单。</p>
+              <p>这里只放高置信候选标签，不混入需验证标签；每行一个，便于复制。</p>
             </div>
             <div class="topic-copy-grid topic-copy-single">
               <div>
@@ -967,56 +950,107 @@
             </div>
           </div>
 
-          <div class="topic-report-layout">
-            <div class="topic-report-main">
-              <div class="topic-backup-tags" id="topicBackupTags">候补标签：需要人工确认 等待生成。</div>
-              <div class="topic-chinese-reference">
-                <span>中文参考 / 需要翻译确认</span>
-                <p id="topicChineseReference">等待生成。</p>
-              </div>
-              <details class="topic-detail-section">
-                <summary>查看标签明细表</summary>
-                <div class="topic-table-wrap">
-                  <table class="topic-tag-table">
-                    <thead>
-                      <tr>
-                        <th>标签</th>
-                        <th>类型</th>
-                        <th>来源</th>
-                        <th>字符数</th>
-                        <th>状态</th>
-                        <th>理由</th>
-                      </tr>
-                    </thead>
-                    <tbody id="topicTagDetailTableBody">
-                      <tr><td colspan="6">等待生成。</td></tr>
-                    </tbody>
-                  </table>
-                </div>
-              </details>
+          <div class="topic-count-grid" aria-label="候选标签数量">
+            <div>
+              <span>Requires Ozon search verification</span>
+              <strong id="topicVerificationCount">0</strong>
             </div>
-            <aside class="topic-report-side">
-              <div class="topic-rejected-summary">
-                <span>已排除 / 需修改标签</span>
-                <p id="topicRejectedTags">等待生成。</p>
-              </div>
-              <div class="topic-score-grid" id="topicTagScores" hidden></div>
-              <div class="topic-analysis-grid">
-                <div>
-                  <span>2. 竞品词拆解</span>
-                  <p id="topicCompetitorTagAnalysis">等待生成。</p>
-                </div>
-                <div>
-                  <span>我的候选标签分析</span>
-                  <p id="topicCandidateTagAnalysis">等待生成。</p>
-                </div>
-              </div>
-              <div class="selection-actions-title">数据边界 / 人工确认</div>
-              <ul class="selection-actions" id="topicTagWarnings">
-                <li>当前主题标签建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。</li>
-              </ul>
-            </aside>
+            <div>
+              <span>Rejected tags</span>
+              <strong id="topicRejectedCount">0</strong>
+            </div>
           </div>
+
+          <div class="topic-candidate-panel">
+            <div class="topic-table-title">
+              <span>Recommended tag table</span>
+              <p>高置信标签可先复制；需验证标签必须先按清单在 Ozon 搜索结果中确认。</p>
+            </div>
+            <div class="topic-table-wrap">
+              <table class="topic-tag-table topic-recommendation-table">
+                <thead>
+                  <tr>
+                    <th>候选标签</th>
+                    <th>分组</th>
+                    <th>来源</th>
+                    <th>类型</th>
+                    <th>验证动作</th>
+                  </tr>
+                </thead>
+                <tbody id="topicRecommendedTagTableBody">
+                  <tr><td colspan="5">等待生成。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="topic-candidate-panel">
+            <div class="topic-table-title">
+              <span>Competitor tag breakdown</span>
+              <p>每个竞品标签一行；中文含义只作为理解辅助，不作为可复制标签。</p>
+            </div>
+            <div class="topic-table-wrap">
+              <table class="topic-tag-table topic-competitor-table">
+                <thead>
+                  <tr>
+                    <th>Tag</th>
+                    <th>Chinese meaning</th>
+                    <th>Type</th>
+                    <th>Source</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody id="topicCompetitorBreakdownTableBody">
+                  <tr><td colspan="6">等待生成。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="topic-candidate-panel">
+            <span>My candidate tags check</span>
+            <p id="topicSellerTerms">等待生成。</p>
+          </div>
+
+          <div class="topic-verification-panel">
+            <span>Ozon search verification checklist</span>
+            <ul class="selection-actions" id="topicVerificationChecklist">
+              <li>等待生成。</li>
+            </ul>
+          </div>
+
+          <div class="topic-rejected-summary">
+            <span>Rejected tags and reasons</span>
+            <p id="topicRejectedTags">等待生成。</p>
+          </div>
+
+          <div class="topic-score-grid" id="topicTagScores" hidden></div>
+          <div class="selection-actions-title">数据边界 / 人工确认</div>
+          <ul class="selection-actions" id="topicTagWarnings">
+            <li>当前主题标签建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。</li>
+          </ul>
+
+          <details class="topic-detail-section">
+            <summary>查看标签明细表</summary>
+            <div class="topic-table-wrap">
+              <table class="topic-tag-table">
+                <thead>
+                  <tr>
+                    <th>标签</th>
+                    <th>类型</th>
+                    <th>来源</th>
+                    <th>字符数</th>
+                    <th>状态</th>
+                    <th>理由</th>
+                  </tr>
+                </thead>
+                <tbody id="topicTagDetailTableBody">
+                  <tr><td colspan="6">等待生成。</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </details>
 
           <details class="topic-compact-details">
             <summary>查看标签分组和组合方案</summary>
