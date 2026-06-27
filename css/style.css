@@ -303,8 +303,27 @@ button:focus-visible {
   min-height: 120px;
 }
 
-.topic-optional-grid {
+.topic-generate-button {
+  border: 1px solid #b7d4f5;
+  background: #f5f9ff;
+  color: #195c9f;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .82);
+}
+
+.topic-generate-button:hover {
+  border-color: #8bb9ec;
+  background: #eaf4ff;
+}
+
+.topic-optional-grid,
+.topic-two-column-inputs {
   margin-top: 12px;
+}
+
+.topic-two-column-inputs {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
 }
 
 .topic-tag-boundary {
@@ -325,7 +344,8 @@ button:focus-visible {
 .topic-copy-panel,
 .topic-detail-section,
 .topic-rejected-summary,
-.topic-chinese-reference {
+.topic-candidate-panel,
+.topic-verification-panel {
   margin-top: 12px;
   padding: 14px;
   border: 1px solid var(--line);
@@ -358,8 +378,7 @@ button:focus-visible {
   font-weight: 950;
 }
 
-.topic-copy-head p,
-.topic-backup-tags {
+.topic-copy-head p {
   max-width: 520px;
   color: var(--muted-strong);
   font-size: 13px;
@@ -380,6 +399,10 @@ button:focus-visible {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 12px;
+}
+
+.topic-primary-grid {
+  grid-template-columns: minmax(0, 1fr);
 }
 
 .topic-strategy-grid > div {
@@ -416,9 +439,91 @@ button:focus-visible {
   color: #846000;
 }
 
+.topic-count-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.topic-count-grid > div {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .82);
+}
+
+.topic-count-grid span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.topic-count-grid strong {
+  display: block;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 950;
+}
+
 .topic-report-main,
 .topic-report-side {
   min-width: 0;
+}
+
+.topic-term-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.topic-term-grid > div {
+  min-height: 118px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .82);
+}
+
+.topic-term-grid span,
+.topic-candidate-panel > span,
+.topic-table-title span,
+.topic-verification-panel span {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 900;
+}
+
+.topic-term-grid p,
+.topic-candidate-panel > p,
+.topic-table-title p {
+  color: var(--muted-strong);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.topic-table-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.topic-table-title p {
+  max-width: 460px;
+  text-align: right;
+}
+
+.topic-verification-panel {
+  background: #f8fbff;
+  border-color: #d8e6fb;
 }
 
 .topic-copy-grid,
@@ -453,14 +558,6 @@ button:focus-visible {
   line-height: 1.6;
 }
 
-.topic-backup-tags {
-  margin-top: 0;
-  max-width: none;
-  border: 1px solid #f0e1b8;
-  border-radius: 8px;
-  background: #fffaf0;
-}
-
 .topic-rejected-summary span {
   display: block;
   margin-bottom: 6px;
@@ -469,12 +566,6 @@ button:focus-visible {
   font-weight: 900;
 }
 
-.topic-chinese-reference {
-  border-color: #d8e6fb;
-  background: #f8fbff;
-}
-
-.topic-chinese-reference span,
 .topic-detail-section summary {
   display: block;
   margin-bottom: 6px;
@@ -493,7 +584,7 @@ button:focus-visible {
 }
 
 .topic-rejected-summary p,
-.topic-chinese-reference p {
+.topic-candidate-panel > p {
   color: var(--muted-strong);
   font-size: 13px;
   font-weight: 750;
@@ -628,6 +719,17 @@ button:focus-visible {
 .topic-tag-table tr[data-status="需要人工确认"] td:last-child,
 .topic-tag-table tr[data-status="不建议使用"] td:last-child {
   color: #b42318;
+}
+
+.topic-recommendation-table tr[data-status="推荐使用"] td:nth-child(2),
+.topic-recommendation-table tr[data-status="可选使用"] td:nth-child(2) {
+  color: #16824d;
+  font-weight: 900;
+}
+
+.topic-recommendation-table tr[data-status="需要人工确认"] td:nth-child(2) {
+  color: #846000;
+  font-weight: 900;
 }
 
 .topic-analysis-grid {
@@ -2586,8 +2688,11 @@ input.input-warning:focus {
   .placeholder-detail-grid,
   .topic-copy-head,
   .topic-copy-grid,
+  .topic-count-grid,
   .topic-report-layout,
   .topic-strategy-grid,
+  .topic-term-grid,
+  .topic-two-column-inputs,
   .topic-score-grid,
   .topic-tag-output-grid,
   .topic-analysis-grid,

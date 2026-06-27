@@ -977,7 +977,7 @@ function renderEvidenceDiagnosis(evidenceSummary) {
   });
 }
 
-const TOPIC_TAG_BOUNDARY_TEXT = '当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。当前建议基于你提供的商品信息、竞品文本和本地规则生成，不代表平台真实搜索量或官方标签库。';
+const TOPIC_TAG_BOUNDARY_TEXT = '当前模块仅针对 Ozon 主题标签。Wildberries 和 Yandex 更适合单独做关键词助手，不在本模块生成。当前结果是候选标签和验证路径，不是 Ozon 官方标签库、真实搜索量或平台审核结论。';
 const TOPIC_TOOL_STRATEGY_TEXT = '工具类、机械类、配件类产品不适合追求太泛的流量。它们的搜索流量可能小，但用户意图更明确。主题标签应优先围绕核心产品词、型号规格、适配对象和具体使用场景，提升精准点击和转化概率。';
 const TOPIC_CONSUMER_STRATEGY_TEXT = '普通消费品可以通过场景、材质、季节、人群和功能词扩展流量，但仍然不能使用和产品不匹配的泛词。';
 
@@ -1380,7 +1380,28 @@ function extractCustomTopicTerms(value, reason, maxItems = 12) {
 
 const TOPIC_FINAL_TAG_TARGET = 30;
 const TOPIC_FINAL_TAG_MAX_LENGTH = 30;
-const TOPIC_DEFAULT_BANNED_WORDS = ['ozon', 'wildberries', 'yandex', 'amazon', 'aliexpress', 'taobao', 'tmall', '1688'];
+const TOPIC_DEFAULT_BANNED_WORDS = [
+  'ozon',
+  'wildberries',
+  'yandex',
+  'amazon',
+  'aliexpress',
+  'taobao',
+  'tmall',
+  '1688',
+  'nike',
+  'adidas',
+  'xiaomi',
+  'apple',
+  'iphone',
+  'samsung',
+  'huawei',
+  'disney',
+  'marvel',
+  'lego',
+  'barbie',
+  'pokemon'
+];
 const TOPIC_BROAD_TAGS = [
   'сумка',
   'bag',
@@ -1672,7 +1693,7 @@ function buildTopicCandidateRow(tag, options) {
     status = '不建议使用';
     riskLevel = '高';
     issues.push('contains-chinese');
-    reasons.push('包含中文，不能进入最终 Ozon 标签；只保留为中文参考。');
+    reasons.push('包含中文，不能进入最终 Ozon 标签；只保留在表格或明细中作为理解辅助。');
   }
   if (unsafePunctuation) {
     status = '不建议使用';
@@ -1975,30 +1996,6 @@ function shortTopicReason(row) {
   return row.reason;
 }
 
-function collectTopicChineseReference(input, rows) {
-  const corpusItems = [
-    input.title,
-    input.category,
-    input.material,
-    input.specification,
-    input.usageScene,
-    input.sellingPoints,
-    input.targetUser,
-    input.evidencePack,
-    input.candidateTags,
-    input.competitorTags
-  ];
-  const fromInputs = corpusItems
-    .join('\n')
-    .split(/[\n,，;；、。.!！?？|/\\\s]+/)
-    .map(item => topicCleanTagText(item))
-    .filter(item => item.length >= 2 && item.length <= 12 && topicContainsCjk(item));
-  const fromRows = rows
-    .map(row => row.text)
-    .filter(text => text.length <= 12 && topicContainsCjk(text));
-  return uniqueList(fromInputs.concat(fromRows), 18);
-}
-
 function topicRowSortScore(row) {
   const statusScore = row.status === '推荐使用' ? 100 : row.status === '可选使用' ? 70 : row.status === '需要人工确认' ? 30 : 0;
   const typeScore = row.type === '长尾组合词' ? 35 : row.type === '型号 / 规格词' || row.type === '规格 / 型号词' ? 32 : row.type === '核心产品词' ? 34 : row.type === '适配对象词' ? 30 : row.type === '功能词' ? 22 : row.type === '属性词' ? 18 : row.type === '使用场景词' || row.type === '场景词' ? 18 : 8;
@@ -2013,6 +2010,46 @@ function topicIntentKey(row) {
   if (key === 'кемпинг' || key.includes('для кемпинга')) return 'scene:camping';
   if (key === 'пляж' || key.includes('для пляжа')) return 'scene:beach';
   return key;
+}
+
+function topicFinalGroupKey(row) {
+  return topicTagKey(row && (row.formattedTag || row.text));
+}
+
+function topicIsStandaloneTag(row) {
+  const key = topicFinalGroupKey(row);
+  return key.split(/\s+/).filter(Boolean).length === 1;
+}
+
+function topicHasProductAnchor(row) {
+  const key = topicFinalGroupKey(row);
+  return /эндоскоп|термосумка|сумка холодильник|сумка для обеда|хранение/.test(key);
+}
+
+function topicIsStandaloneWeakTag(row) {
+  const key = topicFinalGroupKey(row);
+  const weakExactTags = ['дом', 'легкий', 'хлопок', 'женский'];
+  const weakTypes = ['属性词', '材质词', '人群词', '使用场景词', '场景词', '功能词', '季节词', '用途词'];
+  return weakExactTags.includes(key) || (weakTypes.includes(row.type) && !topicHasProductAnchor(row));
+}
+
+function topicHasStrongHighConfidenceSource(row) {
+  const strongTypes = ['核心产品词', '长尾组合词', '型号 / 规格词', '规格 / 型号词', '适配对象词'];
+  if (row.source === '竞品标签') return true;
+  if (!row.evidenceSupported) return false;
+  if (row.source === '证据包' || row.source === '商品信息') return true;
+  return strongTypes.includes(row.type);
+}
+
+function topicCanBeHighConfidence(row) {
+  return ['推荐使用', '可选使用'].includes(row.status)
+    && topicHasStrongHighConfidenceSource(row)
+    && !topicIsStandaloneWeakTag(row)
+    && !row.issues.includes('banned-word')
+    && !row.issues.includes('too-broad')
+    && !row.issues.includes('mismatch')
+    && !row.issues.includes('contains-chinese')
+    && isValidFormattedTag(row.formattedTag, row.bannedWords || []);
 }
 
 function dedupeByIntent(rows) {
@@ -2049,7 +2086,7 @@ function buildTopicFinalPlan(rows) {
   const sortedRows = rows.slice().sort((a, b) => topicRowSortScore(b) - topicRowSortScore(a));
 
   sortedRows.forEach(row => {
-    const key = topicTagKey(row.formattedTag || row.text);
+    const key = topicFinalGroupKey(row);
     if (!key) return;
     if (seen.has(key)) {
       duplicateRows.push({
@@ -2066,21 +2103,43 @@ function buildTopicFinalPlan(rows) {
 
   const intentResult = dedupeByIntent(Array.from(seen.values()));
   const dedupedRows = intentResult.keptRows;
-  const finalRows = dedupedRows
-    .filter(row => ['推荐使用', '可选使用'].includes(row.status))
+  const candidateRows = dedupedRows
+    .filter(row => ['推荐使用', '可选使用', '需要人工确认'].includes(row.status))
     .filter(row => isValidFormattedTag(row.formattedTag, row.bannedWords || []))
     .filter(row => !row.issues.includes('banned-word') && !row.issues.includes('too-broad') && !row.issues.includes('mismatch'))
+    .slice(0, TOPIC_FINAL_TAG_TARGET + 18);
+  const highConfidenceRows = candidateRows
+    .filter(topicCanBeHighConfidence)
     .slice(0, TOPIC_FINAL_TAG_TARGET);
-  const backupRows = dedupedRows
-    .filter(row => row.status === '需要人工确认')
-    .filter(row => row.charCount <= TOPIC_FINAL_TAG_MAX_LENGTH)
-    .slice(0, 12);
+  const highConfidenceKeys = new Set(highConfidenceRows.map(topicFinalGroupKey));
+  const verificationRows = candidateRows
+    .filter(row => !highConfidenceKeys.has(topicFinalGroupKey(row)))
+    .slice(0, 16);
+  const acceptedKeys = new Set(highConfidenceRows.concat(verificationRows).map(topicFinalGroupKey));
   const rejectedRows = dedupedRows
     .filter(row => row.status === '不建议使用')
     .concat(duplicateRows, intentResult.duplicateRows)
+    .filter(row => !acceptedKeys.has(topicFinalGroupKey(row)))
     .slice(0, 40);
 
-  return { finalRows, backupRows, rejectedRows, detailRows: finalRows.concat(backupRows, rejectedRows) };
+  return {
+    finalRows: highConfidenceRows,
+    highConfidenceRows,
+    verificationRows,
+    backupRows: verificationRows,
+    rejectedRows,
+    detailRows: highConfidenceRows.concat(verificationRows, rejectedRows)
+  };
+}
+
+function withTopicPlanBucket(row, plan) {
+  const key = topicTagKey(row.formattedTag || row.text);
+  const keyIn = list => list.some(item => topicTagKey(item.formattedTag || item.text) === key);
+  if (keyIn(plan.highConfidenceRows)) return { ...row, candidateBucket: '高置信候选' };
+  if (keyIn(plan.verificationRows)) return { ...row, candidateBucket: '需 Ozon 搜索验证' };
+  if (keyIn(plan.rejectedRows)) return { ...row, candidateBucket: 'Rejected' };
+  if (topicIsStandaloneWeakTag(row) && row.status !== '不建议使用') return { ...row, candidateBucket: '需 Ozon 搜索验证' };
+  return { ...row, candidateBucket: row.status === '不建议使用' ? 'Rejected' : '需 Ozon 搜索验证' };
 }
 
 function getTopicCoreTerms(reportParts) {
@@ -2102,6 +2161,40 @@ function buildTopicConfirmationItems(input, missing, plan) {
   if (!input.competitorTags) items.push('未提供 Ozon 竞品主题标签，当前结果会更依赖本地规则。');
   if (!items.length) items.push('仍需人工确认俄语语义、型号规格、类目边界和 Ozon 搜索结果是否一致。');
   return uniqueList(items, 8);
+}
+
+function formatTopicTermSummary(rows, fallback) {
+  if (!rows.length) return fallback;
+  return rows.slice(0, 12).map(row => {
+    const label = row.status === '不建议使用'
+      ? '排除'
+      : row.status === '需要人工确认'
+        ? '需验证'
+        : '候选';
+    return `${row.formattedTag || formatOzonTag(row.text)}：${label}；${topicMeaningForRow(row)}；${shortTopicReason(row)}`;
+  }).join('\n');
+}
+
+function getTopicVerificationAction(row) {
+  if (!row) return '在 Ozon 搜索该词，确认结果是否与当前商品一致。';
+  if (row.status === '需要人工确认') return '先在 Ozon 搜索该词，确认搜索结果、类目和俄语语义后再使用。';
+  if (row.source === '竞品标签') return '抽查 Ozon 搜索结果，确认相似商品仍集中出现。';
+  if (row.source === '我的候选标签') return '与竞品词对照；若搜索结果偏离当前商品，不要使用。';
+  if (/型号|规格|适配对象/.test(row.type)) return '确认型号、规格或适配对象真实存在，且 Ozon 搜索结果不跑偏。';
+  return '搜索该候选词，确认前几页结果与当前商品类型一致。';
+}
+
+function buildTopicVerificationChecklist(reportParts) {
+  const checklist = [];
+  const { input, productType, plan } = reportParts;
+  checklist.push('先搜索核心产品词，确认搜索结果前几页是否是同类商品。');
+  if (plan.verificationRows.length) checklist.push(`逐个搜索需验证标签：${plan.verificationRows.slice(0, 5).map(row => row.formattedTag).join('、')}。`);
+  if (productType.id === 'tool') checklist.push('工具 / 配件类要重点确认型号、规格、适配对象和维修场景，不要用生活方式泛词扩流。');
+  if (productType.id === 'ordinary') checklist.push('普通消费品可以验证场景、容量、功能词，但搜索结果必须仍然指向同一产品类型。');
+  checklist.push('打开 5-10 个相似商品，记录它们真实使用的主题标签和标题核心词。');
+  checklist.push('删除会引出错配商品、品牌词、平台词、中文词、过长词或不安全标点的标签。');
+  if (!input.competitorTags) checklist.push('当前未提供竞品主题标签，建议补充 Ozon 竞品标签后重新生成。');
+  return uniqueList(checklist, 8);
 }
 
 function formatTopicAnalysisRows(rows, fallback) {
@@ -2227,7 +2320,6 @@ function buildTopicTagReport(input) {
     priority: 1
   }));
   const plan = buildTopicFinalPlan(sourceRows.competitorRows.concat(systemRows, sourceRows.candidateRows, avoidRows));
-  const chineseReference = collectTopicChineseReference(input, plan.detailRows);
   const scores = buildTopicScores(groups, input, matchedRuleIds, plan.finalRows, plan.rejectedRows);
   const combinations = buildTopicCombinations(groups);
   const missing = [];
@@ -2247,14 +2339,15 @@ function buildTopicTagReport(input) {
     : '核心产品词不足，先补准确产品名称，避免直接使用泛标签。';
   const evidenceStatus = missing.length
     ? `仍缺少：${missing.join('、')}。`
-    : '当前证据足够生成 v1.0 Ozon 标签策略，但俄语词仍需平台搜索复核。';
+    : '当前证据足够生成 v1.2 候选标签方案，但仍需按 Ozon 搜索结果验证。';
   const confirmationItems = buildTopicConfirmationItems(input, missing, plan);
   const finalNote = plan.finalRows.length < TOPIC_FINAL_TAG_TARGET
-    ? '未用弱词凑满。建议补充更多竞品标签、型号、规格或适配场景后再扩展。'
-    : '已达到 30 个标签上限，建议先复制当前清单并继续人工复核。';
+    ? '未用弱词凑满。需验证标签请先按 Ozon 搜索清单确认，不要直接混入高置信复制区。'
+    : '已达到 30 个高置信候选标签上限，建议先复制当前清单并继续人工复核。';
+  const verificationChecklist = buildTopicVerificationChecklist({ input, productType, plan });
 
   return {
-    status: plan.finalRows.length ? '已生成 Ozon 标签方案' : '需要补充核心信息',
+    status: plan.finalRows.length ? '已生成候选标签与验证清单' : '需要补充核心信息',
     summary: `${productType.label}。${mainDirection}${productType.strategy}${evidenceStatus}`,
     productType,
     coreTerms,
@@ -2263,7 +2356,9 @@ function buildTopicTagReport(input) {
     scores,
     combinations,
     plan,
-    chineseReference,
+    verificationChecklist,
+    competitorBreakdownRows: sourceRows.competitorRows.map(row => withTopicPlanBucket(row, plan)),
+    sellerTerms: formatTopicTermSummary(sourceRows.candidateRows, '未粘贴卖家候选标签。'),
     competitorPriority: input.competitorTags
       ? '已优先分析竞品主题标签。竞品标签有价值，是因为它们展示了相似商品已经如何在 Ozon 流量入口描述自己。'
       : '未粘贴竞品主题标签；建议补充 Ozon 相似商品标签后再扩展。',
@@ -2273,7 +2368,7 @@ function buildTopicTagReport(input) {
     warnings: uniqueList([
       TOPIC_TAG_BOUNDARY_TEXT,
       productType.trafficLogic,
-      `当前可推荐标签：${plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}。`,
+      `高置信候选标签：${plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}；需 Ozon 搜索验证：${plan.verificationRows.length}。`,
       finalNote,
       confirmationItems.join(' '),
       groups.avoid.length ? `建议避开：${groups.avoid.slice(0, 4).map(tag => tag.text).join('、')}。` : '',
@@ -2334,18 +2429,84 @@ function renderTopicTagDetailTable(rows) {
   });
 }
 
-function formatTopicBackupRows(rows) {
-  if (!rows || !rows.length) return '候补标签：需要人工确认 暂无。';
-  const items = rows.map(row => {
-    if (topicContainsCjk(row.text)) return `${row.text}（需要翻译确认）`;
-    return row.formattedTag || formatOzonTag(row.text);
+function renderTopicRecommendedTagTable(rows) {
+  const tbody = document.getElementById('topicRecommendedTagTableBody');
+  if (!tbody) return;
+  tbody.textContent = '';
+
+  if (!rows || !rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 5;
+    td.textContent = '等待生成。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.dataset.status = row.status;
+    const bucket = row.candidateBucket || (row.status === '需要人工确认' ? '需 Ozon 搜索验证' : '高置信候选');
+    [
+      row.formattedTag || formatOzonTag(row.text),
+      bucket,
+      row.source,
+      row.type,
+      getTopicVerificationAction(row)
+    ].forEach(value => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
   });
-  return `候补标签：需要人工确认 ${items.join('、')}`;
 }
 
-function formatTopicChineseReference(items) {
-  if (!items || !items.length) return '暂无中文参考词。';
-  return items.map(item => `${item}：只作为中文证据，需要翻译确认后再使用。`).join('\n');
+function renderTopicCompetitorBreakdownTable(rows) {
+  const tbody = document.getElementById('topicCompetitorBreakdownTableBody');
+  if (!tbody) return;
+  tbody.textContent = '';
+
+  if (!rows || !rows.length) {
+    const tr = document.createElement('tr');
+    const td = document.createElement('td');
+    td.colSpan = 6;
+    td.textContent = '未粘贴竞品主题标签。';
+    tr.appendChild(td);
+    tbody.appendChild(tr);
+    return;
+  }
+
+  rows.forEach(row => {
+    const tr = document.createElement('tr');
+    tr.dataset.status = row.status;
+    [
+      row.formattedTag || formatOzonTag(row.text),
+      topicMeaningForRow(row),
+      row.type,
+      row.source,
+      row.candidateBucket || row.status,
+      getTopicVerificationAction(row)
+    ].forEach(value => {
+      const td = document.createElement('td');
+      td.textContent = value;
+      tr.appendChild(td);
+    });
+    tbody.appendChild(tr);
+  });
+}
+
+function renderTopicVerificationChecklist(items) {
+  const list = document.getElementById('topicVerificationChecklist');
+  if (!list) return;
+  list.textContent = '';
+  const rows = Array.isArray(items) && items.length ? items : ['等待生成。'];
+  rows.forEach(item => {
+    const li = document.createElement('li');
+    li.textContent = item;
+    list.appendChild(li);
+  });
 }
 
 function renderTopicTagReport(report) {
@@ -2360,14 +2521,21 @@ function renderTopicTagReport(report) {
   setText('topicCompetitorPriorityInsight', report.competitorPriority);
   setText('topicCoreTermInsight', report.coreTerms.length ? report.coreTerms.join('\n') : '未能确认核心产品词。请补充 Ozon 竞品主题标签或更准确产品名称。');
   setText('topicStrategyInsight', report.productType.strategy);
-  setText('topicFinalTagCount', `当前可推荐标签：${report.plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}`);
+  setText('topicFinalTagCount', `高置信候选标签：${report.plan.finalRows.length} / ${TOPIC_FINAL_TAG_TARGET}`);
   setText('topicFinalTagBlock', report.plan.finalRows.length ? report.plan.finalRows.map(row => row.formattedTag).join('\n') : '没有足够证据生成可直接复制的标签。');
   setText('topicFinalTagNote', report.finalNote);
-  setText('topicBackupTags', formatTopicBackupRows(report.plan.backupRows));
-  setText('topicChineseReference', formatTopicChineseReference(report.chineseReference));
+  setText('topicVerificationCount', String(report.plan.verificationRows.length));
+  setText('topicRejectedCount', String(report.plan.rejectedRows.length));
+  setText('topicSellerTerms', report.sellerTerms);
   renderTopicScoreCards(report.scores);
+  renderTopicRecommendedTagTable(
+    report.plan.highConfidenceRows
+      .map(row => ({ ...row, candidateBucket: '高置信候选' }))
+      .concat(report.plan.verificationRows.map(row => ({ ...row, candidateBucket: '需 Ozon 搜索验证' })))
+  );
+  renderTopicCompetitorBreakdownTable(report.competitorBreakdownRows);
+  renderTopicVerificationChecklist(report.verificationChecklist);
   renderTopicTagDetailTable(report.plan.detailRows);
-  setText('topicCompetitorTagAnalysis', report.competitorAnalysis);
   setText('topicCandidateTagAnalysis', report.candidateAnalysis);
   setText('topicRejectedTags', report.rejectedAnalysis);
   setText('topicCoreTags', formatTopicTagDetails(report.groups.core, '未识别核心产品标签。请补准确产品名称，例如“保温包 / 午餐包 / 收纳盒”。'));

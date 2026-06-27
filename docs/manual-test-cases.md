@@ -955,3 +955,55 @@
 6. Existing modules should still open
    - Input: after using `Ozon 主题标签`, click `利润计算器`, `选品测品分析`, and `API 设置`.
    - Expected: each target module opens; no console errors appear; profit formulas, logistics logic, platform presets, Product Testing Analysis, Profit Calculator, API Settings, Worker behavior, API calls, crawler/parser behavior, and credentials are unchanged.
+
+## Ozon Topic Tag Candidate Verification Assistant v1.2
+
+1. Forbidden-word input should not be visible
+   - Input: open `Ozon 主题标签`.
+   - Expected: there is no visible `品牌词 / 禁用词` textarea. The module still states it is Ozon-only and still internally excludes platform words such as Ozon, Wildberries, Yandex, Amazon, AliExpress, Taobao, Tmall, and 1688 from final candidate tags.
+
+2. Automotive endoscope should produce candidate verification output
+   - Input: title `汽车旋转式内窥镜`, category `汽车配件`, specification `T42 单镜头 1米硬线`, usage `汽车维修`, target user `家庭汽车维修，修理厂`, selling points `适用于汽车发动机的检测与维修工作。1080高清像素，2600mah续航，8mm微镜头，IP67级别防水。`, evidence `эндоскоп автомобильный поворотный 360 эндоскопия двигателя infsue 4,3-дюймовый IPS-экран 1080P пиксельный 6,2 мм объектив линия 1 м водонепроницаемая IP67, для ремонта автомобильных двигателей`, competitor tags `#эндоскоп #эндоскоп_автомобильный #эндоскоп_поворотный #автомобильный_эндоскоп`, seller candidate tags `эндоскоп автомобильный поворотный`.
+   - Expected: product type is tool / automotive repair; competitor terms are shown before seller terms; final copy block contains high-confidence candidate tags one per line; recommended tag table separates `高置信候选` and `需 Ozon 搜索验证`; Ozon search checklist explains how to verify core word, model/specification, compatibility, and repair-scene tags.
+
+3. Picnic cooler bag should produce consumer-product verification output
+   - Input: title `野餐保温包 35L 大容量 多层口袋 保温保冷`, category `户外 / 野餐 / 保温包`, material `牛津布 / 铝膜内胆`, specification `35L`, usage `野餐、露营、海边、车载旅行`, selling points `35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`, competitor tags `термосумка, сумка холодильник, пикник, кемпинг, пляж, сумка, рюкзак, женская сумка, большая вместимость, термоизоляция, карманы`.
+   - Expected: product type is ordinary outdoor consumer product; high-confidence tags focus on product type, scene, capacity, and insulation/function; `#рюкзак`, `#женская_сумка`, and broad `#сумка` are shown under excluded tags with reasons and do not enter the final copy block.
+
+4. Final copy block should contain only clean candidate tags
+   - Input: run either v1.2 required sample.
+   - Expected: final copy block is one tag per line; every tag starts with `#`; multi-word tags use `_`; no final tag contains Chinese, spaces, commas, slashes, brackets, or punctuation except `#` and `_`; every final tag passes `Array.from(tag).length <= 30`; the report clearly says these are candidate tags, not official Ozon tags.
+
+5. Candidate table and excluded tags should be readable
+   - Input: generate either v1.2 report.
+   - Expected: recommended table columns include candidate tag, group, source, type, and verification action. Excluded tags are grouped by reason, including broadness, wrong product type, Chinese, platform/banned words, over length, unsafe punctuation, duplicates, or verification failure risk.
+
+6. Scope boundaries should remain unchanged
+   - Input: inspect behavior after generating v1.2 reports and navigate to other modules.
+   - Expected: no Worker request, Ozon Seller API request, LLM API request, crawler, parser, dynamic renderer, dependency, or credential flow is added. Profit Calculator, Product Testing Analysis, API Settings, formulas, logistics, and platform presets are unchanged.
+
+## Ozon Topic Tag Assistant v1.2.1
+
+1. Input area should use two columns on desktop
+   - Input: open `Ozon 主题标签` on desktop width.
+   - Expected: `Competitor topic tags / competitor keywords` appears in the left column and `My candidate tags / backend search terms` appears in the right column. On mobile width, the two fields stack vertically.
+
+2. Competitor breakdown should be a single structured table
+   - Input: generate any report with competitor tags.
+   - Expected: there is only one `Competitor tag breakdown` area. It is a table with columns `Tag`, `Chinese meaning`, `Type`, `Source`, `Status`, and `Action`. There is no duplicate paragraph-style competitor breakdown and no standalone `Chinese reference / cannot be used directly as tags` section.
+
+3. Automotive endoscope should keep only strong high-confidence tags in the final copy box
+   - Input: title `汽车旋转式内窥镜`, category `汽车配件`, specification `T42 单镜头 1米硬线`, usage `汽车维修`, target user `家庭汽车维修，修理厂`, selling points `适用于汽车发动机的检测与维修工作。1080高清像素，2600mah续航，8mm微镜头，IP67级别防水。`, evidence `эндоскоп автомобильный поворотный 360 эндоскопия двигателя infsue 4,3-дюймовый IPS-экран 1080P пиксельный 6,2 мм объектив линия 1 м водонепроницаемая IP67, для ремонта автомобильных двигателей`, competitor tags `#эндоскоп #эндоскоп_автомобильный #эндоскоп_поворотный #автомобильный_эндоскоп`, seller candidate tags `эндоскоп автомобильный поворотный`.
+   - Expected: product type is tool / automotive repair; final copy-ready box contains only high-confidence tags, one per line; tags requiring verification are counted separately and do not appear in the final copy-ready box.
+
+4. Picnic cooler bag should move standalone scene and attribute words out of high confidence
+   - Input: title `野餐保温包 35L 大容量 多层口袋 保温保冷`, category `户外 / 野餐 / 保温包`, material `牛津布 / 铝膜内胆`, specification `35L`, usage `野餐、露营、海边、车载旅行`, selling points `35L大容量，保温保冷，多层口袋，可手提，适合家庭户外`, competitor tags `термосумка, сумка холодильник, пикник, кемпинг, пляж, сумка, рюкзак, женская сумка, большая вместимость, термоизоляция, карманы`.
+   - Expected: product type is ordinary outdoor consumer product; final copy-ready box focuses on product-type or strong combination tags; standalone scenario or attribute terms such as `#пикник`, `#кемпинг`, `#пляж`, `#термоизоляция`, and `#карманы` require Ozon search verification rather than high-confidence copy.
+
+5. Weak standalone words should not be high confidence
+   - Input: use a simple consumer product and competitor tags `#дом, #легкий, #хлопок, #женский`.
+   - Expected: `#дом`, `#легкий`, `#хлопок`, and `#женский` do not appear in the final copy-ready box. They appear under `Requires Ozon search verification` or `Rejected tags`, depending on the product context.
+
+6. Duplicate-source tags should have one final status
+   - Input: run the automotive endoscope and picnic cooler bag v1.2.1 samples.
+   - Expected: a normalized tag that appears in the final copy-ready box does not appear in the verification-required list or rejected detail rows. `#эндоскоп` is not both high-confidence and rejected. `#термосумка` is not both high-confidence and rejected. Verification-required tags also do not appear in rejected detail rows.
